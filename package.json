@@ -8,7 +8,7 @@
     "format:fix": "yarn lint --fix && prettier --write .",
     "build:styles": "npx tailwindcss -i ./src/styles/styles.css -o ./build/output.css",
     "watch:styles": "yarn build:styles --watch",
-    "build": "yarn build:styles && yarn build:main"
+    "build": "yarn build:styles && scripts/build-module.mjs main --html-no-skip"
   },
   "private": true,
   "dependencies": {
@@ -43,5 +43,9 @@
     "eslint": "^8",
     "lint": "^0.8.19",
     "prettier": "^3.6.2"
+  },
+  "imports": {
+    "#lib/*": "./scripts/lib/*",
+    "#commands/*": "./scripts/commands/*"
   }
 }
