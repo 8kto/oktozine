@@ -10,7 +10,8 @@
     "build:styles": "npx tailwindcss -i ./src/styles/styles.css -o ./build/output.css",
     "watch:styles": "yarn build:styles --watch",
     "build": "yarn build:styles && scripts/build-module.mjs main --html-no-skip",
-    "dev": "npx http-server ./build/chunks-html -p 3001"
+    "dev": "npx http-server ./build/chunks-html -p 3001",
+    "test": "jest"
   },
   "private": true,
   "dependencies": {
