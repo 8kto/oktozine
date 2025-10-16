@@ -1,17 +1,18 @@
 {
-  "name": "ttrpg-module-behind-the-eye-of-Vargothar",
+  "name": "ttrpg-module-behind-the-eye-of-vargothar",
   "version": "1.1.5",
   "description": "TTRPG Module",
   "author": "undefined",
   "scripts": {
-    "lint": "eslint",
+    "build": "yarn build:styles && scripts/build-module.mjs main --html-no-skip",
+    "build:styles": "npx tailwindcss -i ./src/styles/styles.css -o ./build/output.css",
+    "dev": "npx http-server ./build/chunks-html -p 3001",
     "format": "prettier . --check",
     "format:fix": "yarn lint --fix && prettier --write .",
-    "build:styles": "npx tailwindcss -i ./src/styles/styles.css -o ./build/output.css",
-    "watch:styles": "yarn build:styles --watch",
-    "build": "yarn build:styles && scripts/build-module.mjs main --html-no-skip",
-    "dev": "npx http-server ./build/chunks-html -p 3001",
-    "test": "jest"
+    "lint": "eslint",
+    "release": "./scripts/git-release.sh",
+    "test": "jest",
+    "watch:styles": "yarn build:styles --watch"
   },
   "private": true,
   "dependencies": {
