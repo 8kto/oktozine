@@ -6,6 +6,7 @@
   "scripts": {
     "build": "yarn build:styles && scripts/build-module.mjs main --html-no-skip",
     "build:styles": "npx tailwindcss -i ./src/styles/styles.css -o ./build/output.css",
+    "build:bestiary": "./scripts/build-bestiary.sh",
     "dev": "npx http-server ./build/chunks-html -p 3001 --cors",
     "format": "prettier . --check",
     "format:fix": "yarn lint --fix && prettier --write .",
