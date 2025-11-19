@@ -5,7 +5,7 @@
   "author": "undefined",
   "scripts": {
     "build": "yarn build:styles && scripts/build-module.mjs main --html-no-skip",
-    "build:all": "yarn build:styles && scripts/build-module.mjs --html-no-skip",
+    "build:all": "yarn build:styles && scripts/build-module.mjs --html-no-skip; yarn build:bestiary",
     "build:styles": "npx tailwindcss -i ./src/styles/styles.css -o ./build/output.css",
     "build:bestiary": "./scripts/build-bestiary.sh",
     "build:map": "yarn build:styles && ./scripts/build-module.mjs map --no-skip-html",
