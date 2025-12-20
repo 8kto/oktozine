@@ -10,6 +10,7 @@
     "build:bestiary": "./scripts/build-bestiary.sh",
     "build:map": "yarn build:styles && ./scripts/build-module.mjs map --no-skip-html",
     "dev": "npx http-server ./build/chunks-html -p 3001 --cors",
+    "dev:radar": "npx live-server --port=3010 --no-browser maps/ascii/grounds/",
     "format": "prettier . --check",
     "format:fix": "yarn lint --fix && prettier --write .",
     "lint": "eslint",
