@@ -1,6 +1,6 @@
 {
   "name": "ttrpg-module-behind-the-eye-of-vargothar",
-  "version": "1.9.8",
+  "version": "1.9.9",
   "description": "TTRPG Module",
   "author": "undefined",
   "scripts": {
@@ -14,7 +14,7 @@
     "format": "prettier . --check",
     "format:fix": "yarn lint --fix && prettier --write .",
     "lint": "eslint",
-    "release": "./scripts/git-release.sh",
+    "release": "./scripts/release/release.sh",
     "test": "jest",
     "watch:styles": "yarn build:styles --watch"
   },
