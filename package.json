@@ -13,6 +13,7 @@
     "dev:radar": "npx live-server --port=3010 --no-browser maps/ascii/grounds/",
     "format": "prettier . --check",
     "format:fix": "yarn lint --fix && prettier --write .",
+    "pdf:accept": "node scripts/pdf-visual-diff/pdf-run.mjs accept",
     "pdf:baseline": "node scripts/pdf-visual-diff/pdf-run.mjs baseline",
     "pdf:diff": "node scripts/pdf-visual-diff/pdf-run.mjs diff",
     "pdf:update": "node scripts/pdf-visual-diff/pdf-run.mjs update",
