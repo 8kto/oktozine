@@ -26,7 +26,7 @@
     "radar:deploy": "./scripts/deploy-radar-map.sh",
     "lint": "eslint",
     "release": "./scripts/release/release.sh",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "watch:styles": "yarn build:styles --watch"
   },
   "private": true,
