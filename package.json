@@ -10,7 +10,7 @@
     "build:bestiary": "./scripts/build-bestiary.sh --id bestiary",
     "build:map": "yarn build:styles && ./scripts/build-module.mjs map --no-skip-html",
     "build:osr": "yarn build:styles && ./scripts/build-module.mjs osr --no-skip-html",
-    "build:bestiary-osr": "./scripts/build-bestiary.sh",
+    "build:bestiary-osr": "./scripts/build-bestiary.sh --id bestiary-osr",
     "build:bestiaries": "yarn build:bestiary && ./scripts/build-bestiary.sh --id bestiary-osr --cache",
     "dev": "npx http-server ./build/chunks-html -p 3001 --cors",
     "dev:radar": "npx live-server --port=3010 --no-browser maps/crt/",
