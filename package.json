@@ -5,6 +5,7 @@
   "author": "undefined",
   "scripts": {
     "build": "yarn build:styles && scripts/build-module.mjs main --html-no-skip",
+    "build:clean": "node scripts/release/clean-build.mjs --dir build/pdf",
     "build:all": "yarn build:styles && scripts/build-module.mjs --html-no-skip; yarn build:bestiaries",
     "build:styles": "npx tailwindcss -i ./src/styles/styles.css -o ./build/output.css",
     "build:bestiary": "./scripts/build-bestiary.sh --id bestiary",
