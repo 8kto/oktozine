@@ -4,7 +4,8 @@
   "description": "TTRPG Module",
   "author": "undefined",
   "scripts": {
-    "build": "yarn build:styles && scripts/build-module.mjs main --html-no-skip",
+    "build": "yarn build:main",
+    "build:main": "yarn build:styles && scripts/build-module.mjs main --html-no-skip",
     "build:clean": "node scripts/release/clean-build.mjs --dir build/pdf",
     "build:all": "yarn build:styles && scripts/build-module.mjs --html-no-skip; yarn build:bestiaries",
     "build:styles": "npx tailwindcss -i ./src/styles/styles.css -o ./build/output.css",
@@ -13,6 +14,7 @@
     "build:osr": "yarn build:styles && ./scripts/build-module.mjs osr --no-skip-html",
     "build:bestiary-osr": "./scripts/build-bestiary.sh --id bestiary-osr",
     "build:bestiaries": "yarn build:bestiary && ./scripts/build-bestiary.sh --id bestiary-osr --cache",
+    "build-prod": "sh -c 'banner PROD BUILD; BUILD_MODE=production yarn build:$1; banner PROD BUILD END;' --",
     "dev": "npx http-server ./build/chunks-html -p 3001 --cors",
     "dev:radar": "npx live-server --port=3010 --no-browser maps/crt/",
     "dev:add-links-to-map": "npx live-server --port=3011 --no-browser maps/add-links-to-map/",
