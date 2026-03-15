@@ -2,18 +2,18 @@
   "name": "ttrpg-module-behind-the-eye-of-vargothar",
   "version": "1.11.23",
   "description": "TTRPG Module",
-  "author": "undefined",
+  "author": "undefined Okto",
   "scripts": {
     "build": "yarn build:main",
-    "build:main": "yarn build:styles && scripts/build-module.mjs main --html-no-skip",
+    "build:main": "yarn build:styles && scripts/oktozine/build-module.mjs main --html-no-skip",
     "build:clean": "node scripts/release/clean-build.mjs --dir build/pdf",
-    "build:all": "yarn build:styles && scripts/build-module.mjs --html-no-skip; yarn build:bestiaries",
+    "build:all": "yarn build:styles && scripts/oktozine/build-module.mjs --html-no-skip; yarn build:bestiaries",
     "build:styles": "npx tailwindcss -i ./src/styles/styles.css -o ./build/output.css",
-    "build:bestiary": "./scripts/build-bestiary.sh --id bestiary",
-    "build:map": "yarn build:styles && ./scripts/build-module.mjs map --no-skip-html",
-    "build:osr": "yarn build:styles && ./scripts/build-module.mjs osr --no-skip-html",
-    "build:bestiary-osr": "./scripts/build-bestiary.sh --id bestiary-osr",
-    "build:bestiaries": "yarn build:bestiary && ./scripts/build-bestiary.sh --id bestiary-osr --cache",
+    "build:bestiary": "scripts/build/build-bestiary.sh --id bestiary",
+    "build:map": "yarn build:styles && scripts/oktozine/build-module.mjs map --no-skip-html",
+    "build:osr": "yarn build:styles && scripts/oktozine/build-module.mjs osr --no-skip-html",
+    "build:bestiary-osr": "scripts/build/build-bestiary.sh --id bestiary-osr",
+    "build:bestiaries": "yarn build:bestiary && scripts/build/build-bestiary.sh --id bestiary-osr --cache",
     "build-prod": "sh -c 'banner PROD BUILD; BUILD_MODE=production yarn build:$1; banner PROD BUILD END;' --",
     "build-prod:all": "sh -c 'banner PROD BUILD; BUILD_MODE=production yarn build:all; ./scripts/release/bookmark-release-pdfs.sh; banner PROD BUILD END;' --",
     "dev": "npx http-server ./build/chunks-html -p 3001 --cors",
@@ -75,9 +75,5 @@
     "pngjs": "^7.0.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.5.7"
-  },
-  "imports": {
-    "#lib/*": "./scripts/lib/*",
-    "#commands/*": "./scripts/commands/*"
   }
 }
