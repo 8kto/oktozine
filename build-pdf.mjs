@@ -18,14 +18,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const baseIncludesPath = `${__dirname}/../../src`
 const buildHtmlFolderPath = path.join(__dirname, '../../build/chunks-html')
 const buildPdfFolderPath = path.join(__dirname, '../../build/pdf')
+const cssPath = path.join(__dirname, '../../build/output.css') // used by addStyleTag
 
 /**
  * @param {string} html
  * @param {string} outputPath
  * @param {PartProperties} config
+ * @param {{ headerTemplate: string, footerTemplate: string }} templates
  * @returns {Promise<void>}
  */
-const createDocumentContentPdf = async (html, outputPath, config) => {
+const createDocumentContentPdf = async (html, outputPath, config, { headerTemplate, footerTemplate }) => {
   const browser = await puppeteer.launch({
     headless: 'new',
     defaultViewport: null, // Otherwise it defaults to 800x600
@@ -49,7 +51,7 @@ const createDocumentContentPdf = async (html, outputPath, config) => {
   try {
     await page.setViewport({ width: 1280, height: 720 })
     await page.setContent(html, { waitUntil: 'networkidle0' }) // Wait for no in-flight network requests
-    await page.addStyleTag({ path: path.join(__dirname, '../../build/output.css') })
+    await page.addStyleTag({ path: cssPath })
 
     // Ensure all fonts are loaded
     await page.evaluateHandle('document.fonts.ready')
@@ -70,12 +72,6 @@ const createDocumentContentPdf = async (html, outputPath, config) => {
 
     await page.evaluate(wrapContentSections, { selector: '.content', wrapperClass: 'room-section' })
 
-    // Load header and footer templates
-    const [templateHeader, templateFooter] = await Promise.all([
-      fs.readFile(`${baseIncludesPath}/html/fragments/header.html`, 'utf-8'),
-      fs.readFile(`${baseIncludesPath}/html/fragments/footer.html`, 'utf-8'),
-    ])
-
     await page.emulateMediaType('print')
 
     // Generate PDF
@@ -84,15 +80,17 @@ const createDocumentContentPdf = async (html, outputPath, config) => {
       printBackground: true,
       preferCSSPageSize: true,
       displayHeaderFooter: true,
-      headerTemplate: templateHeader.replace('{{header}}', config.header),
-      footerTemplate: templateFooter.replace('{{footer}}', config.footer),
+      headerTemplate: headerTemplate.replace('{{header}}', config.header),
+      footerTemplate: footerTemplate.replace('{{footer}}', config.footer),
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
       scale: 1,
     })
 
-    // Retrieve from the live page after evaluating all the scripts
-    const htmlPageContent = await page.evaluate(() => document.body.innerHTML || '')
-    writeFullContentToFile(config.id, htmlPageContent)
+    // Debug: dump final HTML to file. Enable with BUILD_DUMP_HTML=1.
+    if (process.env.BUILD_DUMP_HTML) {
+      const htmlPageContent = await page.evaluate(() => document.body.innerHTML || '')
+      writeFullContentToFile(config.id, htmlPageContent)
+    }
   } catch (err) {
     logger.error(err)
   } finally {
@@ -185,9 +183,13 @@ export const buildPdf = async (config) => {
       ? path.join(buildHtmlFolderPath, `module-${config.id}`, backCoverHtmlFile)
       : null
 
-    const [coverContent, backCoverContent] = await Promise.all([
+    // Read all independent inputs in one parallel batch before touching the browser.
+    const [coverContent, backCoverContent, htmlFiles, templateHeader, templateFooter] = await Promise.all([
       coverHtmlPath ? fs.readFile(coverHtmlPath, 'utf8') : Promise.resolve(null),
       backCoverHtmlPath ? fs.readFile(backCoverHtmlPath, 'utf8') : Promise.resolve(null),
+      fs.readdir(`${buildHtmlFolderPath}/module-${config.id}`),
+      fs.readFile(`${baseIncludesPath}/html/fragments/header.html`, 'utf-8'),
+      fs.readFile(`${baseIncludesPath}/html/fragments/footer.html`, 'utf-8'),
     ])
 
     let fullHtmlContent = ''
@@ -195,10 +197,9 @@ export const buildPdf = async (config) => {
       fullHtmlContent += getPageTemplate(config.id, coverHtmlFile, coverContent, true)
     }
 
-    let htmlFiles = await fs.readdir(`${buildHtmlFolderPath}/module-${config.id}`)
-    htmlFiles = htmlFiles.filter((f) => coverHtmlFile !== f && backCoverHtmlFile !== f && f !== 'server.html')
+    const filteredFiles = htmlFiles.filter((f) => coverHtmlFile !== f && backCoverHtmlFile !== f && f !== 'server.html')
 
-    const processes = [...new Set(htmlFiles)].map(async (file) => {
+    const processes = [...new Set(filteredFiles)].map(async (file) => {
       if (!file.endsWith('.html') || file.startsWith('$fullHtmlContent-') || file.startsWith('$toc-')) {
         return
       }
@@ -237,7 +238,10 @@ export const buildPdf = async (config) => {
       fullHtmlContent += getPageTemplate(config.id, backCoverHtmlFile, backCoverContent, true)
     }
 
-    await createDocumentContentPdf(getFullPageTemplate(fullHtmlContent), outputFilenamePath, config)
+    await createDocumentContentPdf(getFullPageTemplate(fullHtmlContent), outputFilenamePath, config, {
+      headerTemplate: templateHeader,
+      footerTemplate: templateFooter,
+    })
 
     logger.info(chalk.green(`>> Generated PDF document for ${outputFilenamePath}`))
   } catch (error) {
