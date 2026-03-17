@@ -1,10 +1,4 @@
-import {
-  glueDamageUnits,
-  glueShorthands,
-  glueUnits,
-  glueUnitsWithNoLineBreaks,
-  glueWords,
-} from '../cmd-glue-units.mjs'
+import { glueDamageUnits, glueShorthands, glueUnits, glueUnitsWithNoLineBreaks, glueWords } from '../cmd-glue-units.mjs'
 
 describe('glue units tests', () => {
   describe('glueUnits', () => {

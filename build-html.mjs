@@ -6,9 +6,8 @@ import matter from 'gray-matter'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-import handleCommands from './commands/index.mjs'
-
 import packageConfig from '../../package.json' with { type: 'json' }
+import handleCommands from './commands/index.mjs'
 import {
   getBuildFilePath,
   isFileChangedSinceLastBuild,
