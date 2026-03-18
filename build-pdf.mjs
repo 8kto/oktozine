@@ -167,6 +167,8 @@ const rebuildNamedDestinations = (mergedPdf, chunks) => {
   logger.debug(chalk.gray(`rebuilt ${allEntries.length} named destinations in /Catalog/Dests`))
 }
 
+const rgb255 = (r, g, b) => rgb(r / 255, g / 255, b / 255)
+
 /**
  * Merge chunk PDF buffers in order, fix the /Names tree for hyperlinks,
  * then draw correct headers/footers on every page.
@@ -204,7 +206,7 @@ const mergeChunks = async (chunkBuffers, headerText) => {
   rebuildNamedDestinations(mergedPdf, chunkMeta)
 
   // Draw headers and footers on every page using Philosopher font
-  const grayColor = rgb(0.867, 0.867, 0.867) // #ddd // FIXME
+  const grayColor = rgb255(137, 137, 137) // #ddd
   const fontSize = 6 // 8px CSS ≈ 6pt in PDF (8 × 72/96)
 
   const mergedPages = mergedPdf.getPages()
@@ -227,7 +229,7 @@ const mergeChunks = async (chunkBuffers, headerText) => {
 
     page.drawText(headerText, {
       x: (width - hdrWidth) / 2,
-      y: height - 9,
+      y: height - 13,
       size: fontSize,
       font,
       color: grayColor,
