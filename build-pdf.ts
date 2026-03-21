@@ -29,6 +29,10 @@ const philosopherFontPath = path.join(__dirname, '../../src/styles/fonts/Philoso
 // Override with PDF_PARALLEL=N environment variable.
 const PDF_PARALLEL = Math.max(1, parseInt(process.env.PDF_PARALLEL ?? '4', 10))
 
+// Each Puppeteer browser instance registers exit/signal handlers on the process.
+// With many parallel instances the default limit of 10 triggers a warning.
+process.setMaxListeners(0)
+
 const BROWSER_ARGS = [
   '--no-sandbox',
   '--disable-setuid-sandbox',
@@ -266,7 +270,7 @@ const createDocumentContentPdf = async (
   html: string,
   outputPath: string,
   config: IPartProperties,
-  { headerTemplate }: { headerTemplate: string },
+  { headerTemplate: _headerTemplate }: { headerTemplate: string },
 ): Promise<void> => {
   // ── Phase 1: one browser for DOM setup (TOC, section-wrap) ───────────────
   const endSetup = measure('pdf-setup')
@@ -344,12 +348,25 @@ const createDocumentContentPdf = async (
   logger.info(chalk.gray(`rendering ${N} (by ${chunkSize}) chunks in parallel: ${ranges.join(', ')}`))
   const endRender = measure('pdf-render')
 
-  let chunkBuffers: Buffer[]
-  try {
-    chunkBuffers = await Promise.all(ranges.map((range) => renderChunk(finalHtml, range)))
-  } catch (err) {
-    logger.error(err)
-
+  // Use allSettled so that chunks whose page range falls beyond the document
+  // ("Printing failed" from Chrome) don't abort the other chunks.
+  const results = await Promise.allSettled(ranges.map((range) => renderChunk(finalHtml, range)))
+  const chunkBuffers: Buffer[] = []
+  let renderFailed = false
+  for (const [i, result] of results.entries()) {
+    if (result.status === 'fulfilled') {
+      chunkBuffers.push(result.value)
+    } else {
+      const err = result.reason as Error
+      if (err.message?.includes('Printing failed')) {
+        logger.debug(chalk.gray(`chunk ${ranges[i]}: empty page range, skipping`))
+      } else {
+        logger.error(err, `chunk ${ranges[i]} failed`)
+        renderFailed = true
+      }
+    }
+  }
+  if (renderFailed || chunkBuffers.length === 0) {
     return
   }
 
