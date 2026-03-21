@@ -306,11 +306,9 @@ const createDocumentContentPdf = async (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await page0.evaluate(wrapContentSections as any, { selector: '.content', wrapperClass: 'room-section' })
 
-    // Approximate page count from page delimiters (exact count unknown before render)
-    approxPageCount =
-      config.buildPartSize && config.buildPartSize
-        ? config.buildPartSize * config.buildPartSize
-        : await page0.evaluate(() => document.querySelectorAll('.page-delimiter').length + 1)
+    // Count actual page delimiters from the DOM — always use the real page count
+    // so we don't launch unnecessary Chrome instances for empty page ranges.
+    approxPageCount = await page0.evaluate(() => document.querySelectorAll('.page-delimiter').length + 1)
 
     // Serialize the post-mutation DOM so all chunks render the same layout
     finalHtml = await page0.content()
@@ -330,12 +328,17 @@ const createDocumentContentPdf = async (
 
   let chunkSize = config.buildPartSize
   let N = config.buildProcessesNum
+
   if (!chunkSize || !N) {
     N = N ?? Math.min(PDF_PARALLEL, approxPageCount)
     chunkSize = chunkSize ?? Math.ceil(approxPageCount / N)
-
-    logger.info(chalk.gray(`${endSetup()}, ~${approxPageCount} pages`))
+  } else {
+    // Cap N to the actual number of non-empty chunks so we don't launch
+    // Chrome instances for page ranges beyond the document.
+    N = Math.min(N, Math.ceil(approxPageCount / chunkSize))
   }
+
+  logger.info(chalk.gray(`${endSetup()}, ~${approxPageCount} pages`))
 
   // ── Phase 2: parallel rendering ──────────────────────────────────────────
   const ranges = Array.from({ length: N }, (_, i) => {
@@ -348,25 +351,12 @@ const createDocumentContentPdf = async (
   logger.info(chalk.gray(`rendering ${N} (by ${chunkSize}) chunks in parallel: ${ranges.join(', ')}`))
   const endRender = measure('pdf-render')
 
-  // Use allSettled so that chunks whose page range falls beyond the document
-  // ("Printing failed" from Chrome) don't abort the other chunks.
-  const results = await Promise.allSettled(ranges.map((range) => renderChunk(finalHtml, range)))
-  const chunkBuffers: Buffer[] = []
-  let renderFailed = false
-  for (const [i, result] of results.entries()) {
-    if (result.status === 'fulfilled') {
-      chunkBuffers.push(result.value)
-    } else {
-      const err = result.reason as Error
-      if (err.message?.includes('Printing failed')) {
-        logger.debug(chalk.gray(`chunk ${ranges[i]}: empty page range, skipping`))
-      } else {
-        logger.error(err, `chunk ${ranges[i]} failed`)
-        renderFailed = true
-      }
-    }
-  }
-  if (renderFailed || chunkBuffers.length === 0) {
+  let chunkBuffers: Buffer[]
+  try {
+    chunkBuffers = await Promise.all(ranges.map((range) => renderChunk(finalHtml, range)))
+  } catch (err) {
+    logger.error(err)
+
     return
   }
 
