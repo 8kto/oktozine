@@ -39,6 +39,9 @@ const BROWSER_ARGS = [
   '--start-fullscreen',
   '--lang=ru-RU,ru',
   '--disable-translate',
+  // Prevents Chrome from using /dev/shm (often limited) for shared memory,
+  // which causes PDF rendering failures when many instances run in parallel.
+  '--disable-dev-shm-usage',
 ]
 
 const launchBrowser = () => puppeteer.launch({ headless: 'new' as const, defaultViewport: null, args: BROWSER_ARGS })
@@ -56,7 +59,7 @@ const setupPage = async (browser: Awaited<ReturnType<typeof launchBrowser>>, htm
   return page
 }
 
-const renderChunk = async (html: string, pageRange: string): Promise<Buffer> => {
+const renderChunkOnce = async (html: string, pageRange: string): Promise<Buffer> => {
   const browser = await launchBrowser()
   try {
     const page = await setupPage(browser, html)
@@ -75,6 +78,17 @@ const renderChunk = async (html: string, pageRange: string): Promise<Buffer> => 
     })
   } finally {
     await browser.close()
+  }
+}
+
+// Retry once on failure — parallel Chrome instances can fail transiently
+// due to resource contention (shared memory, CPU spikes, etc.).
+const renderChunk = async (html: string, pageRange: string): Promise<Buffer> => {
+  try {
+    return await renderChunkOnce(html, pageRange)
+  } catch (err) {
+    logger.debug(chalk.gray(`chunk ${pageRange}: retrying after error — ${(err as Error).message}`))
+    return renderChunkOnce(html, pageRange)
   }
 }
 
