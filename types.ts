@@ -1,0 +1,85 @@
+// ── Shared TypeScript interfaces for the oktozine build system ───────────────
+
+export interface ITocOverrides {
+  dropLabels?: string[]
+  dropItemsFromLabels?: string[]
+  alwaysInclude?: string[]
+}
+
+export interface ITocConfig {
+  headersSelector?: string
+  rootClassName?: string
+  rootId?: string
+  targetId?: string
+  renderMaxLevel?: number
+  tocOverrides?: ITocOverrides
+}
+
+export interface ITocItem {
+  label: string
+  id?: string
+  items?: ITocItem[]
+  $skipped?: boolean
+  $level?: number
+}
+
+export interface IBookmarksConfig {
+  config: string
+  skipFirstPages?: number
+  skipLastPages?: number
+}
+
+export interface IDocProperties {
+  template?: string
+  footer?: string
+  header?: string
+  skipped?: string[]
+  includePattern?: RegExp
+  include?: string[]
+  invalidateBuildOnPattern?: RegExp
+  tocConfig?: ITocConfig
+  bookmarksConfig?: IBookmarksConfig
+  referenceFiles?: string[]
+  conditionalsAlias?: Record<string, string>
+}
+
+export interface IPartProperties extends IDocProperties {
+  id: string
+  documentTitle?: string
+  documentFileName?: string
+  coverHtmlFile?: string | null
+  backCoverHtmlFile?: string | null
+  skipBuild?: boolean
+  buildPartSize?: number
+  buildProcessesNum?: number
+}
+
+export interface IModuleBuilderConfig extends IDocProperties {
+  parts: IPartProperties[]
+  releasePartIds?: string[]
+}
+
+export interface IDocPageMetadata {
+  template?: string
+  name?: string
+  use?: string[]
+  'picture-id'?: string
+  seqPage?: boolean
+  seqPageNum?: number
+  documentTitle?: string
+  [key: string]: unknown
+}
+
+export interface IDocPage {
+  metadata: IPartProperties & IDocPageMetadata
+  content: string
+}
+
+export interface IRefEntry {
+  fullText: string
+  shortText: string
+  buffer?: string[]
+}
+
+/** A function that transforms a markdown string given a build config. */
+export type CommandHandlerFn = (markdown: string, config: IPartProperties) => string

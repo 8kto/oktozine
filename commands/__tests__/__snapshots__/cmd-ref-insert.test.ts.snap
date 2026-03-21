@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`convert ref inserts should convert cmd into full html 1`] = `"<!-- cmd[ref] header[Костяная химера] detailed /-->"`;
+
+exports[`convert ref inserts should convert cmd into shortened stats html 1`] = `"<!-- cmd[ref] header[Костяная химера] /-->"`;
+
+exports[`convert ref inserts should insert n times 1`] = `"XXX <!-- cmd[ref] header[Костяная химера] /--> YYY <!-- cmd[ref] header[Костяная химера] /-->"`;

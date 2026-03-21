@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`convert stats inserts should convert cmd into html 1`] = `
+"<div class="stats-insert no-page-break">
+<span class="stat-record"><span class="stat-name">КБ</span>:&nbsp;<span class="stat-value">14</span></span>
+<span class="stat-record"><span class="stat-name">ХД</span>:&nbsp;<span class="stat-value">½ (2hp)</span></span>
+<span class="stat-record"><span class="stat-name">Урон</span>:&nbsp;<span class="stat-value">d4-1 (кинжал) или d6-1 (меч)</span></span>
+<span class="stat-record"><span class="stat-name">Скорость</span>:&nbsp;<span class="stat-value">60' (20')</span></span>
+<span class="stat-record"><span class="stat-name">Мораль</span>:&nbsp;<span class="stat-value">6</span></span>
+<span class="stat-record"><span class="stat-name">МВ</span>:&nbsp;<span class="stat-value">Хаос</span></span>
+
+</div>"
+`;

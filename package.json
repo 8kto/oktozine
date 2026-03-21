@@ -5,13 +5,13 @@
   "author": "undefined Okto",
   "scripts": {
     "build": "yarn build:main",
-    "build:main": "yarn build:styles && scripts/oktozine/build-module.mjs main --html-no-skip",
+    "build:main": "yarn build:styles && tsx scripts/oktozine/build-module.ts main --html-no-skip",
     "build:clean": "node scripts/release/clean-build.mjs --dir build/pdf",
-    "build:all": "yarn build:styles && scripts/oktozine/build-module.mjs --html-no-skip; yarn build:bestiaries",
+    "build:all": "yarn build:styles && tsx scripts/oktozine/build-module.ts --html-no-skip; yarn build:bestiaries",
     "build:styles": "npx tailwindcss -i ./src/styles/styles.css -o ./build/output.css",
     "build:bestiary": "scripts/build/build-bestiary.sh --id bestiary",
-    "build:map": "yarn build:styles && scripts/oktozine/build-module.mjs map --no-skip-html",
-    "build:osr": "yarn build:styles && scripts/oktozine/build-module.mjs osr --no-skip-html",
+    "build:map": "yarn build:styles && tsx scripts/oktozine/build-module.ts map --no-skip-html",
+    "build:osr": "yarn build:styles && tsx scripts/oktozine/build-module.ts osr --no-skip-html",
     "build:bestiary-osr": "scripts/build/build-bestiary.sh --id bestiary-osr",
     "build:bestiaries": "yarn build:bestiary && scripts/build/build-bestiary.sh --id bestiary-osr --cache",
     "build-prod": "sh -c 'banner PROD BUILD; BUILD_MODE=production yarn build:$1; banner PROD BUILD END;' --",
@@ -57,6 +57,11 @@
     "@babel/eslint-parser": "^7.23.10",
     "@babel/plugin-syntax-import-assertions": "^7.23.3",
     "@babel/preset-env": "^7.23.9",
+    "@types/fs-extra": "^11.0.4",
+    "@types/jest": "^30.0.0",
+    "@types/jsdom": "^28.0.0",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^25.5.0",
     "babel-plugin-transform-import-meta": "^2.2.1",
     "baseline-browser-mapping": "^2.9.19",
     "eslint": "^8",
@@ -75,6 +80,9 @@
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
     "prettier": "^3.6.2",
-    "prettier-plugin-tailwindcss": "^0.5.7"
+    "prettier-plugin-tailwindcss": "^0.5.7",
+    "ts-jest": "^29.4.6",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }
