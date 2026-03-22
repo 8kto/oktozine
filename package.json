@@ -15,7 +15,7 @@
     "build:bestiary-osr": "scripts/build/build-bestiary.sh --id bestiary-osr",
     "build:bestiaries": "yarn build:bestiary && scripts/build/build-bestiary.sh --id bestiary-osr --cache",
     "build-prod": "sh -c 'banner PROD BUILD; BUILD_MODE=production yarn build:$1; banner PROD BUILD END;' --",
-    "build-prod:all": "sh -c 'banner PROD BUILD; BUILD_MODE=production yarn build:all; ./scripts/release/bookmark-release-pdfs.sh; banner PROD BUILD END;' --",
+    "build-prod:all": "sh -c 'banner PROD BUILD; export BUILD_MODE=production; yarn build:all; ./scripts/release/bookmark-release-pdfs.sh; banner PROD BUILD END;' --",
     "dev": "npx http-server ./build/chunks-html -p 3001 --cors",
     "dev:radar": "npx live-server --port=3010 --no-browser maps/crt/",
     "dev:add-links-to-map": "npx live-server --port=3011 --no-browser maps/add-links-to-map/",
@@ -29,6 +29,7 @@
     "radar:get-token": "(cd maps/crt/; node gm-link.js http://localhost:3010/ grounds)",
     "radar:deploy": "./scripts/deploy-radar-map.sh",
     "lint": "eslint",
+    "release-check": "node scripts/release-check/check-release.mjs",
     "release": "./scripts/release/release.sh",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "watch:styles": "yarn build:styles --watch"
