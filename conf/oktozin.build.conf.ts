@@ -46,7 +46,7 @@ const mainBestiaryConf: Partial<IPartProperties> = {
   skipBuild: true,
   buildPartSize: 8,
   buildProcessesNum: 3,
-  skipHeaderAndFooter: [2]
+  skipHeaderAndFooter: [2],
 }
 
 const config: IModuleBuilderConfig = {
@@ -151,7 +151,7 @@ const config: IModuleBuilderConfig = {
         config: 'build/$toc-map.json',
         skipFirstPages: 1,
       },
-      skipHeaderAndFooter: [2,3,4,5,6,7,8,9]
+      skipHeaderAndFooter: [2, 3, 4, 5, 6, 7, 8, 9],
     } as IPartProperties,
   ],
 }
