@@ -326,14 +326,25 @@ const rebuildNamedDestinations = (
 
 const rgb255 = (r: number, g: number, b: number) => rgb(r / 255, g / 255, b / 255)
 
-/** Draws a centered page number footer and a centered title header on every page. */
-const decoratePdfPages = (mergedPdf: PDFDocument, headerText: string, font: PDFFont): void => {
+/**
+ * Draws a centered page number footer and a centered title header on each page.
+ * Pages listed in skipPages are left undecorated.
+ * skipPages uses 1-based page numbers; negative values count from the end
+ * (-1 = last page, -2 = second-to-last, etc.).
+ */
+const decoratePdfPages = (mergedPdf: PDFDocument, headerText: string, font: PDFFont, skipPages: number[] = []): void => {
   const grayColor = rgb255(137, 137, 137)
   const fontSize = 6 // 8px CSS ≈ 6pt in PDF (8 × 72/96)
 
+  const totalPages = mergedPdf.getPageCount()
+  const skipSet = new Set(skipPages.map((n) => (n < 0 ? totalPages + n + 1 : n)))
+
   mergedPdf.getPages().forEach((page, i) => {
+    const pageNum = i + 1 // 1-based
+    if (skipSet.has(pageNum)) return
+
     const { width, height } = page.getSize()
-    const pageNumStr = String(i + 1)
+    const pageNumStr = String(pageNum)
 
     // Footer: centered page number
     const numWidth = font.widthOfTextAtSize(pageNumStr, fontSize)
@@ -345,7 +356,7 @@ const decoratePdfPages = (mergedPdf: PDFDocument, headerText: string, font: PDFF
   })
 }
 
-const mergeChunks = async (chunkBuffers: Buffer[], headerText: string): Promise<Uint8Array> => {
+const mergeChunks = async (chunkBuffers: Buffer[], headerText: string, skipHeaderAndFooter?: number[]): Promise<Uint8Array> => {
   const mergedPdf = await PDFDocument.create()
   mergedPdf.registerFontkit(fontkit)
   const philosopherBytes = await fs.readFile(philosopherFontPath)
@@ -370,7 +381,7 @@ const mergeChunks = async (chunkBuffers: Buffer[], headerText: string): Promise<
   rebuildNamedDestinations(mergedPdf, chunkMeta)
   logger.info(chalk.gray(endRebuildNamedDestinations()))
 
-  decoratePdfPages(mergedPdf, headerText, font)
+  decoratePdfPages(mergedPdf, headerText, font, skipHeaderAndFooter)
 
   return mergedPdf.save()
 }
@@ -494,7 +505,7 @@ const createDocumentContentPdf = async (html: string, outputPath: string, config
   // ── Phase 3: merge + link repair + headers/footers ─────────────────────────
   const endMerge = measure('Merge PDF chunks')
   try {
-    const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '')
+    const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '', config.skipHeaderAndFooter)
     await fs.writeFile(outputPath, mergedBytes)
   } catch (err) {
     logger.error(err)

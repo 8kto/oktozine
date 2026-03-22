@@ -41,6 +41,12 @@ export interface IDocProperties {
   bookmarksConfig?: IBookmarksConfig
   referenceFiles?: string[]
   conditionalsAlias?: Record<string, string>
+  /**
+   * 1-based page numbers to skip header/footer decoration.
+   * Negative values count from the end: -1 = last page, -2 = second-to-last, etc.
+   * Example: [1, -1] skips the first and last pages.
+   */
+  skipHeaderAndFooter?: number[]
 }
 
 export interface IPartProperties extends IDocProperties {
