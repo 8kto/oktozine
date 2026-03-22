@@ -63,7 +63,6 @@
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^25.5.0",
     "babel-plugin-transform-import-meta": "^2.2.1",
-    "baseline-browser-mapping": "^2.9.19",
     "eslint": "^8",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-import": "^2.29.1",

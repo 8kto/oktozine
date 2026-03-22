@@ -23,7 +23,7 @@ export const convertRefInserts = (markdown: string, buildConf?: IPartProperties)
     const shouldWrap = !!/\sno-page-break\s/.exec(extraArgs)
     const hasAlternateLook = !!/\salt\s/.exec(extraArgs)
     const hasNoHeader = !!/\sno-header\s/.exec(extraArgs)
-    const hasAlernateHeader = !!/\salt-header\s/.exec(extraArgs)
+    const hasAlternateHeader = !!/\salt-header\s/.exec(extraArgs)
 
     const idMatch = /\bid\[([A-Za-z0-9_-]+?)]/.exec(extraArgs)
     const id = idMatch?.[1]
@@ -38,7 +38,7 @@ export const convertRefInserts = (markdown: string, buildConf?: IPartProperties)
         content,
         idAttr,
         hasAlternateLook,
-        hasAlernateHeader,
+        hasAlternateHeader,
         shouldWrap,
         title,
         hasNoHeader,

@@ -1,7 +1,7 @@
 export interface IRenderReferenceBlockOptions {
   idAttr?: string
   hasAlternateLook?: boolean
-  hasAlernateHeader?: boolean
+  hasAlternateHeader?: boolean
   title: string
   content: string
   headerTagName?: string | null
@@ -18,7 +18,7 @@ export const handleLists = (content: string): string => {
 export const renderReferenceBlock = ({
   idAttr = '',
   hasAlternateLook = false,
-  hasAlernateHeader = false,
+  hasAlternateHeader = false,
   title,
   content,
   headerTagName = null,
@@ -26,7 +26,7 @@ export const renderReferenceBlock = ({
   hasNoHeader = false,
 }: IRenderReferenceBlockOptions): string => {
   const htag = !headerTagName ? 'header' : headerTagName
-  const headerClasses = `ref-header ${hasAlernateHeader ? 'ref-header--alt' : ''}`
+  const headerClasses = `ref-header ${hasAlternateHeader ? 'ref-header--alt' : ''}`
   let refInsertClasses = `ref-insert`
   if (hasAlternateLook) {
     refInsertClasses += ' alternative'
