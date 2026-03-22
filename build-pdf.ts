@@ -320,9 +320,14 @@ const createDocumentContentPdf = async (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await page0.evaluate(wrapContentSections as any, { selector: '.content', wrapperClass: 'room-section' })
 
-    // Count actual page delimiters from the DOM — always use the real page count
-    // so we don't launch unnecessary Chrome instances for empty page ranges.
-    approxPageCount = await page0.evaluate(() => document.querySelectorAll('.page-delimiter').length + 1)
+    // page-delimiter separates HTML chapters, not PDF pages — one chapter
+    // typically spans multiple PDF pages. When buildPartSize/buildProcessesNum
+    // are configured the user knows the real page count; the delimiter count is
+    // only used as a fallback estimate when those props are absent.
+    approxPageCount =
+      config.buildPartSize && config.buildProcessesNum
+        ? config.buildPartSize * config.buildProcessesNum
+        : await page0.evaluate(() => document.querySelectorAll('.page-delimiter').length + 1)
 
     // Serialize the post-mutation DOM so all chunks render the same layout
     finalHtml = await page0.content()
@@ -346,13 +351,9 @@ const createDocumentContentPdf = async (
   if (!chunkSize || !N) {
     N = N ?? Math.min(PDF_PARALLEL, approxPageCount)
     chunkSize = chunkSize ?? Math.ceil(approxPageCount / N)
-  } else {
-    // Cap N to the actual number of non-empty chunks so we don't launch
-    // Chrome instances for page ranges beyond the document.
-    N = Math.min(N, Math.ceil(approxPageCount / chunkSize))
-  }
 
-  logger.info(chalk.gray(`${endSetup()}, ~${approxPageCount} pages`))
+    logger.info(chalk.gray(`${endSetup()}, ~${approxPageCount} pages`))
+  }
 
   // ── Phase 2: parallel rendering ──────────────────────────────────────────
   const ranges = Array.from({ length: N }, (_, i) => {
