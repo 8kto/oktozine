@@ -46,7 +46,7 @@ describe('resolveChunkPlan', () => {
 
   it('caps N at approxPageCount for small documents', () => {
     const { N, chunkSize } = resolveChunkPlan(base, 2)
-    expect(N).toBe(2)   // min(PDF_PARALLEL=4, 2) = 2
+    expect(N).toBe(2) // min(PDF_PARALLEL=4, 2) = 2
     expect(chunkSize).toBe(1) // ceil(2 / 2) = 1
   })
 
@@ -60,7 +60,7 @@ describe('resolveChunkPlan', () => {
   it('computes N and uses config chunkSize when only buildPartSize is provided', () => {
     const config = { ...base, buildPartSize: 30 }
     const { N, chunkSize } = resolveChunkPlan(config, 100)
-    expect(N).toBe(4)    // min(PDF_PARALLEL=4, 100) = 4
+    expect(N).toBe(4) // min(PDF_PARALLEL=4, 100) = 4
     expect(chunkSize).toBe(30) // from config
   })
 

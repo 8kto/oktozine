@@ -464,13 +464,9 @@ export const buildChunkRanges = (N: number, chunkSize: number): string[] =>
 
 // ── Main PDF builder ─────────────────────────────────────────────────────────
 
-const createDocumentContentPdf = async (
-  html: string,
-  outputPath: string,
-  config: IPartProperties,
-): Promise<void> => {
+const createDocumentContentPdf = async (html: string, outputPath: string, config: IPartProperties): Promise<void> => {
   // ── Phase 1: DOM setup (TOC, section-wrap, page count, HTML serialisation) ─
-  const endSetup = measure('pdf-setup')
+  const endSetup = measure('Setup PDF doc: TOC, sections wrap...')
   const prepared = await preparePdfHtml(html, config)
   if (!prepared) return
 
