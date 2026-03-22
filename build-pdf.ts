@@ -280,6 +280,19 @@ const baseName = (name: string): string => name.replace(/-\d+\.md\.html$/, '.md.
 
 // ── Main PDF builder ────────────────────────────────────────────────────────
 
+/**
+ * Builds an array of Puppeteer page-range strings (e.g. ["1-50", "51-100", "101-999999"])
+ * for splitting the full PDF into N parallel chunks of chunkSize pages each.
+ * The last chunk is always open-ended so it captures any over-estimated pages.
+ */
+export const buildChunkRanges = (N: number, chunkSize: number): string[] =>
+  Array.from({ length: N }, (_, i) => {
+    const start = i * chunkSize + 1
+    const end = i === N - 1 ? 999999 : (i + 1) * chunkSize
+
+    return `${start}-${end}`
+  })
+
 const createDocumentContentPdf = async (
   html: string,
   outputPath: string,
@@ -356,12 +369,7 @@ const createDocumentContentPdf = async (
   }
 
   // ── Phase 2: parallel rendering ──────────────────────────────────────────
-  const ranges = Array.from({ length: N }, (_, i) => {
-    const start = i * chunkSize! + 1
-    const end = i === N! - 1 ? 999999 : (i + 1) * chunkSize! // last chunk: open-ended
-
-    return `${start}-${end}`
-  })
+  const ranges = buildChunkRanges(N!, chunkSize!)
 
   logger.info(chalk.gray(`rendering ${N} (by ${chunkSize}) chunks in parallel: ${ranges.join(', ')}`))
   const endRender = measure('pdf-render')

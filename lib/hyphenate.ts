@@ -9,6 +9,8 @@ interface IHyphenateOptions {
   preserveExisting?: boolean
 }
 
+const hypher = new Hypher({ ...russian, leftmin: 4, rightmin: 3 })
+
 /**
  * Расставляет мягкие переносы (&shy; / \u00AD) в текстовых узлах HTML-фрагмента.
  */
@@ -21,8 +23,6 @@ export const hyphenateHtml = (htmlFragment: string, opts: IHyphenateOptions = {}
 
   const dom = new JSDOM(`<div id="__root__">${htmlFragment}</div>`)
   const root = dom.window.document.getElementById('__root__')!
-
-  const h = new Hypher({ ...russian, leftmin: 4, rightmin: 3 })
   const SOFT = '\u00AD'
 
   const WORD_RE = new RegExp(`\\p{L}{${minWordLength},}`, 'gu')
@@ -43,7 +43,7 @@ export const hyphenateHtml = (htmlFragment: string, opts: IHyphenateOptions = {}
       if (URL_LIKE_RE.test(word)) {
         return word
       }
-      const parts = h.hyphenate(word)
+      const parts = hypher.hyphenate(word)
       if (!parts || parts.length <= 1) {
         return word
       }

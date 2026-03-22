@@ -37,7 +37,7 @@ const findLastNonSpaceEntry = (arr: string[]): string | null => {
   return null
 }
 
-const parseMarkdown = (md: string): Record<string, IRefEntry> => {
+export const parseMarkdown = (md: string): Record<string, IRefEntry> => {
   const lines = md.split('\n')
   const buffer: Record<string, string[]> = {}
   let currentTitle = ''
