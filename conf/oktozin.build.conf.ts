@@ -22,7 +22,7 @@ const mainModuleConf: Partial<IPartProperties> = {
   buildPartSize: 8,
   buildProcessesNum: 8,
   skipHeaderAndFooter: [-1, 1, 2, 3, 11, 15, 18, 27, 37, 47, 52, 58],
-  skipFooter: [23, 25, 36, 45, 55],
+  skipFooter: [17, 23, 25, 36, 45, 55],
 }
 
 const mainBestiaryConf: Partial<IPartProperties> = {

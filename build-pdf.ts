@@ -360,7 +360,7 @@ const decoratePdfPages = (
 
     if (!skipBoth.has(pageNum) && !skipHdr.has(pageNum)) {
       const hdrWidth = font.widthOfTextAtSize(headerText, fontSize)
-      page.drawText(headerText, { x: (width - hdrWidth) / 2, y: height - 14.5, size: fontSize, font, color: grayColor })
+      page.drawText(headerText, { x: (width - hdrWidth) / 2, y: height - 14, size: fontSize, font, color: grayColor })
     }
 
     if (!skipBoth.has(pageNum) && !skipFtr.has(pageNum)) {
