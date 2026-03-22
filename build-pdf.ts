@@ -326,37 +326,55 @@ const rebuildNamedDestinations = (
 
 const rgb255 = (r: number, g: number, b: number) => rgb(r / 255, g / 255, b / 255)
 
+interface IDecorateOptions {
+  skipHeaderAndFooter?: number[]
+  skipHeader?: number[]
+  skipFooter?: number[]
+}
+
 /**
  * Draws a centered page number footer and a centered title header on each page.
- * Pages listed in skipPages are left undecorated.
- * skipPages uses 1-based page numbers; negative values count from the end
+ * All skip arrays use 1-based page numbers; negative values count from the end
  * (-1 = last page, -2 = second-to-last, etc.).
  */
-const decoratePdfPages = (mergedPdf: PDFDocument, headerText: string, font: PDFFont, skipPages: number[] = []): void => {
+const decoratePdfPages = (
+  mergedPdf: PDFDocument,
+  headerText: string,
+  font: PDFFont,
+  opts: IDecorateOptions = {},
+): void => {
   const grayColor = rgb255(137, 137, 137)
   const fontSize = 6 // 8px CSS ≈ 6pt in PDF (8 × 72/96)
 
   const totalPages = mergedPdf.getPageCount()
-  const skipSet = new Set(skipPages.map((n) => (n < 0 ? totalPages + n + 1 : n)))
+  const resolve = (pages: number[] = []) => new Set(pages.map((n) => (n < 0 ? totalPages + n + 1 : n)))
+
+  const skipBoth = resolve(opts.skipHeaderAndFooter)
+  const skipHdr = resolve(opts.skipHeader)
+  const skipFtr = resolve(opts.skipFooter)
 
   mergedPdf.getPages().forEach((page, i) => {
     const pageNum = i + 1 // 1-based
-    if (skipSet.has(pageNum)) return
-
     const { width, height } = page.getSize()
     const pageNumStr = String(pageNum)
 
-    // Footer: centered page number
-    const numWidth = font.widthOfTextAtSize(pageNumStr, fontSize)
-    page.drawText(pageNumStr, { x: (width - numWidth) / 2, y: 7, size: fontSize, font, color: grayColor })
+    if (!skipBoth.has(pageNum) && !skipFtr.has(pageNum)) {
+      const numWidth = font.widthOfTextAtSize(pageNumStr, fontSize)
+      page.drawText(pageNumStr, { x: (width - numWidth) / 2, y: 7, size: fontSize, font, color: grayColor })
+    }
 
-    // Header: centered title
-    const hdrWidth = font.widthOfTextAtSize(headerText, fontSize)
-    page.drawText(headerText, { x: (width - hdrWidth) / 2, y: height - 13, size: fontSize, font, color: grayColor })
+    if (!skipBoth.has(pageNum) && !skipHdr.has(pageNum)) {
+      const hdrWidth = font.widthOfTextAtSize(headerText, fontSize)
+      page.drawText(headerText, { x: (width - hdrWidth) / 2, y: height - 13, size: fontSize, font, color: grayColor })
+    }
   })
 }
 
-const mergeChunks = async (chunkBuffers: Buffer[], headerText: string, skipHeaderAndFooter?: number[]): Promise<Uint8Array> => {
+const mergeChunks = async (
+  chunkBuffers: Buffer[],
+  headerText: string,
+  decorateOpts?: IDecorateOptions,
+): Promise<Uint8Array> => {
   const mergedPdf = await PDFDocument.create()
   mergedPdf.registerFontkit(fontkit)
   const philosopherBytes = await fs.readFile(philosopherFontPath)
@@ -381,7 +399,7 @@ const mergeChunks = async (chunkBuffers: Buffer[], headerText: string, skipHeade
   rebuildNamedDestinations(mergedPdf, chunkMeta)
   logger.info(chalk.gray(endRebuildNamedDestinations()))
 
-  decoratePdfPages(mergedPdf, headerText, font, skipHeaderAndFooter)
+  decoratePdfPages(mergedPdf, headerText, font, decorateOpts)
 
   return mergedPdf.save()
 }
@@ -505,7 +523,11 @@ const createDocumentContentPdf = async (html: string, outputPath: string, config
   // ── Phase 3: merge + link repair + headers/footers ─────────────────────────
   const endMerge = measure('Merge PDF chunks')
   try {
-    const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '', config.skipHeaderAndFooter)
+    const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '', {
+      skipHeaderAndFooter: config.skipHeaderAndFooter,
+      skipHeader: config.skipHeader,
+      skipFooter: config.skipFooter,
+    })
     await fs.writeFile(outputPath, mergedBytes)
   } catch (err) {
     logger.error(err)

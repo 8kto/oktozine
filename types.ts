@@ -47,6 +47,10 @@ export interface IDocProperties {
    * Example: [1, -1] skips the first and last pages.
    */
   skipHeaderAndFooter?: number[]
+  /** Same as skipHeaderAndFooter but skips only the header. */
+  skipHeader?: number[]
+  /** Same as skipHeaderAndFooter but skips only the footer. */
+  skipFooter?: number[]
 }
 
 export interface IPartProperties extends IDocProperties {
