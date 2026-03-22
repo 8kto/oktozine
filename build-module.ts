@@ -17,6 +17,7 @@ Usage: tsx scripts/oktozine/build-module.ts <partIds> [options]
 <partIds>                           Comma-separated list of part IDs to build (positional)
 -h, --help                          Show this help and exit
 -x, --html-no-skip, no-html-skip    Rebuild every HTML file, skipping the cache
+--parallel                          Build PDFs in parallel (default: serial)
 --log-level <level>                 Set pino logger level (trace|debug|info|warn|error|fatal)
 --config <path>                     Path to build config file (e.g. ./conf/build.conf.ts)
 `.trim()
@@ -26,12 +27,13 @@ interface ICliArgs {
   help: boolean
   logLevel?: string
   htmlNoSkip: boolean
+  parallel: boolean
   config?: string
 }
 
 const parseArgs = (): ICliArgs => {
   const args = process.argv.slice(2)
-  const out: ICliArgs = { partIds: [], help: false, htmlNoSkip: false }
+  const out: ICliArgs = { partIds: [], help: false, htmlNoSkip: false, parallel: false }
 
   let i = 0
   while (i < args.length) {
@@ -60,6 +62,11 @@ const parseArgs = (): ICliArgs => {
       case '--no-html-skip':
       case '--no-skip-html':
         out.htmlNoSkip = true
+        i += 1
+        break
+
+      case '--parallel':
+        out.parallel = true
         i += 1
         break
 
@@ -110,7 +117,7 @@ const runPhase = async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
 /** ---------------------------- main build --------------------------------- */
 
 export const main = async (): Promise<void> => {
-  const { partIds, help, logLevel, htmlNoSkip, config: configPath } = parseArgs()
+  const { partIds, help, logLevel, htmlNoSkip, parallel, config: configPath } = parseArgs()
 
   if (help) {
     // eslint-disable-next-line no-console
@@ -156,14 +163,21 @@ export const main = async (): Promise<void> => {
     await runPhase(`buildHtml() failed for part "${conf.id}"`, () => buildHtml(merged))
   }
 
-  // Parallel PDF build
+  // PDF build — serial by default, parallel with --parallel flag
   await runPhase('buildPdf() failed (one or more parts)', async () => {
-    await Promise.all(
-      docsToBuild.map(async (conf) => {
+    if (parallel) {
+      await Promise.all(
+        docsToBuild.map(async (conf) => {
+          const merged = deepmerge(defaults, conf)
+          await runPhase(`buildPdf() failed for part "${conf.id}"`, () => buildPdf(merged))
+        }),
+      )
+    } else {
+      for (const conf of docsToBuild) {
         const merged = deepmerge(defaults, conf)
         await runPhase(`buildPdf() failed for part "${conf.id}"`, () => buildPdf(merged))
-      }),
-    )
+      }
+    }
   })
 
   const measuredBuildTime = endMeasure()
