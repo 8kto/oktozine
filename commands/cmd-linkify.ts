@@ -9,6 +9,7 @@ import type { CommandHandlerFn } from '../types'
 const convertRoomRefToLink = (ref: string): string => `room-${ref.toLowerCase()}`
 
 const linkRooms = (text: string): string => {
+  // FIXME config
   const roomRefRegex = /\(([A-FPQS]\d+)\)/g
 
   return text.replace(roomRefRegex, (_match, roomRef: string) => {

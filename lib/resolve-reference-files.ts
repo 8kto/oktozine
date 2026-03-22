@@ -79,14 +79,15 @@ export const getReferenceDictionary = (filePaths: string[]): Record<string, IRef
   return parseMarkdown(markdownContent)
 }
 
-export const getReferenceResolver =
-  (buildConf: IModuleBuilderConfig | IPartProperties): ((refId: string, fullText: boolean) => string | null) => {
-    const filePaths = resolveReferenceFiles(buildConf)
-    const storage = getReferenceDictionary(filePaths)
+export const getReferenceResolver = (
+  buildConf: IModuleBuilderConfig | IPartProperties,
+): ((refId: string, fullText: boolean) => string | null) => {
+  const filePaths = resolveReferenceFiles(buildConf)
+  const storage = getReferenceDictionary(filePaths)
 
-    return (refId: string, fullText: boolean): string | null => {
-      const content = fullText ? storage[refId]?.fullText?.trim() : storage[refId]?.shortText?.trim()
+  return (refId: string, fullText: boolean): string | null => {
+    const content = fullText ? storage[refId]?.fullText?.trim() : storage[refId]?.shortText?.trim()
 
-      return content ? handleCommands(content, buildConf as IPartProperties) : null
-    }
+    return content ? handleCommands(content, buildConf as IPartProperties) : null
   }
+}

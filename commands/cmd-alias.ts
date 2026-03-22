@@ -7,7 +7,10 @@ import type { CommandHandlerFn } from '../types'
 const ALIASES = /<!-- (?:item|stats)\[([^\]]+)]([^/]*)\/-->/g
 
 const HTML_ALIASES: Array<[string | RegExp, string]> = [
-  [/<!--\s*cmd:if\[(.*?)\]\s+margin\s+-->/g, `<div class="conditional-block conditional-block--with-margin conditional-block--$1">`],
+  [
+    /<!--\s*cmd:if\[(.*?)\]\s+margin\s+-->/g,
+    `<div class="conditional-block conditional-block--with-margin conditional-block--$1">`,
+  ],
   [/<!--\s*cmd:if\[(.*?)\]\s*-->/g, `<div class="conditional-block conditional-block--$1">`],
   [`<!-- /cmd:if -->`, `</div>`],
   [`<!-- col-break /-->`, `<div class="col-break" aria-hidden="true" role="none">&nbsp;</div>`],
@@ -26,6 +29,7 @@ export const addAliases: CommandHandlerFn = (markdown, config) => {
     return acc.replaceAll(cur[0], cur[1])
   }, replaced)
 
+  // Quick optimization for OSR builds, not to scan B(S)H versions
   if (config.id.match(/osr$/)) {
     res = HTML_ALIASES_OSR.reduce((acc, cur) => {
       return acc.replaceAll(cur[0], cur[1])

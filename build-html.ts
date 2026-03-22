@@ -8,12 +8,7 @@ import { fileURLToPath } from 'url'
 
 import packageConfig from '../../package.json' with { type: 'json' }
 import handleCommands from './commands/index'
-import {
-  getBuildFilePath,
-  isFileChangedSinceLastBuild,
-  recalculatePages,
-  updateLastBuildTime,
-} from './lib/build-utils'
+import { getBuildFilePath, isFileChangedSinceLastBuild, recalculatePages, updateLastBuildTime } from './lib/build-utils'
 import { logger } from './lib/logger'
 import { getMarkdownRenderer } from './lib/markdown'
 import { measure } from './lib/measure'

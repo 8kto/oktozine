@@ -23,10 +23,14 @@ const statsTranslations = new Map([
 const resolveValueFor = (statName: string, value: string): string => {
   if (statName === 'A') {
     switch (value) {
-      case 'C': return 'Хаос'
-      case 'L': return 'Законное'
-      case 'N': return 'Нейтральное'
-      default: throw new Error(`Unknown alignment: ${value}`)
+      case 'C':
+        return 'Хаос'
+      case 'L':
+        return 'Законное'
+      case 'N':
+        return 'Нейтральное'
+      default:
+        throw new Error(`Unknown alignment: ${value}`)
     }
   }
   if (value === '-') {

@@ -64,8 +64,8 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
 
   function getTocData({ headersSelector = 'h1, h2, h3' }: Pick<ITocConfig, 'headersSelector'> = {}): ITocItem[] {
     function slugify(el: HTMLElement, sfx: number): void {
-      const slug = el.textContent!
-        .trim()
+      const slug = el
+        .textContent!.trim()
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '')
@@ -106,7 +106,11 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
 
   function renderToc(
     tocData: ITocItem[],
-    { rootClassName, targetId = 'toc-main', tocOverrides }: Pick<ITocConfig, 'rootClassName' | 'targetId' | 'tocOverrides'> = {},
+    {
+      rootClassName,
+      targetId = 'toc-main',
+      tocOverrides,
+    }: Pick<ITocConfig, 'rootClassName' | 'targetId' | 'tocOverrides'> = {},
   ): void {
     const alwaysInclude = new Set(tocOverrides?.alwaysInclude ?? [])
 
