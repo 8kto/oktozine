@@ -83,10 +83,16 @@ const renderChunkOnce = async (html: string, pageRange: string): Promise<Buffer>
 
 // Retry once on failure — parallel Chrome instances can fail transiently
 // due to resource contention (shared memory, CPU spikes, etc.).
-const renderChunk = async (html: string, pageRange: string): Promise<Buffer> => {
+const renderChunk = async (html: string, pageRange: string): Promise<Buffer | null> => {
   try {
+    logger.debug(chalk.gray(`Rendering PDF chunk ${pageRange}`))
+
     return await renderChunkOnce(html, pageRange)
   } catch (err) {
+    if ((err as Error)?.message.includes('Page range exceeds page count')) {
+      return null
+    }
+
     logger.debug(chalk.gray(`chunk ${pageRange}: retrying after error — ${(err as Error).message}`))
     return renderChunkOnce(html, pageRange)
   }
@@ -202,7 +208,9 @@ const mergeChunks = async (chunkBuffers: Buffer[], headerText: string): Promise<
   }
 
   // Rebuild hyperlink destinations
+  const endRebuildNamedDestinations = measure('Rebuild PDF links')
   rebuildNamedDestinations(mergedPdf, chunkMeta)
+  logger.info(chalk.gray(endRebuildNamedDestinations()))
 
   // Draw headers and footers on every page using Philosopher font
   const grayColor = rgb255(137, 137, 137) // #ddd
@@ -372,11 +380,13 @@ const createDocumentContentPdf = async (
   const ranges = buildChunkRanges(N!, chunkSize!)
 
   logger.info(chalk.gray(`rendering ${N} (by ${chunkSize}) chunks in parallel: ${ranges.join(', ')}`))
-  const endRender = measure('pdf-render')
+  const endRender = measure('PDF render')
 
   let chunkBuffers: Buffer[]
   try {
-    chunkBuffers = await Promise.all(ranges.map((range) => renderChunk(finalHtml, range)))
+    chunkBuffers = (await Promise.all(ranges.map((range) => renderChunk(finalHtml, range)))).filter(
+      (b): b is Buffer => !!b,
+    )
   } catch (err) {
     logger.error(err)
 
@@ -386,7 +396,7 @@ const createDocumentContentPdf = async (
   logger.info(chalk.gray(endRender()))
 
   // ── Phase 3: merge + link repair + headers/footers ───────────────────────
-  const endMerge = measure('pdf-merge')
+  const endMerge = measure('Merge PDF chunks')
 
   try {
     const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '')
