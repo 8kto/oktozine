@@ -29,7 +29,7 @@
     "radar:get-token": "(cd maps/crt/; node gm-link.js http://localhost:3010/ grounds)",
     "radar:deploy": "./scripts/deploy-radar-map.sh",
     "lint": "eslint",
-    "release-check": "node scripts/release-check/check-release.mjs",
+    "release-check": "node scripts/release/check-release.mjs",
     "release": "./scripts/release/release.sh",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "watch:styles": "yarn build:styles --watch"
