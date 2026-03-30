@@ -358,14 +358,14 @@ const decoratePdfPages = (
     const { width, height } = page.getSize()
     const pageNumStr = String(pageNum)
 
-    if (!skipBoth.has(pageNum) && !skipFtr.has(pageNum)) {
-      const numWidth = font.widthOfTextAtSize(pageNumStr, fontSize)
-      page.drawText(pageNumStr, { x: (width - numWidth) / 2, y: 7, size: fontSize, font, color: grayColor })
-    }
-
     if (!skipBoth.has(pageNum) && !skipHdr.has(pageNum)) {
       const hdrWidth = font.widthOfTextAtSize(headerText, fontSize)
-      page.drawText(headerText, { x: (width - hdrWidth) / 2, y: height - 13, size: fontSize, font, color: grayColor })
+      page.drawText(headerText, { x: (width - hdrWidth) / 2, y: height - 14, size: fontSize, font, color: grayColor })
+    }
+
+    if (!skipBoth.has(pageNum) && !skipFtr.has(pageNum)) {
+      const numWidth = font.widthOfTextAtSize(pageNumStr, fontSize)
+      page.drawText(pageNumStr, { x: (width - numWidth) / 2, y: 8, size: fontSize, font, color: grayColor })
     }
   })
 }

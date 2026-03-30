@@ -22,7 +22,7 @@ const mainModuleConf: Partial<IPartProperties> = {
   buildPartSize: 8,
   buildProcessesNum: 8,
   skipHeaderAndFooter: [-1, 1, 2, 3, 11, 15, 18, 27, 37, 47, 52, 58],
-  skipFooter: [23, 25, 36, 45, 55]
+  skipFooter: [17, 23, 25, 36, 45, 55],
 }
 
 const mainBestiaryConf: Partial<IPartProperties> = {
@@ -46,6 +46,7 @@ const mainBestiaryConf: Partial<IPartProperties> = {
   skipBuild: true,
   buildPartSize: 8,
   buildProcessesNum: 3,
+  skipHeaderAndFooter: [2],
 }
 
 const config: IModuleBuilderConfig = {
@@ -75,7 +76,7 @@ const config: IModuleBuilderConfig = {
   tocConfig: {
     rootId: 'toc-main',
   },
-  skipHeaderAndFooter: [1, -1],  // skip first and last pages
+  skipHeaderAndFooter: [1, -1], // skip first and last pages
   parts: [
     mainModuleConf as IPartProperties,
     {
@@ -150,8 +151,7 @@ const config: IModuleBuilderConfig = {
         config: 'build/$toc-map.json',
         skipFirstPages: 1,
       },
-      buildPartSize: 5,
-      buildProcessesNum: 2,
+      skipHeaderAndFooter: [2, 3, 4, 5, 6, 7, 8, 9],
     } as IPartProperties,
   ],
 }
