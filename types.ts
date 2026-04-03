@@ -1,5 +1,3 @@
-// ── Shared TypeScript interfaces for the oktozine build system ───────────────
-
 export type PartId = 'main' | 'osr' | 'bestiary' | 'bestiary-osr' | 'items' | 'cover' | 'test-doc' | 'map'
 
 export type ITocOverridesBase = {
@@ -99,4 +97,4 @@ export interface IRefEntry {
 }
 
 /** A function that transforms a markdown string given a build config. */
-export type CommandHandlerFn = (markdown: string, config: IPartProperties) => string
+export type MacroFn = (markdown: string, config: IPartProperties) => string

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'path'
 
-import handleCommands from '../commands/index'
+import handleMacros from '../macros/index'
 import type { IModuleBuilderConfig, IPartProperties, IRefEntry } from '../types'
 
 const findProjectRoot = (startDir?: string): string => {
@@ -88,6 +88,6 @@ export const getReferenceResolver = (
   return (refId: string, fullText: boolean): string | null => {
     const content = fullText ? storage[refId]?.fullText?.trim() : storage[refId]?.shortText?.trim()
 
-    return content ? handleCommands(content, buildConf as IPartProperties) : null
+    return content ? handleMacros(content, buildConf as IPartProperties) : null
   }
 }

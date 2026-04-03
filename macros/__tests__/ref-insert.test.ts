@@ -1,4 +1,4 @@
-import { convertRefInserts } from '../cmd-ref-insert'
+import { convertRefInserts } from '../ref-insert'
 
 describe('convert ref inserts', () => {
   it('should convert cmd into shortened stats html', () => {

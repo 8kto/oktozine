@@ -7,7 +7,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 import packageConfig from '../../package.json' with { type: 'json' }
-import handleCommands from './commands/index'
+import handleMacros from './macros/index'
 import { getBuildFilePath, isFileChangedSinceLastBuild, recalculatePages, updateLastBuildTime } from './lib/build-utils'
 import { logger } from './lib/logger'
 import { getMarkdownRenderer } from './lib/markdown'
@@ -68,9 +68,9 @@ const convertMarkdownToHtml = async (
 
   let processedContent
   try {
-    processedContent = handleCommands(frontMatter.content, config)
+    processedContent = handleMacros(frontMatter.content, config)
   } catch (err) {
-    throw new Error(`handleCommands failed for ${filePath}`, { cause: err })
+    throw new Error(`handleMacros failed for ${filePath}`, { cause: err })
   }
 
   let htmlContent

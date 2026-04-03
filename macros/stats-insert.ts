@@ -2,7 +2,7 @@
  * @file Expand shortened stats block `{ AC: 14; HD: ½; ... }` into HTML layout.
  */
 
-import type { CommandHandlerFn } from '../types'
+import type { MacroFn } from '../types'
 
 const statsTranslations = new Map([
   ['Atk', 'Атаки'],

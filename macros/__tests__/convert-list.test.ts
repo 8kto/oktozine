@@ -1,4 +1,4 @@
-import { convertListToTable } from '../cmd-convert-list'
+import { convertListToTable } from '../convert-list'
 
 describe('convert-list tests', () => {
   it('should convert markdown list to table', () => {

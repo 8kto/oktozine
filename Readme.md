@@ -146,7 +146,7 @@ Overrides are defined in `conf/oktozin.toc.conf.ts` and passed into `buildToc` a
 
 ## Markdown Macro System
 
-Macros are processed by `commands/index.ts` in a fixed pipeline before Markdown rendering. Each macro is a pure `(markdown, config) => markdown` function.
+Macros are processed by `macros/index.ts` in a fixed pipeline before Markdown rendering. Each macro is a pure `(markdown, config) => markdown` function.
 
 ### Pipeline order
 
@@ -161,7 +161,7 @@ Macros are processed by `commands/index.ts` in a fixed pipeline before Markdown 
 | 12 | `convertStatsInserts` | Inlines stat blocks |
 | 13 | `linkify` | Auto-links bare URLs |
 
-Macros also run on the content of each reference block before it is inserted (step 11 calls `handleCommands` recursively on resolved content). The `convertRefInserts` handler itself is excluded from that recursive pass to prevent infinite loops.
+Macros also run on the content of each reference block before it is inserted (step 11 calls `handleMacros` recursively on resolved content). The `convertRefInserts` handler itself is excluded from that recursive pass to prevent infinite loops.
 
 ---
 

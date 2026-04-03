@@ -4,7 +4,6 @@
  *   - inline refs "(A4)" → <a href="#room-a4">(A4)</a>
  */
 
-import type { CommandHandlerFn } from '../types'
 
 const convertRoomRefToLink = (ref: string): string => `room-${ref.toLowerCase()}`
 

@@ -1,4 +1,4 @@
-import { linkify } from '../cmd-linkify'
+import { linkify } from '../linkify'
 
 describe('linkify tests', () => {
   it('should linkify room references', () => {
