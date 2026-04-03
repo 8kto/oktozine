@@ -1,9 +1,16 @@
 // ── Shared TypeScript interfaces for the oktozine build system ───────────────
 
-export interface ITocOverrides {
+export type PartId = 'main' | 'osr' | 'bestiary' | 'bestiary-osr' | 'items' | 'cover' | 'test-doc' | 'map'
+
+export type ITocOverridesBase = {
   dropLabels?: string[]
   dropItemsFromLabels?: string[]
   alwaysInclude?: string[]
+}
+
+export interface ITocOverrides extends ITocOverridesBase {
+  /** Per-part overrides, merged with the top-level defaults (part values take priority). */
+  parts?: Partial<Record<PartId, ITocOverridesBase>>
 }
 
 export interface ITocConfig {

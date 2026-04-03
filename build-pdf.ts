@@ -16,7 +16,7 @@ import { logger } from './lib/logger'
 import { measure } from './lib/measure'
 import { buildToc } from './lib/table-of-contents'
 import { wrapContentSections } from './lib/wrap-sections'
-import type { IPartProperties } from './types'
+import type { IPartProperties, PartId } from './types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const buildHtmlFolderPath = path.join(__dirname, '../../build/chunks-html')
@@ -159,7 +159,9 @@ const buildTocForPage = async (page: Awaited<ReturnType<typeof setupPage>>, conf
   if (!config.tocConfig) return
 
   try {
-    const toc = await page.evaluate(buildToc, { ...config.tocConfig, tocOverrides })
+    const { parts, ...tocDefaults } = tocOverrides
+    const mergedTocOverrides = { ...tocDefaults, ...parts?.[config.id as PartId] }
+    const toc = await page.evaluate(buildToc, { ...config.tocConfig, tocOverrides: mergedTocOverrides })
     const rootId = config.tocConfig.rootId ?? 'toc-main'
     const tocHtml = await page.evaluate((id: string) => document.getElementById(id)?.innerHTML || '', rootId)
     fs.writeFile(path.join(buildHtmlFolderPath, `$toc-${config.id}.html`), tocHtml)
