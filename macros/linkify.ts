@@ -4,7 +4,6 @@
  *   - inline refs "(A4)" → <a href="#room-a4">(A4)</a>
  */
 
-
 const convertRoomRefToLink = (ref: string): string => `room-${ref.toLowerCase()}`
 
 const linkRooms = (text: string): string => {

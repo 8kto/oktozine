@@ -95,7 +95,7 @@ export const addAliases: MacroFn = (markdown, config) => {
     return acc.replaceAll(cur[0], cur[1])
   }, replaced)
 
-  // Quick optimization for OSR builds, not to scan B(S)H versions
+  // FIXME Quick optimization for OSR builds, not to scan B(S)H versions
   if (config.id.match(/osr$/)) {
     res = HTML_ALIASES_OSR.reduce((acc, cur) => {
       return acc.replaceAll(cur[0], cur[1])

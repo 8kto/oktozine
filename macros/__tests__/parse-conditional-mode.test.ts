@@ -1,4 +1,4 @@
-import { parseConditionalMode } from '../parse-conditional-mode'
+import { parseConditionalMode } from '../conditionals'
 
 describe('parses conditionals', () => {
   it('should parse mode [main]', () => {

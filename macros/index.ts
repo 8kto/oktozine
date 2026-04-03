@@ -22,8 +22,12 @@ import { logger } from '../lib/logger'
 import type { MacroFn, IPartProperties } from '../types'
 
 import { addAliases } from './alias'
-import { convertNamedSections } from './anchors'
-import { convertListToTable } from './convert-list'
+import { convertRefInserts } from './ref.macro'
+import { convertNamedSections } from './named.macro'
+import { convertListToTable } from './list-to-table.macro'
+import { linkify } from './linkify'
+import { parseConditionalMode } from './conditionals'
+import { convertStatsInserts } from './stats-insert'
 import {
   glueCrystalsAlike,
   glueDamageUnits,
@@ -32,10 +36,6 @@ import {
   glueUnitsWithNoLineBreaks,
   glueWords,
 } from './glue-units'
-import { linkify } from './linkify'
-import { parseConditionalMode } from './parse-conditional-mode'
-import { convertRefInserts } from './ref-insert'
-import { convertStatsInserts } from './stats-insert'
 
 // Lazily initialised to break the circular-dependency TDZ in ESM:
 // macros/index → ref-insert → resolve-reference-files → macros/index

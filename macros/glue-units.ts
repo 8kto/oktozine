@@ -46,7 +46,6 @@
  * ```
  */
 
-
 /** Supported measurement unit suffixes. */
 const UNITS = ['мм', 'см', 'зм', 'фунтов']
 const combinedUnitsRegex = new RegExp(`(\\d+)\\s*(${UNITS.join('|')})`, 'g')
@@ -100,6 +99,7 @@ const combinedNobrTermsRegex = new RegExp(
 )
 
 /**
+ * FIXME
  * Wrap compound crystal/field terms (e.g. `Телепорт-кристалл`, `t-поле`)
  * in `<nobr>` to prevent mid-word line breaks.
  *
