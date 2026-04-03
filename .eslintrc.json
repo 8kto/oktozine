@@ -51,7 +51,6 @@
     ],
     "jsdoc/require-param-type": "error",
     "jsdoc/require-returns-type": "error",
-    "jsdoc/no-undefined-types": ["error", { "definedTypes": ["CommandHandlerFn", "PartProperties", "TocConfig"] }],
     "import/no-unresolved": [2, { "ignore": ["^#.+$"] }],
     "no-undef": "error"
   },
