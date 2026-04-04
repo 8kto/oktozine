@@ -161,12 +161,12 @@ Macros are processed by `macros/index.ts` in a fixed pipeline before Markdown re
 | --- | ---------------------- | ------------------------------------------------------------- |
 | 1   | `parseConditionalMode` | Inline conditionals                                           |
 | 2   | `addAliases`           | HTML comment macros and item/stats shortcuts                  |
-| 3   | `convertNamedSections` | `<!-- anchor[id] -->` → anchor elements                       |
+| 3   | `convertNamedSections` | `<!-- named[id] /-->` → hidden anchor elements                |
 | 4–9 | `glue*`                | Non-breaking space insertion between words, units, shorthands |
 | 10  | `convertListToTable`   | Converts special Markdown lists to HTML tables                |
 | 11  | `convertRefInserts`    | Inlines referenced content blocks from `$refs-*.md`           |
 | 12  | `convertStatsInserts`  | Inlines stat blocks                                           |
-| 13  | `linkify`              | Auto-links bare URLs                                          |
+| 13  | `linkify`              | Auto-links room references `(A4)` and room headings           |
 
 Macros also run on the content of each reference block before it is inserted (step 11 calls `handleMacros` recursively
 on resolved content). The `convertRefInserts` handler itself is excluded from that recursive pass to prevent infinite
@@ -204,7 +204,77 @@ Shorthand macros written as HTML comments, processed before Markdown rendering:
 | `<!-- span-all-columns /-->`     | Span-all-columns spacer                                   |
 | `<!-- pic[type] id[elemId] /-->` | `<div id="elemId" class="pic-type"></div>`                |
 
-For OSR builds (`id` ending in `osr`), `:` is replaced with `: ` (non-breaking colon spacing).
+For OSR builds (`id` ending in `osr`), ` : ` is replaced with `: ` (non-breaking colon spacing).
+
+---
+
+### `convertNamedSections` — hidden anchors
+
+Creates invisible navigation targets (jump-to anchors) in the output.
+
+```markdown
+<!-- named[secret-room] /-->
+```
+
+Output:
+
+```html
+<a id="secret-room" class="hidden"></a>
+```
+
+| Argument   | Description                                     |
+| ---------- | ----------------------------------------------- |
+| `named[id]` | The anchor `id` value, used verbatim in the HTML |
+
+---
+
+### `glue*` — typography / non-breaking spaces
+
+Six micro-macros that prevent unwanted line breaks around numbers, units, abbreviations, and compound terms. They run as
+separate pipeline steps so they can be reordered or disabled individually.
+
+| Function                    | Pattern                      | Result                         |
+| --------------------------- | ---------------------------- | ------------------------------ |
+| `glueWords`                 | `2:6`                        | `<nobr>2:6</nobr>`            |
+| `glueUnits`                 | `10 м`, `5 фунтов`          | `10&nbsp;м`, `5&nbsp;фунтов`  |
+| `glueShorthands`            | `и т. д.`, `т. е.`          | `<nobr>и т. д.</nobr>`        |
+| `glueUnitsWithNoLineBreaks` | `10′`, `5″`                  | `<nobr>10′</nobr>`            |
+| `glueCrystalsAlike`         | `Телепорт-кристалл`, `t-поле` | `<nobr>Телепорт-кристалл</nobr>` |
+| `glueDamageUnits`           | `2d6 урона`, `3 раунда`     | `2d6&nbsp;урона`               |
+
+**Supported units** (`glueUnits`): мм, см, зм, фунтов.
+
+**Supported abbreviations** (`glueShorthands`): и т. д., и т.д., и т. п., и т.п., в т. ч., в т.ч., и др., и пр.,
+т. д., т.д., т. п., т.п., т. е., т.е., т. к., т.к., т. н., т.н.
+
+**Crystal prefixes** (`glueCrystalsAlike`): Телепорт, Хроно, t, g, f — joined by a hyphen to `кристалл*` or `пол*`.
+
+**Damage/duration units** (`glueDamageUnits`): урон*, ход*, раунд*, раз*. Handles both dice notation (`2d6 урона`) and
+plain numbers (`3 раунда`).
+
+---
+
+### `convertListToTable` — list-to-table conversion
+
+Converts fenced Markdown lists into Markdown tables. The block is delimited by an opening `<!-- cmd[list-to-table] … -->`
+comment and a closing `<!-- /cmd -->`.
+
+```markdown
+<!-- cmd[list-to-table] header[d4|Encounter] no-page-break id[random-enc] -->
+- 1 | A swarm of bats
+- 2 | Dripping ceiling
+- 3 | Loose rubble
+- 4 | Mushroom patch
+<!-- /cmd -->
+```
+
+| Argument         | Required | Description                                              |
+| ---------------- | -------- | -------------------------------------------------------- |
+| `header[c1\|c2]` | yes      | Pipe-separated column headers                            |
+| `no-page-break`  | no       | Adds a CSS class to prevent the table from splitting     |
+| `id[value]`      | no       | Sets `id="value"` on the wrapper `<div>`                 |
+
+Each list item is a `- left | right` row. Items that don't match the pattern are silently dropped.
 
 ---
 
@@ -229,6 +299,74 @@ Pulls named content blocks from the reference dictionary (built from `referenceF
 
 Reference files are standard Markdown files where each `##` heading defines a named block. Everything between two `##`
 headings is that block's content.
+
+---
+
+### `convertStatsInserts` — inline stat blocks
+
+Expands compact stat-block shorthand (single-brace `` `{ … }` ``) into styled HTML. Stat keys are English abbreviations
+that are translated to Russian in the output.
+
+```markdown
+`{ AC: 14; HD: 2; HP: 9; Atk: 1; DMG: 1d6; MV: 40; ML: 8; A: N; XP: 20; S: F2; CL: 2 }`
+```
+
+**Supported stat keys:**
+
+| Key   | Russian              | Meaning              |
+| ----- | -------------------- | -------------------- |
+| `AC`  | КБ                   | Armour Class         |
+| `HD`  | ХД                   | Hit Dice             |
+| `HP`  | ХП                   | Hit Points           |
+| `Atk` | Атаки                | Attacks (multiattack link) |
+| `DMG` | Урон                 | Damage               |
+| `MV`  | Скорость             | Movement Speed       |
+| `ML`  | Мораль               | Morale               |
+| `A`   | МВ (Мировоззрение)   | Alignment            |
+| `XP`  | Опыт                 | Experience Points    |
+| `S`   | Спасброски           | Saving Throws        |
+| `CL`  | Сложность            | Challenge Level      |
+| `LVL` | Уровень              | Level                |
+| `MR`  | Устойчивость к магии | Magic Resistance     |
+
+**Special value handling:**
+
+- **Alignment (`A`):** `C` → Хаос, `L` → Законное, `N` → Нейтральное.
+- **Dash (`-`):** rendered as "Нет".
+- **`Atk`:** rendered as a clickable link to the multiattack rules anchor (`#anchor-multiattack`).
+
+The output is wrapped in `<div class="stats-insert no-page-break">`.
+
+> **Note:** Single braces `` `{ … }` `` are stat blocks; double braces `` `{{ … }}` `` are conditionals
+> (`parseConditionalMode`). The regex uses a negative lookahead to distinguish them.
+
+---
+
+### `linkify` — room reference linking
+
+Auto-links room references and room headings. Two passes run sequentially:
+
+1. **Inline refs:** `(A4)` → `<a class="linkified" href="#room-a4">(A4)</a>`
+2. **Headings:** `## A2. Throne Room` → `<h2 id="room-a2">A2. Throne Room</h2>`
+
+Room codes must start with one of the accepted area prefixes followed by one or more digits:
+
+| Prefix | Area            |
+| ------ | --------------- |
+| `A`    | Caves           |
+| `B`    | Quarters        |
+| `C`    | Upper level     |
+| `D`    | Relax zone      |
+| `E`    | Vargothar       |
+| `F`    | Misc            |
+| `P`    | Misc            |
+| `Q`    | Appendix quests |
+| `S`    | Spaceship       |
+
+```markdown
+The passage leads to (A4).    →  …<a href="#room-a4">(A4)</a>.
+## S1. Engine Bay              →  <h2 id="room-s1">S1. Engine Bay</h2>
+```
 
 ---
 
