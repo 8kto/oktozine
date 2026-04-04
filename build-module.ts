@@ -9,6 +9,15 @@ import { loadBuildConfig } from './lib/build-config-loader'
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
 
+interface ICliArgs {
+  partIds: string[]
+  help: boolean
+  logLevel?: string
+  htmlNoSkip: boolean
+  parallel: boolean
+  config?: string
+}
+
 /** ---------- CLI parsing -------------------------------------------------- */
 
 const USAGE = `
@@ -21,15 +30,6 @@ Usage: tsx scripts/oktozine/build-module.ts <partIds> [options]
 --log-level <level>                 Set pino logger level (trace|debug|info|warn|error|fatal)
 --config <path>                     Path to build config file (e.g. ./conf/build.conf.ts)
 `.trim()
-
-interface ICliArgs {
-  partIds: string[]
-  help: boolean
-  logLevel?: string
-  htmlNoSkip: boolean
-  parallel: boolean
-  config?: string
-}
 
 const parseArgs = (): ICliArgs => {
   const args = process.argv.slice(2)

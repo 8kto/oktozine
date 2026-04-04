@@ -38,7 +38,6 @@
  * ```
  */
 
-import type { MacroFn } from '../types'
 
 /**
  * Convert fenced `<!-- cmd[list-to-table] … -->` blocks into Markdown tables.
@@ -77,6 +76,7 @@ export const convertListToTable = (markdown: string): string => {
           return null
         }
         const [, left, right] = m
+
         return `| ${left} | ${right} |`
       })
       .filter((row): row is string => row !== null)

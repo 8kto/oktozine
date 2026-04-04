@@ -52,6 +52,7 @@ const linkRooms = (text: string): string => {
 
   return text.replace(roomRefRegex, (_match, roomRef: string) => {
     const id = convertRoomRefToLink(roomRef)
+
     return `<a class="linkified" target="_self" href="#${id}">(${roomRef})</a>`
   })
 }
@@ -71,6 +72,7 @@ const linkHeaders = (text: string): string => {
   return text.replace(headerRegex, (_match, hashes: string, roomRef: string, headerText: string) => {
     const level = hashes.length
     const id = convertRoomRefToLink(roomRef)
+
     return `<h${level} id="${id}">${roomRef}. ${headerText}</h${level}>`
   })
 }

@@ -31,7 +31,6 @@
  * ```
  */
 
-import type { MacroFn } from '../types'
 
 /**
  * Map of English stat abbreviations to their Russian translations.
@@ -96,6 +95,7 @@ const resolveValueFor = (statName: string, value: string): string => {
   if (value === '-') {
     return 'Нет'
   }
+
   return value
 }
 

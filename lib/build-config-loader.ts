@@ -6,11 +6,13 @@ import type { IModuleBuilderConfig } from '../types'
 export const loadBuildConfig = async (cliPath?: string): Promise<IModuleBuilderConfig> => {
   const importConfig = async (absPath: string): Promise<IModuleBuilderConfig> => {
     const mod = await import(pathToFileURL(absPath).href)
+
     return Object.prototype.hasOwnProperty.call(mod, 'default') ? mod.default : mod
   }
 
   if (cliPath) {
     const abs = resolve(process.cwd(), cliPath)
+
     return importConfig(abs)
   }
 

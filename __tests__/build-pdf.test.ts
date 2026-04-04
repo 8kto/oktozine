@@ -116,6 +116,7 @@ describe('assembleDocumentHtml', () => {
 
   const pageClass = (name: string) => {
     const pageName = name.replace('.md.html', '').replace(/^\d+-/, '')
+
     return `page--wrapper page--mod page--mod-${pageName} page-name--${pageName}`
   }
 

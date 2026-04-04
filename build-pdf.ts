@@ -69,6 +69,7 @@ const injectNamePolyfill = (page: Awaited<ReturnType<typeof setupPage>>) =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(window as any).__name = (target: any, value: string) => {
       Object.defineProperty(target, 'name', { value, configurable: true })
+
       return target
     }
   })
@@ -110,6 +111,7 @@ const renderChunk = async (html: string, pageRange: string): Promise<Buffer | nu
     }
 
     logger.debug(chalk.gray(`chunk ${pageRange}: retrying after error — ${(err as Error).message}`))
+
     return renderChunkOnce(html, pageRange)
   }
 }
@@ -156,7 +158,9 @@ const writeFullContentToFile = (id: string, content: string): void => {
 // ── PDF DOM preparation ──────────────────────────────────────────────────────
 
 const buildTocForPage = async (page: Awaited<ReturnType<typeof setupPage>>, config: IPartProperties): Promise<void> => {
-  if (!config.tocConfig) return
+  if (!config.tocConfig) {
+    return
+  }
 
   try {
     const { parts, ...tocDefaults } = tocOverrides
@@ -218,6 +222,7 @@ const preparePdfHtml = async (html: string, config: IPartProperties): Promise<IP
     return { finalHtml, approxPageCount }
   } catch (err) {
     logger.error(err)
+
     return null
   } finally {
     await browser.close()
@@ -388,7 +393,9 @@ const mergeChunks = async (
   for (const buf of chunkBuffers) {
     const doc = await PDFDocument.load(buf)
     const srcIndices = doc.getPageIndices()
-    if (srcIndices.length === 0) continue // empty chunk (over-estimated page count)
+    if (srcIndices.length === 0) {
+      continue
+    } // empty chunk (over-estimated page count)
 
     const copied = await mergedPdf.copyPages(doc, srcIndices)
     copied.forEach((p) => mergedPdf.addPage(p))
@@ -418,7 +425,9 @@ export const compareHtmlFiles = (a: string, b: string): number => {
   if (baseA === baseB) {
     const incA = isIncremented(a)
     const incB = isIncremented(b)
-    if (incA !== incB) return incA ? 1 : -1
+    if (incA !== incB) {
+      return incA ? 1 : -1
+    }
   }
 
   return a.localeCompare(b)
@@ -443,6 +452,7 @@ const readModuleHtmlPages = async (
         return null
       }
       const content = await fs.readFile(path.join(moduleDir, file), 'utf8')
+
       return [file, content]
     }),
   )
@@ -499,7 +509,9 @@ const createDocumentContentPdf = async (html: string, outputPath: string, config
   // ── Phase 1: DOM setup (TOC, section-wrap, page count, HTML serialisation) ─
   const endSetup = measure('Setup PDF doc: TOC, sections wrap...')
   const prepared = await preparePdfHtml(html, config)
-  if (!prepared) return
+  if (!prepared) {
+    return
+  }
 
   const { finalHtml, approxPageCount } = prepared
   const { N, chunkSize } = resolveChunkPlan(config, approxPageCount)
@@ -517,6 +529,7 @@ const createDocumentContentPdf = async (html: string, outputPath: string, config
     )
   } catch (err) {
     logger.error(err)
+
     return
   }
 
@@ -533,6 +546,7 @@ const createDocumentContentPdf = async (html: string, outputPath: string, config
     await fs.writeFile(outputPath, mergedBytes)
   } catch (err) {
     logger.error(err)
+
     return
   }
 
