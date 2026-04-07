@@ -18,6 +18,8 @@ export interface ITocConfig {
   targetId?: string
   renderMaxLevel?: number
   tocOverrides?: ITocOverrides
+  /** Anchor ID → 1-based page number. When provided, page numbers are rendered next to each TOC item. */
+  pageNumbers?: Record<string, number>
 }
 
 export interface ITocItem {

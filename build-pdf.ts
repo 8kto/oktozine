@@ -5,6 +5,7 @@ import { mkdir } from 'node:fs/promises'
 import fontkit from '@pdf-lib/fontkit'
 import chalk from 'chalk'
 import fs from 'fs-extra'
+import { JSDOM } from 'jsdom'
 import path from 'path'
 import { PDFArray, PDFDict, PDFDocument, PDFFont, PDFName, PDFRef, rgb } from 'pdf-lib'
 import puppeteer from 'puppeteer'
@@ -16,7 +17,7 @@ import { logger } from './lib/logger'
 import { measure } from './lib/measure'
 import { buildToc } from './lib/table-of-contents'
 import { wrapContentSections } from './lib/wrap-sections'
-import type { IPartProperties, PartId } from './types'
+import type { IPartProperties, ITocItem, PartId } from './types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const buildHtmlFolderPath = path.join(__dirname, '../../build/chunks-html')
@@ -262,6 +263,7 @@ export const resolveChunkPlan = (config: IPartProperties, approxPageCount: numbe
 const rebuildNamedDestinations = (
   mergedPdf: PDFDocument,
   chunks: Array<{ doc: PDFDocument; pageOffset: number }>,
+  anchorPageOut?: Map<string, number>,
 ): void => {
   const mergedPages = mergedPdf.getPages()
   const allEntries: Array<[PDFName, ReturnType<typeof mergedPdf.context.obj>]> = []
@@ -310,6 +312,10 @@ const rebuildNamedDestinations = (
       ])
       allEntries.push([key, newDest])
       chunkCount++
+
+      if (anchorPageOut) {
+        anchorPageOut.set(key.toString().slice(1), pageOffset + localIdx + 1)
+      }
     }
     logger.debug(chalk.gray(`chunk @${pageOffset}: ${srcPages.length} pages, ${chunkCount} dests`))
   }
@@ -328,6 +334,12 @@ const rebuildNamedDestinations = (
 
   logger.debug(chalk.gray(`rebuilt ${allEntries.length} named destinations in /Catalog/Dests`))
 }
+
+// ── TOC helpers ──────────────────────────────────────────────────────────────
+
+/** Recursively collects all anchor IDs from TOC items. */
+const flattenTocIds = (items: ITocItem[]): string[] =>
+  items.flatMap((item) => [item.id, ...(item.items ? flattenTocIds(item.items) : [])].filter((id): id is string => !!id))
 
 // ── PDF page decoration ──────────────────────────────────────────────────────
 
@@ -377,10 +389,44 @@ const decoratePdfPages = (
   })
 }
 
+/** Draws header/footer on a specific range of pages (1-based, inclusive). */
+const decoratePagesInRange = (
+  pdf: PDFDocument,
+  headerText: string,
+  font: PDFFont,
+  fromPage: number,
+  toPage: number,
+  opts: IDecorateOptions = {},
+): void => {
+  const grayColor = rgb255(137, 137, 137)
+  const fontSize = 6
+  const totalPages = pdf.getPageCount()
+  const resolve = (pages: number[] = []) => new Set(pages.map((n) => (n < 0 ? totalPages + n + 1 : n)))
+  const skipBoth = resolve(opts.skipHeaderAndFooter)
+  const skipHdr = resolve(opts.skipHeader)
+  const skipFtr = resolve(opts.skipFooter)
+
+  for (let pageNum = fromPage; pageNum <= toPage; pageNum++) {
+    const page = pdf.getPage(pageNum - 1)
+    const { width, height } = page.getSize()
+
+    if (!skipBoth.has(pageNum) && !skipHdr.has(pageNum)) {
+      const hdrWidth = font.widthOfTextAtSize(headerText, fontSize)
+      page.drawText(headerText, { x: (width - hdrWidth) / 2, y: height - 14, size: fontSize, font, color: grayColor })
+    }
+    if (!skipBoth.has(pageNum) && !skipFtr.has(pageNum)) {
+      const numStr = String(pageNum)
+      const numWidth = font.widthOfTextAtSize(numStr, fontSize)
+      page.drawText(numStr, { x: (width - numWidth) / 2, y: 8, size: fontSize, font, color: grayColor })
+    }
+  }
+}
+
 const mergeChunks = async (
   chunkBuffers: Buffer[],
   headerText: string,
   decorateOpts?: IDecorateOptions,
+  anchorPageOut?: Map<string, number>,
 ): Promise<Uint8Array> => {
   const mergedPdf = await PDFDocument.create()
   mergedPdf.registerFontkit(fontkit)
@@ -405,7 +451,7 @@ const mergeChunks = async (
   }
 
   const endRebuildNamedDestinations = measure('Rebuild PDF links')
-  rebuildNamedDestinations(mergedPdf, chunkMeta)
+  rebuildNamedDestinations(mergedPdf, chunkMeta, anchorPageOut)
   logger.info(chalk.gray(endRebuildNamedDestinations()))
 
   decoratePdfPages(mergedPdf, headerText, font, decorateOpts)
@@ -535,14 +581,99 @@ const createDocumentContentPdf = async (html: string, outputPath: string, config
 
   logger.info(chalk.gray(endRender()))
 
+  const decorateOpts: IDecorateOptions = {
+    skipHeaderAndFooter: config.skipHeaderAndFooter,
+    skipHeader: config.skipHeader,
+    skipFooter: config.skipFooter,
+  }
+
   // ── Phase 3: merge + link repair + headers/footers ─────────────────────────
   const endMerge = measure('Merge PDF chunks')
+  const anchorPageOut = config.tocConfig ? new Map<string, number>() : undefined
   try {
-    const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '', {
-      skipHeaderAndFooter: config.skipHeaderAndFooter,
-      skipHeader: config.skipHeader,
-      skipFooter: config.skipFooter,
-    })
+    const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '', decorateOpts, anchorPageOut)
+
+    // ── Phase 4: splice TOC pages with page numbers ─────────────────────────
+    // Pass 1 already produced the final decorated PDF. Here we:
+    //   1. Determine which pages are TOC pages
+    //   2. Re-render only those pages with page numbers injected (jsdom + 1 small render)
+    //   3. Splice the new pages into the merged PDF in place
+    //   4. Decorate only the spliced pages (header/footer)
+    if (process.env.BUILD_TOC_PAGENUMS && config.tocConfig && anchorPageOut && anchorPageOut.size > 0) {
+      const tocRootId = config.tocConfig.rootId ?? 'toc-main'
+      // Primary: look up the named destination Chrome emitted for the TOC root element.
+      // Fallback: skipFirstPages tells us how many pre-TOC pages there are.
+      const tocStartPage =
+        anchorPageOut.get(tocRootId) ?? (config.bookmarksConfig?.skipFirstPages ?? 0) + 1
+
+      let tocEndPage: number | undefined
+      try {
+        const tocJsonPath = path.join(__dirname, `../../build/$toc-${config.id}.json`)
+        const tocItems: ITocItem[] = JSON.parse(await fs.readFile(tocJsonPath, 'utf8'))
+        const pages = flattenTocIds(tocItems)
+          .map((id) => anchorPageOut!.get(id))
+          .filter((p): p is number => p !== undefined)
+        if (pages.length > 0) {
+          tocEndPage = Math.min(...pages) - 1
+        }
+      } catch {
+        logger.debug('Could not load TOC JSON to determine TOC page range')
+      }
+
+      if (tocEndPage !== undefined && tocEndPage >= tocStartPage) {
+        logger.info(chalk.gray(`Patching TOC pages ${tocStartPage}–${tocEndPage} with page numbers...`))
+
+        // 1. Inject page numbers into the TOC links (in-process, no browser)
+        const dom = new JSDOM(finalHtml)
+        const tocRoot = dom.window.document.getElementById(tocRootId)
+        if (tocRoot) {
+          for (const a of tocRoot.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')) {
+            const anchorId = a.getAttribute('href')!.slice(1)
+            if (anchorId === tocRootId) {continue} // skip the self-link sentinel
+            const pageNum = anchorPageOut!.get(anchorId)
+            if (pageNum !== undefined) {
+              const span = dom.window.document.createElement('span')
+              span.className = 'toc-page-num'
+              span.textContent = String(pageNum)
+              // Insert after .toc-dots but before any child <ul>, so flex-wrap
+              // puts it on the same row as the label — not after the children.
+              const dotsSpan = a.nextElementSibling
+              a.parentElement!.insertBefore(span, dotsSpan?.nextElementSibling ?? null)
+            }
+          }
+        }
+        const patchedHtml = dom.serialize()
+
+        // 2. Render only the TOC pages
+        const tocBuffer = await renderChunk(patchedHtml, `${tocStartPage}-${tocEndPage}`)
+        if (tocBuffer) {
+          // 3. Splice new TOC pages into the merged PDF
+          const mergedDoc = await PDFDocument.load(mergedBytes)
+          const tocDoc = await PDFDocument.load(tocBuffer)
+
+          // Remove old TOC pages in reverse order to keep indices stable
+          for (let i = tocEndPage - 1; i >= tocStartPage - 1; i--) {
+            mergedDoc.removePage(i)
+          }
+
+          // Insert the new TOC pages at the same position
+          const tocPageCount = tocEndPage - tocStartPage + 1
+          const newPages = await mergedDoc.copyPages(tocDoc, [...Array(tocPageCount).keys()])
+          newPages.forEach((page, i) => mergedDoc.insertPage(tocStartPage - 1 + i, page))
+
+          // 4. Decorate only the spliced pages (merged PDF is already decorated elsewhere)
+          mergedDoc.registerFontkit(fontkit)
+          const patchFont = await mergedDoc.embedFont(await fs.readFile(philosopherFontPath))
+          decoratePagesInRange(mergedDoc, config.header ?? '', patchFont, tocStartPage, tocEndPage, decorateOpts)
+
+          await fs.writeFile(outputPath, await mergedDoc.save())
+          logger.info(chalk.gray(endMerge()))
+
+          return
+        }
+      }
+    }
+
     await fs.writeFile(outputPath, mergedBytes)
   } catch (err) {
     logger.error(err)

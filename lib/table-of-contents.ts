@@ -110,7 +110,8 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
       rootClassName,
       targetId = 'toc-main',
       tocOverrides,
-    }: Pick<ITocConfig, 'rootClassName' | 'targetId' | 'tocOverrides'> = {},
+      pageNumbers,
+    }: Pick<ITocConfig, 'rootClassName' | 'targetId' | 'tocOverrides' | 'pageNumbers'> = {},
   ): void {
     const alwaysInclude = new Set(tocOverrides?.alwaysInclude ?? [])
 
@@ -128,9 +129,33 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
         const li = document.createElement('li')
         const a = document.createElement('a')
         a.href = `#${item.id}`
-        a.textContent = item.label
         a.classList.add(`level-${visualDepth}`)
+
+        const labelSpan = document.createElement('span')
+        labelSpan.className = 'toc-label'
+        labelSpan.textContent = item.label
+        a.appendChild(labelSpan)
+
         li.appendChild(a)
+
+        const dotsSpan = document.createElement('span')
+        dotsSpan.className = 'toc-dots'
+        li.appendChild(dotsSpan)
+
+        const pageNum = item.id ? pageNumbers?.[item.id] : undefined
+        if (pageNum !== undefined) {
+          const pageSpan = document.createElement('span')
+          pageSpan.className = 'toc-page-num'
+          pageSpan.textContent = String(pageNum)
+          li.appendChild(pageSpan)
+        // } else {
+        //   // DEBUG
+        //   // li.removeChild(document.querySelector('.toc-page-num')!)
+        //   const pageSpan = document.createElement('span')
+        //   pageSpan.className = 'toc-page-num'
+        //   pageSpan.textContent = String('99')
+        //   li.appendChild(pageSpan)
+        }
 
         const hasChildren = Array.isArray(item.items) && item.items.length > 0
         if (hasChildren) {
@@ -151,11 +176,20 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
     if (rootClassName) {
       tocNav.classList.add(rootClassName)
     }
+
     tocNav.appendChild(createList(tocData, 1))
 
     const tocRoot = document.getElementById(targetId)
     if (tocRoot) {
       tocRoot.appendChild(tocNav)
+
+      // A link pointing to the TOC root causes Chrome to emit a named destination
+      // for it in /Catalog/Dests, letting us locate the TOC start page precisely.
+      // Appended to <body> (not inside the TOC) so it has zero layout impact.
+      const tocAnchor = document.createElement('a')
+      tocAnchor.href = `#${targetId}`
+      tocAnchor.style.cssText = 'position:fixed;left:-9999px;opacity:0'
+      document.body.appendChild(tocAnchor)
     }
   }
 
