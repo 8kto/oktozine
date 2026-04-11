@@ -1,4 +1,5 @@
-import { assembleDocumentHtml, buildChunkRanges, compareHtmlFiles, resolveChunkPlan } from '../build-pdf'
+import { assembleDocumentHtml, compareHtmlFiles } from '../lib/pdf-html-assembler'
+import { buildChunkRanges, resolveChunkPlan } from '../build-pdf'
 import type { IPartProperties } from '../types'
 
 // ── buildChunkRanges ─────────────────────────────────────────────────────────

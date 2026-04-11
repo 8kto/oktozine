@@ -1,6 +1,5 @@
 #!/bin/env node
 
-import { createHash } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
 
 import fontkit from '@pdf-lib/fontkit'
@@ -16,6 +15,19 @@ import { tocOverrides } from '../../conf/oktozin.toc.conf'
 import packageConfig from '../../package.json' with { type: 'json' }
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
+import {
+  chunkCachePath,
+  hashContent,
+  IIncrementalBuildInfo,
+  loadRegistry,
+  resolveIncrementalPlan,
+  saveRegistry,
+} from './lib/pdf-chunk-registry'
+import {
+  assembleDocumentHtml,
+  getFullPageTemplate,
+  readModuleHtmlPages,
+} from './lib/pdf-html-assembler'
 import { buildToc } from './lib/table-of-contents'
 import { wrapContentSections } from './lib/wrap-sections'
 import type { IPartProperties, ITocItem, PartId } from './types'
@@ -116,24 +128,6 @@ const renderChunk = async (html: string, pageRange: string): Promise<Buffer | nu
 
     return renderChunkOnce(html, pageRange)
   }
-}
-
-// ── HTML content helpers ─────────────────────────────────────────────────────
-
-const getPageClassname = (moduleId: string, fileName: string): string => {
-  const pageName = fileName.replace('.md.html', '').replace(/^\d+-/, '')
-
-  return `page--wrapper page--${moduleId} page--${moduleId}-${pageName} page-name--${pageName}`
-}
-
-const getPageTemplate = (moduleId: string, fileName: string, pageContent: string, skipDelimiter = false): string => {
-  return `<div class="${getPageClassname(moduleId, fileName)}">
-    ${pageContent}
-  </div>${skipDelimiter ? '' : '<div class="page-delimiter"></div>' + `<!-- ${fileName} -->`}`
-}
-
-const getFullPageTemplate = (content: string): string => {
-  return `<div class="page-bg"></div><div class="full-content-container">${content}</div>`
 }
 
 const writeFullContentToFile = (id: string, content: string): void => {
@@ -460,81 +454,6 @@ const mergeChunks = async (
   return mergedPdf.save()
 }
 
-// ── HTML file assembly helpers ───────────────────────────────────────────────
-
-const isIncremented = (name: string): boolean => /-\d+\.md\.html$/.test(name)
-const baseName = (name: string): string => name.replace(/-\d+\.md\.html$/, '.md.html')
-
-/** Sorts HTML chunk files alphabetically; incremented variants (e.g. `-2.md.html`) sort after their base. */
-export const compareHtmlFiles = (a: string, b: string): number => {
-  const baseA = baseName(a)
-  const baseB = baseName(b)
-  if (baseA === baseB) {
-    const incA = isIncremented(a)
-    const incB = isIncremented(b)
-    if (incA !== incB) {
-      return incA ? 1 : -1
-    }
-  }
-
-  return a.localeCompare(b)
-}
-
-/**
- * Reads and filters all HTML page files for a module, excluding cover/back-cover
- * and internal build artifacts (files prefixed with `$` or named `server.html`).
- * Returns sorted `[filename, content]` pairs.
- */
-const readModuleHtmlPages = async (
-  config: IPartProperties,
-  excludeFiles: Array<string | null>,
-): Promise<Array<[string, string]>> => {
-  const moduleDir = path.join(buildHtmlFolderPath, `module-${config.id}`)
-  const allFiles = await fs.readdir(moduleDir)
-  const excluded = new Set(excludeFiles.filter((f): f is string => f !== null))
-
-  const entries = await Promise.all(
-    [...new Set(allFiles)].map(async (file): Promise<[string, string] | null> => {
-      if (!file.endsWith('.html') || file.startsWith('$') || file === 'server.html' || excluded.has(file)) {
-        return null
-      }
-      const content = await fs.readFile(path.join(moduleDir, file), 'utf8')
-
-      return [file, content]
-    }),
-  )
-
-  return entries.filter((x): x is [string, string] => x !== null).sort(([a], [b]) => compareHtmlFiles(a, b))
-}
-
-/** Concatenates cover, sorted page fragments, and back-cover into the full HTML body string. */
-export const assembleDocumentHtml = (
-  config: IPartProperties,
-  coverContent: string | null,
-  sortedPages: Array<[string, string]>,
-  backCoverContent: string | null,
-): string => {
-  const coverFile = config.coverHtmlFile ? `${config.coverHtmlFile}.html` : null
-  const backCoverFile = config.backCoverHtmlFile ? `${config.backCoverHtmlFile}.html` : null
-
-  let html = ''
-
-  if (coverFile && coverContent) {
-    html += getPageTemplate(config.id, coverFile, coverContent, true)
-  }
-
-  sortedPages.forEach(([file, txt], index, arr) => {
-    logger.debug(chalk.green(`>> PDF includes ${file}`))
-    html += getPageTemplate(config.id, file, txt, index >= arr.length - 1)
-  })
-
-  if (backCoverFile && backCoverContent) {
-    html += getPageTemplate(config.id, backCoverFile, backCoverContent, true)
-  }
-
-  return html
-}
-
 // ── Chunk range planning ─────────────────────────────────────────────────────
 
 /**
@@ -549,136 +468,6 @@ export const buildChunkRanges = (N: number, chunkSize: number): string[] =>
 
     return `${start}-${end}`
   })
-
-// ── Incremental build registry ───────────────────────────────────────────────
-
-/** MD5 hex digest of a string — fast enough for build-time comparison. */
-const hashContent = (s: string): string => createHash('md5').update(s).digest('hex')
-
-interface IChunkRegistry {
-  partId: string
-  builtAt: number
-  N: number
-  chunkSize: number
-  /** All tracked file base-names → MD5 hash of their content. CSS is stored under '__css__'. */
-  fileHashes: Record<string, string>
-}
-
-interface IIncrementalBuildInfo {
-  /** Ordered list of HTML file base-names (cover → body pages → back-cover). */
-  fileOrder: string[]
-  /** base-name → MD5 content hash for every HTML file + '__css__'. */
-  fileHashes: Record<string, string>
-}
-
-interface IIncrementalPlan {
-  /** chunk index → pre-loaded Buffer (safe to reuse). */
-  cached: Map<number, Buffer>
-  /** Chunk indices that must be freshly rendered. */
-  toRebuild: Set<number>
-}
-
-const registryPath = (partId: string): string =>
-  path.join(buildPdfFolderPath, `${partId}-registry.json`)
-
-const chunkCachePath = (partId: string, i: number): string =>
-  path.join(buildPdfFolderPath, `${partId}-chunk-${i}.pdf`)
-
-const loadRegistry = async (partId: string): Promise<IChunkRegistry | null> => {
-  try {
-    return JSON.parse(await fs.readFile(registryPath(partId), 'utf8')) as IChunkRegistry
-  } catch {
-    return null
-  }
-}
-
-const saveRegistry = (registry: IChunkRegistry): Promise<void> =>
-  fs.writeFile(registryPath(registry.partId), JSON.stringify(registry, null, 2))
-
-/**
- * Assigns each HTML file (by position in the ordered file list) to a chunk
- * index (0-based). The mapping is approximate — it is based on file count, not
- * real page counts — but errs on the side of over-rendering (false positives)
- * rather than under-rendering (false negatives).
- */
-const assignFilesToChunks = (names: string[], N: number): Map<string, number> => {
-  const M = Math.max(1, names.length)
-
-  return new Map(names.map((name, i) => [name, Math.min(N - 1, Math.floor((i * N) / M))]))
-}
-
-/**
- * Compares current file mtimes against the last registry snapshot to decide
- * which PDF chunks must be re-rendered and which can be loaded from disk.
- */
-const resolveIncrementalPlan = async (
-  partId: string,
-  fileOrder: string[],
-  allFileHashes: Record<string, string>,
-  N: number,
-  chunkSize: number,
-): Promise<IIncrementalPlan> => {
-  const rebuildAll = (): IIncrementalPlan => ({
-    cached: new Map(),
-    toRebuild: new Set(Array.from({ length: N }, (_, i) => i)),
-  })
-
-  const registry = await loadRegistry(partId)
-  if (!registry || registry.N !== N || registry.chunkSize !== chunkSize) {
-    return rebuildAll()
-  }
-
-  // Any CSS change affects every page → rebuild all chunks.
-  if (registry.fileHashes['__css__'] !== allFileHashes['__css__']) {
-    logger.debug(chalk.gray(`CSS changed for "${partId}" — rebuilding all chunks`))
-
-    return rebuildAll()
-  }
-
-  // If the set of HTML files changed (added/removed), page order may have
-  // shifted and we can no longer trust the chunk→file assignment.
-  const prevHtmlNames = Object.keys(registry.fileHashes).filter((k) => k !== '__css__')
-  if (prevHtmlNames.length !== fileOrder.length || fileOrder.some((n) => registry.fileHashes[n] === undefined)) {
-    logger.debug(chalk.gray(`HTML file set changed for "${partId}" — rebuilding all chunks`))
-
-    return rebuildAll()
-  }
-
-  // Find chunks that contain at least one changed file.
-  const fileToChunk = assignFilesToChunks(fileOrder, N)
-  const toRebuild = new Set<number>()
-  for (const name of fileOrder) {
-    if (registry.fileHashes[name] !== allFileHashes[name]) {
-      const ci = fileToChunk.get(name) ?? 0
-      toRebuild.add(ci)
-      logger.debug(chalk.gray(`"${name}" changed → chunk ${ci} queued for rebuild`))
-    }
-  }
-
-  // Load cached PDF buffers for every unchanged chunk.
-  const cached = new Map<number, Buffer>()
-  await Promise.all(
-    Array.from({ length: N }, (_, i) => i)
-      .filter((i) => !toRebuild.has(i))
-      .map(async (i) => {
-        try {
-          cached.set(i, await fs.readFile(chunkCachePath(partId, i)))
-        } catch {
-          toRebuild.add(i) // cache file missing or unreadable
-        }
-      }),
-  )
-
-  if (toRebuild.size < N) {
-    logger.info(
-      chalk.gray(
-        `Incremental PDF: rendering ${toRebuild.size}/${N} chunks, reusing ${N - toRebuild.size} from cache`,
-      ),
-    )
-  }
-
-  return { cached, toRebuild }
-}
 
 // ── Main PDF builder ─────────────────────────────────────────────────────────
 
@@ -700,7 +489,7 @@ const createDocumentContentPdf = async (
   logger.info(chalk.gray(`${endSetup()}, ~${approxPageCount} pages`))
 
   const incrPlan = incremental
-    ? await resolveIncrementalPlan(config.id, incremental.fileOrder, incremental.fileHashes, N, chunkSize)
+    ? await resolveIncrementalPlan(buildPdfFolderPath, config.id, incremental.fileOrder, incremental.fileHashes, N, chunkSize)
     : { cached: new Map<number, Buffer>(), toRebuild: new Set(Array.from({ length: N }, (_, i) => i)) }
 
   // ── Phase 2: parallel chunk rendering ─────────────────────────────────────
@@ -736,9 +525,9 @@ const createDocumentContentPdf = async (
   await Promise.all([
     ...chunkResults
       .filter(({ i, buf }) => buf !== null && incrPlan.toRebuild.has(i))
-      .map(({ i, buf }) => fs.writeFile(chunkCachePath(config.id, i), buf!)),
+      .map(({ i, buf }) => fs.writeFile(chunkCachePath(buildPdfFolderPath, config.id, i), buf!)),
     incremental
-      ? saveRegistry({ partId: config.id, builtAt: Date.now(), N, chunkSize, fileHashes: incremental.fileHashes })
+      ? saveRegistry(buildPdfFolderPath, { partId: config.id, builtAt: Date.now(), N, chunkSize, fileHashes: incremental.fileHashes })
       : Promise.resolve(),
   ])
 
@@ -868,7 +657,7 @@ export const buildPdf = async (config: IPartProperties): Promise<void> => {
       fs.readFile(cssPath, 'utf8').catch(() => ''),
     ])
 
-    const sortedPages = await readModuleHtmlPages(config, [coverHtmlFile, backCoverHtmlFile])
+    const sortedPages = await readModuleHtmlPages(moduleDir, [coverHtmlFile, backCoverHtmlFile])
 
     // Compute content hashes for incremental build tracking.
     // Files are already in memory so this adds no I/O.
@@ -886,11 +675,11 @@ export const buildPdf = async (config: IPartProperties): Promise<void> => {
     // and all chunks are cached with no file changes, skip Puppeteer entirely.
     // Disabled when BUILD_TOC_PAGENUMS is set because that phase requires finalHtml.
     if (!process.env.BUILD_TOC_PAGENUMS) {
-      const registry = await loadRegistry(config.id)
+      const registry = await loadRegistry(buildPdfFolderPath, config.id)
       const fastN = config.buildProcessesNum ?? registry?.N
       const fastChunkSize = config.buildPartSize ?? registry?.chunkSize
       if (fastN && fastChunkSize) {
-        const plan = await resolveIncrementalPlan(config.id, htmlFileOrder, fileHashes, fastN, fastChunkSize)
+        const plan = await resolveIncrementalPlan(buildPdfFolderPath, config.id, htmlFileOrder, fileHashes, fastN, fastChunkSize)
         if (plan.toRebuild.size === 0) {
           logger.info(chalk.gray(`All HTML unchanged — reusing ${fastN} cached chunks, skipping render`))
           const decorateOpts: IDecorateOptions = {
