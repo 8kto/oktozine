@@ -19,8 +19,8 @@ const mainModuleConf: Partial<IPartProperties> = {
     skipFirstPages: 3,
     skipLastPages: 1,
   },
-  buildPartSize: 8,
-  buildProcessesNum: 8,
+  buildPartSize: 4,
+  buildProcessesNum: 16,
   skipHeaderAndFooter: [-1, 1, 2, 3, 11, 15, 18, 27, 37, 47, 52, 58],
   skipFooter: [17, 23, 25, 36, 45, 55],
 }
