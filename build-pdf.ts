@@ -1,5 +1,6 @@
 #!/bin/env node
 
+import { createHash } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
 
 import fontkit from '@pdf-lib/fontkit'
@@ -549,9 +550,144 @@ export const buildChunkRanges = (N: number, chunkSize: number): string[] =>
     return `${start}-${end}`
   })
 
+// ── Incremental build registry ───────────────────────────────────────────────
+
+/** MD5 hex digest of a string — fast enough for build-time comparison. */
+const hashContent = (s: string): string => createHash('md5').update(s).digest('hex')
+
+interface IChunkRegistry {
+  partId: string
+  builtAt: number
+  N: number
+  chunkSize: number
+  /** All tracked file base-names → MD5 hash of their content. CSS is stored under '__css__'. */
+  fileHashes: Record<string, string>
+}
+
+interface IIncrementalBuildInfo {
+  /** Ordered list of HTML file base-names (cover → body pages → back-cover). */
+  fileOrder: string[]
+  /** base-name → MD5 content hash for every HTML file + '__css__'. */
+  fileHashes: Record<string, string>
+}
+
+interface IIncrementalPlan {
+  /** chunk index → pre-loaded Buffer (safe to reuse). */
+  cached: Map<number, Buffer>
+  /** Chunk indices that must be freshly rendered. */
+  toRebuild: Set<number>
+}
+
+const registryPath = (partId: string): string =>
+  path.join(buildPdfFolderPath, `${partId}-registry.json`)
+
+const chunkCachePath = (partId: string, i: number): string =>
+  path.join(buildPdfFolderPath, `${partId}-chunk-${i}.pdf`)
+
+const loadRegistry = async (partId: string): Promise<IChunkRegistry | null> => {
+  try {
+    return JSON.parse(await fs.readFile(registryPath(partId), 'utf8')) as IChunkRegistry
+  } catch {
+    return null
+  }
+}
+
+const saveRegistry = (registry: IChunkRegistry): Promise<void> =>
+  fs.writeFile(registryPath(registry.partId), JSON.stringify(registry, null, 2))
+
+/**
+ * Assigns each HTML file (by position in the ordered file list) to a chunk
+ * index (0-based). The mapping is approximate — it is based on file count, not
+ * real page counts — but errs on the side of over-rendering (false positives)
+ * rather than under-rendering (false negatives).
+ */
+const assignFilesToChunks = (names: string[], N: number): Map<string, number> => {
+  const M = Math.max(1, names.length)
+
+  return new Map(names.map((name, i) => [name, Math.min(N - 1, Math.floor((i * N) / M))]))
+}
+
+/**
+ * Compares current file mtimes against the last registry snapshot to decide
+ * which PDF chunks must be re-rendered and which can be loaded from disk.
+ */
+const resolveIncrementalPlan = async (
+  partId: string,
+  fileOrder: string[],
+  allFileHashes: Record<string, string>,
+  N: number,
+  chunkSize: number,
+): Promise<IIncrementalPlan> => {
+  const rebuildAll = (): IIncrementalPlan => ({
+    cached: new Map(),
+    toRebuild: new Set(Array.from({ length: N }, (_, i) => i)),
+  })
+
+  const registry = await loadRegistry(partId)
+  if (!registry || registry.N !== N || registry.chunkSize !== chunkSize) {
+    return rebuildAll()
+  }
+
+  // Any CSS change affects every page → rebuild all chunks.
+  if (registry.fileHashes['__css__'] !== allFileHashes['__css__']) {
+    logger.debug(chalk.gray(`CSS changed for "${partId}" — rebuilding all chunks`))
+
+    return rebuildAll()
+  }
+
+  // If the set of HTML files changed (added/removed), page order may have
+  // shifted and we can no longer trust the chunk→file assignment.
+  const prevHtmlNames = Object.keys(registry.fileHashes).filter((k) => k !== '__css__')
+  if (prevHtmlNames.length !== fileOrder.length || fileOrder.some((n) => registry.fileHashes[n] === undefined)) {
+    logger.debug(chalk.gray(`HTML file set changed for "${partId}" — rebuilding all chunks`))
+
+    return rebuildAll()
+  }
+
+  // Find chunks that contain at least one changed file.
+  const fileToChunk = assignFilesToChunks(fileOrder, N)
+  const toRebuild = new Set<number>()
+  for (const name of fileOrder) {
+    if (registry.fileHashes[name] !== allFileHashes[name]) {
+      const ci = fileToChunk.get(name) ?? 0
+      toRebuild.add(ci)
+      logger.debug(chalk.gray(`"${name}" changed → chunk ${ci} queued for rebuild`))
+    }
+  }
+
+  // Load cached PDF buffers for every unchanged chunk.
+  const cached = new Map<number, Buffer>()
+  await Promise.all(
+    Array.from({ length: N }, (_, i) => i)
+      .filter((i) => !toRebuild.has(i))
+      .map(async (i) => {
+        try {
+          cached.set(i, await fs.readFile(chunkCachePath(partId, i)))
+        } catch {
+          toRebuild.add(i) // cache file missing or unreadable
+        }
+      }),
+  )
+
+  if (toRebuild.size < N) {
+    logger.info(
+      chalk.gray(
+        `Incremental PDF: rendering ${toRebuild.size}/${N} chunks, reusing ${N - toRebuild.size} from cache`,
+      ),
+    )
+  }
+
+  return { cached, toRebuild }
+}
+
 // ── Main PDF builder ─────────────────────────────────────────────────────────
 
-const createDocumentContentPdf = async (html: string, outputPath: string, config: IPartProperties): Promise<void> => {
+const createDocumentContentPdf = async (
+  html: string,
+  outputPath: string,
+  config: IPartProperties,
+  incremental?: IIncrementalBuildInfo,
+): Promise<void> => {
   // ── Phase 1: DOM setup (TOC, section-wrap, page count, HTML serialisation) ─
   const endSetup = measure('Setup PDF doc: TOC, sections wrap...')
   const prepared = await preparePdfHtml(html, config)
@@ -563,15 +699,30 @@ const createDocumentContentPdf = async (html: string, outputPath: string, config
   const { N, chunkSize } = resolveChunkPlan(config, approxPageCount)
   logger.info(chalk.gray(`${endSetup()}, ~${approxPageCount} pages`))
 
+  const incrPlan = incremental
+    ? await resolveIncrementalPlan(config.id, incremental.fileOrder, incremental.fileHashes, N, chunkSize)
+    : { cached: new Map<number, Buffer>(), toRebuild: new Set(Array.from({ length: N }, (_, i) => i)) }
+
   // ── Phase 2: parallel chunk rendering ─────────────────────────────────────
   const ranges = buildChunkRanges(N, chunkSize)
-  logger.info(chalk.gray(`rendering ${N} (by ${chunkSize}) chunks in parallel: ${ranges.join(', ')}`))
+  const toRenderRanges = ranges.filter((_, i) => incrPlan.toRebuild.has(i))
+  logger.info(
+    chalk.gray(
+      `rendering ${incrPlan.toRebuild.size}/${N} (by ${chunkSize}) chunks: ${toRenderRanges.join(', ') || 'none (all cached)'}`,
+    ),
+  )
   const endRender = measure('PDF render')
 
-  let chunkBuffers: Buffer[]
+  let chunkResults: Array<{ i: number; buf: Buffer | null }>
   try {
-    chunkBuffers = (await Promise.all(ranges.map((range) => renderChunk(finalHtml, range)))).filter(
-      (b): b is Buffer => !!b,
+    chunkResults = await Promise.all(
+      ranges.map(async (range, i) => {
+        if (incrPlan.cached.has(i)) {
+          return { i, buf: incrPlan.cached.get(i)! }
+        }
+
+        return { i, buf: await renderChunk(finalHtml, range) }
+      }),
     )
   } catch (err) {
     logger.error(err)
@@ -580,6 +731,18 @@ const createDocumentContentPdf = async (html: string, outputPath: string, config
   }
 
   logger.info(chalk.gray(endRender()))
+
+  // Persist newly rendered chunks and update the registry for future incremental builds.
+  await Promise.all([
+    ...chunkResults
+      .filter(({ i, buf }) => buf !== null && incrPlan.toRebuild.has(i))
+      .map(({ i, buf }) => fs.writeFile(chunkCachePath(config.id, i), buf!)),
+    incremental
+      ? saveRegistry({ partId: config.id, builtAt: Date.now(), N, chunkSize, fileHashes: incremental.fileHashes })
+      : Promise.resolve(),
+  ])
+
+  const chunkBuffers = chunkResults.map(({ buf }) => buf).filter((b): b is Buffer => b !== null)
 
   const decorateOpts: IDecorateOptions = {
     skipHeaderAndFooter: config.skipHeaderAndFooter,
@@ -699,15 +862,60 @@ export const buildPdf = async (config: IPartProperties): Promise<void> => {
     await mkdir(buildPdfFolderPath, { recursive: true })
 
     const moduleDir = path.join(buildHtmlFolderPath, `module-${config.id}`)
-    const [coverContent, backCoverContent] = await Promise.all([
+    const [coverContent, backCoverContent, cssContent] = await Promise.all([
       coverHtmlFile ? fs.readFile(path.join(moduleDir, coverHtmlFile), 'utf8') : Promise.resolve(null),
       backCoverHtmlFile ? fs.readFile(path.join(moduleDir, backCoverHtmlFile), 'utf8') : Promise.resolve(null),
+      fs.readFile(cssPath, 'utf8').catch(() => ''),
     ])
 
     const sortedPages = await readModuleHtmlPages(config, [coverHtmlFile, backCoverHtmlFile])
+
+    // Compute content hashes for incremental build tracking.
+    // Files are already in memory so this adds no I/O.
+    const htmlFileOrder = [
+      ...(coverHtmlFile ? [coverHtmlFile] : []),
+      ...sortedPages.map(([name]) => name),
+      ...(backCoverHtmlFile ? [backCoverHtmlFile] : []),
+    ]
+    const fileHashes: Record<string, string> = { '__css__': hashContent(cssContent) }
+    if (coverHtmlFile && coverContent) {fileHashes[coverHtmlFile] = hashContent(coverContent)}
+    sortedPages.forEach(([name, content]) => { fileHashes[name] = hashContent(content) })
+    if (backCoverHtmlFile && backCoverContent) {fileHashes[backCoverHtmlFile] = hashContent(backCoverContent)}
+
+    // Fast path: when N and chunkSize are determinable without running the browser
+    // and all chunks are cached with no file changes, skip Puppeteer entirely.
+    // Disabled when BUILD_TOC_PAGENUMS is set because that phase requires finalHtml.
+    if (!process.env.BUILD_TOC_PAGENUMS) {
+      const registry = await loadRegistry(config.id)
+      const fastN = config.buildProcessesNum ?? registry?.N
+      const fastChunkSize = config.buildPartSize ?? registry?.chunkSize
+      if (fastN && fastChunkSize) {
+        const plan = await resolveIncrementalPlan(config.id, htmlFileOrder, fileHashes, fastN, fastChunkSize)
+        if (plan.toRebuild.size === 0) {
+          logger.info(chalk.gray(`All HTML unchanged — reusing ${fastN} cached chunks, skipping render`))
+          const decorateOpts: IDecorateOptions = {
+            skipHeaderAndFooter: config.skipHeaderAndFooter,
+            skipHeader: config.skipHeader,
+            skipFooter: config.skipFooter,
+          }
+          const cachedBuffers = Array.from({ length: fastN }, (_, i) => plan.cached.get(i)).filter(
+            (b): b is Buffer => b !== undefined,
+          )
+          const mergedBytes = await mergeChunks(cachedBuffers, config.header ?? '', decorateOpts)
+          await fs.writeFile(outputFilenamePath, mergedBytes)
+          logger.info(chalk.green(`>> Generated PDF document for ${outputFilenamePath}`))
+
+          return
+        }
+      }
+    }
+
     const fullHtmlContent = assembleDocumentHtml(config, coverContent, sortedPages, backCoverContent)
 
-    await createDocumentContentPdf(getFullPageTemplate(fullHtmlContent), outputFilenamePath, config)
+    await createDocumentContentPdf(getFullPageTemplate(fullHtmlContent), outputFilenamePath, config, {
+      fileOrder: htmlFileOrder,
+      fileHashes,
+    })
 
     logger.info(chalk.green(`>> Generated PDF document for ${outputFilenamePath}`))
   } catch (error) {
