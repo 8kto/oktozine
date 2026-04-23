@@ -1,4 +1,4 @@
-import { convertStatsInserts } from '../cmd-stats-insert'
+import { convertStatsInserts } from '../stats-insert'
 
 describe('convert stats inserts', () => {
   it('should convert cmd into html', () => {

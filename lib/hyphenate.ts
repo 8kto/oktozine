@@ -48,6 +48,7 @@ export const hyphenateHtml = (htmlFragment: string, opts: IHyphenateOptions = {}
         return word
       }
       changed = true
+
       return parts.join(SOFT)
     })
 
@@ -61,6 +62,7 @@ export const hyphenateHtml = (htmlFragment: string, opts: IHyphenateOptions = {}
 
     if (node.nodeType === Node.TEXT_NODE) {
       hyphenateTextNode(node as Text)
+
       return
     }
     if (node.nodeType !== Node.ELEMENT_NODE) {

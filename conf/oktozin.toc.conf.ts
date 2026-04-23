@@ -1,6 +1,6 @@
 import type { ITocOverrides } from '../scripts/oktozine/types'
 
-export const tocOverrides: ITocOverrides = {
+const mainTocConf: ITocOverrides = {
   dropLabels: ['Зеница Варготара', 'Содержание'],
   dropItemsFromLabels: [
     'Приложение. Микомант',
@@ -9,4 +9,12 @@ export const tocOverrides: ITocOverrides = {
     'Окружение и обитатели',
   ],
   alwaysInclude: ['Верёвочная лестница', 'Кристаллы', 'Грибы', 'Заклинания Микоманта'],
+}
+
+export const tocOverrides: ITocOverrides = {
+  dropLabels: ['Содержание'],
+  parts: {
+    main: mainTocConf,
+    osr: mainTocConf,
+  },
 }

@@ -5,6 +5,7 @@ import { mkdir } from 'node:fs/promises'
 import fontkit from '@pdf-lib/fontkit'
 import chalk from 'chalk'
 import fs from 'fs-extra'
+import { JSDOM } from 'jsdom'
 import path from 'path'
 import { PDFArray, PDFDict, PDFDocument, PDFFont, PDFName, PDFRef, rgb } from 'pdf-lib'
 import puppeteer from 'puppeteer'
@@ -14,9 +15,22 @@ import { tocOverrides } from '../../conf/oktozin.toc.conf'
 import packageConfig from '../../package.json' with { type: 'json' }
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
+import {
+  chunkCachePath,
+  hashContent,
+  IIncrementalBuildInfo,
+  loadRegistry,
+  resolveIncrementalPlan,
+  saveRegistry,
+} from './lib/pdf-chunk-registry'
+import {
+  assembleDocumentHtml,
+  getFullPageTemplate,
+  readModuleHtmlPages,
+} from './lib/pdf-html-assembler'
 import { buildToc } from './lib/table-of-contents'
 import { wrapContentSections } from './lib/wrap-sections'
-import type { IPartProperties } from './types'
+import type { IPartProperties, ITocItem, PartId } from './types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const buildHtmlFolderPath = path.join(__dirname, '../../build/chunks-html')
@@ -69,6 +83,7 @@ const injectNamePolyfill = (page: Awaited<ReturnType<typeof setupPage>>) =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(window as any).__name = (target: any, value: string) => {
       Object.defineProperty(target, 'name', { value, configurable: true })
+
       return target
     }
   })
@@ -110,26 +125,9 @@ const renderChunk = async (html: string, pageRange: string): Promise<Buffer | nu
     }
 
     logger.debug(chalk.gray(`chunk ${pageRange}: retrying after error — ${(err as Error).message}`))
+
     return renderChunkOnce(html, pageRange)
   }
-}
-
-// ── HTML content helpers ─────────────────────────────────────────────────────
-
-const getPageClassname = (moduleId: string, fileName: string): string => {
-  const pageName = fileName.replace('.md.html', '').replace(/^\d+-/, '')
-
-  return `page--wrapper page--${moduleId} page--${moduleId}-${pageName} page-name--${pageName}`
-}
-
-const getPageTemplate = (moduleId: string, fileName: string, pageContent: string, skipDelimiter = false): string => {
-  return `<div class="${getPageClassname(moduleId, fileName)}">
-    ${pageContent}
-  </div>${skipDelimiter ? '' : '<div class="page-delimiter"></div>' + `<!-- ${fileName} -->`}`
-}
-
-const getFullPageTemplate = (content: string): string => {
-  return `<div class="page-bg"></div><div class="full-content-container">${content}</div>`
 }
 
 const writeFullContentToFile = (id: string, content: string): void => {
@@ -156,10 +154,14 @@ const writeFullContentToFile = (id: string, content: string): void => {
 // ── PDF DOM preparation ──────────────────────────────────────────────────────
 
 const buildTocForPage = async (page: Awaited<ReturnType<typeof setupPage>>, config: IPartProperties): Promise<void> => {
-  if (!config.tocConfig) return
+  if (!config.tocConfig) {
+    return
+  }
 
   try {
-    const toc = await page.evaluate(buildToc, { ...config.tocConfig, tocOverrides })
+    const { parts, ...tocDefaults } = tocOverrides
+    const mergedTocOverrides = { ...tocDefaults, ...parts?.[config.id as PartId] }
+    const toc = await page.evaluate(buildToc, { ...config.tocConfig, tocOverrides: mergedTocOverrides })
     const rootId = config.tocConfig.rootId ?? 'toc-main'
     const tocHtml = await page.evaluate((id: string) => document.getElementById(id)?.innerHTML || '', rootId)
     fs.writeFile(path.join(buildHtmlFolderPath, `$toc-${config.id}.html`), tocHtml)
@@ -216,6 +218,7 @@ const preparePdfHtml = async (html: string, config: IPartProperties): Promise<IP
     return { finalHtml, approxPageCount }
   } catch (err) {
     logger.error(err)
+
     return null
   } finally {
     await browser.close()
@@ -255,6 +258,7 @@ export const resolveChunkPlan = (config: IPartProperties, approxPageCount: numbe
 const rebuildNamedDestinations = (
   mergedPdf: PDFDocument,
   chunks: Array<{ doc: PDFDocument; pageOffset: number }>,
+  anchorPageOut?: Map<string, number>,
 ): void => {
   const mergedPages = mergedPdf.getPages()
   const allEntries: Array<[PDFName, ReturnType<typeof mergedPdf.context.obj>]> = []
@@ -303,6 +307,10 @@ const rebuildNamedDestinations = (
       ])
       allEntries.push([key, newDest])
       chunkCount++
+
+      if (anchorPageOut) {
+        anchorPageOut.set(key.toString().slice(1), pageOffset + localIdx + 1)
+      }
     }
     logger.debug(chalk.gray(`chunk @${pageOffset}: ${srcPages.length} pages, ${chunkCount} dests`))
   }
@@ -321,6 +329,12 @@ const rebuildNamedDestinations = (
 
   logger.debug(chalk.gray(`rebuilt ${allEntries.length} named destinations in /Catalog/Dests`))
 }
+
+// ── TOC helpers ──────────────────────────────────────────────────────────────
+
+/** Recursively collects all anchor IDs from TOC items. */
+const flattenTocIds = (items: ITocItem[]): string[] =>
+  items.flatMap((item) => [item.id, ...(item.items ? flattenTocIds(item.items) : [])].filter((id): id is string => !!id))
 
 // ── PDF page decoration ──────────────────────────────────────────────────────
 
@@ -370,10 +384,44 @@ const decoratePdfPages = (
   })
 }
 
+/** Draws header/footer on a specific range of pages (1-based, inclusive). */
+const decoratePagesInRange = (
+  pdf: PDFDocument,
+  headerText: string,
+  font: PDFFont,
+  fromPage: number,
+  toPage: number,
+  opts: IDecorateOptions = {},
+): void => {
+  const grayColor = rgb255(137, 137, 137)
+  const fontSize = 6
+  const totalPages = pdf.getPageCount()
+  const resolve = (pages: number[] = []) => new Set(pages.map((n) => (n < 0 ? totalPages + n + 1 : n)))
+  const skipBoth = resolve(opts.skipHeaderAndFooter)
+  const skipHdr = resolve(opts.skipHeader)
+  const skipFtr = resolve(opts.skipFooter)
+
+  for (let pageNum = fromPage; pageNum <= toPage; pageNum++) {
+    const page = pdf.getPage(pageNum - 1)
+    const { width, height } = page.getSize()
+
+    if (!skipBoth.has(pageNum) && !skipHdr.has(pageNum)) {
+      const hdrWidth = font.widthOfTextAtSize(headerText, fontSize)
+      page.drawText(headerText, { x: (width - hdrWidth) / 2, y: height - 14, size: fontSize, font, color: grayColor })
+    }
+    if (!skipBoth.has(pageNum) && !skipFtr.has(pageNum)) {
+      const numStr = String(pageNum)
+      const numWidth = font.widthOfTextAtSize(numStr, fontSize)
+      page.drawText(numStr, { x: (width - numWidth) / 2, y: 8, size: fontSize, font, color: grayColor })
+    }
+  }
+}
+
 const mergeChunks = async (
   chunkBuffers: Buffer[],
   headerText: string,
   decorateOpts?: IDecorateOptions,
+  anchorPageOut?: Map<string, number>,
 ): Promise<Uint8Array> => {
   const mergedPdf = await PDFDocument.create()
   mergedPdf.registerFontkit(fontkit)
@@ -386,7 +434,9 @@ const mergeChunks = async (
   for (const buf of chunkBuffers) {
     const doc = await PDFDocument.load(buf)
     const srcIndices = doc.getPageIndices()
-    if (srcIndices.length === 0) continue // empty chunk (over-estimated page count)
+    if (srcIndices.length === 0) {
+      continue
+    } // empty chunk (over-estimated page count)
 
     const copied = await mergedPdf.copyPages(doc, srcIndices)
     copied.forEach((p) => mergedPdf.addPage(p))
@@ -396,84 +446,12 @@ const mergeChunks = async (
   }
 
   const endRebuildNamedDestinations = measure('Rebuild PDF links')
-  rebuildNamedDestinations(mergedPdf, chunkMeta)
+  rebuildNamedDestinations(mergedPdf, chunkMeta, anchorPageOut)
   logger.info(chalk.gray(endRebuildNamedDestinations()))
 
   decoratePdfPages(mergedPdf, headerText, font, decorateOpts)
 
   return mergedPdf.save()
-}
-
-// ── HTML file assembly helpers ───────────────────────────────────────────────
-
-const isIncremented = (name: string): boolean => /-\d+\.md\.html$/.test(name)
-const baseName = (name: string): string => name.replace(/-\d+\.md\.html$/, '.md.html')
-
-/** Sorts HTML chunk files alphabetically; incremented variants (e.g. `-2.md.html`) sort after their base. */
-export const compareHtmlFiles = (a: string, b: string): number => {
-  const baseA = baseName(a)
-  const baseB = baseName(b)
-  if (baseA === baseB) {
-    const incA = isIncremented(a)
-    const incB = isIncremented(b)
-    if (incA !== incB) return incA ? 1 : -1
-  }
-
-  return a.localeCompare(b)
-}
-
-/**
- * Reads and filters all HTML page files for a module, excluding cover/back-cover
- * and internal build artifacts (files prefixed with `$` or named `server.html`).
- * Returns sorted `[filename, content]` pairs.
- */
-const readModuleHtmlPages = async (
-  config: IPartProperties,
-  excludeFiles: Array<string | null>,
-): Promise<Array<[string, string]>> => {
-  const moduleDir = path.join(buildHtmlFolderPath, `module-${config.id}`)
-  const allFiles = await fs.readdir(moduleDir)
-  const excluded = new Set(excludeFiles.filter((f): f is string => f !== null))
-
-  const entries = await Promise.all(
-    [...new Set(allFiles)].map(async (file): Promise<[string, string] | null> => {
-      if (!file.endsWith('.html') || file.startsWith('$') || file === 'server.html' || excluded.has(file)) {
-        return null
-      }
-      const content = await fs.readFile(path.join(moduleDir, file), 'utf8')
-      return [file, content]
-    }),
-  )
-
-  return entries.filter((x): x is [string, string] => x !== null).sort(([a], [b]) => compareHtmlFiles(a, b))
-}
-
-/** Concatenates cover, sorted page fragments, and back-cover into the full HTML body string. */
-export const assembleDocumentHtml = (
-  config: IPartProperties,
-  coverContent: string | null,
-  sortedPages: Array<[string, string]>,
-  backCoverContent: string | null,
-): string => {
-  const coverFile = config.coverHtmlFile ? `${config.coverHtmlFile}.html` : null
-  const backCoverFile = config.backCoverHtmlFile ? `${config.backCoverHtmlFile}.html` : null
-
-  let html = ''
-
-  if (coverFile && coverContent) {
-    html += getPageTemplate(config.id, coverFile, coverContent, true)
-  }
-
-  sortedPages.forEach(([file, txt], index, arr) => {
-    logger.debug(chalk.green(`>> PDF includes ${file}`))
-    html += getPageTemplate(config.id, file, txt, index >= arr.length - 1)
-  })
-
-  if (backCoverFile && backCoverContent) {
-    html += getPageTemplate(config.id, backCoverFile, backCoverContent, true)
-  }
-
-  return html
 }
 
 // ── Chunk range planning ─────────────────────────────────────────────────────
@@ -493,44 +471,165 @@ export const buildChunkRanges = (N: number, chunkSize: number): string[] =>
 
 // ── Main PDF builder ─────────────────────────────────────────────────────────
 
-const createDocumentContentPdf = async (html: string, outputPath: string, config: IPartProperties): Promise<void> => {
+const createDocumentContentPdf = async (
+  html: string,
+  outputPath: string,
+  config: IPartProperties,
+  incremental?: IIncrementalBuildInfo,
+): Promise<void> => {
   // ── Phase 1: DOM setup (TOC, section-wrap, page count, HTML serialisation) ─
   const endSetup = measure('Setup PDF doc: TOC, sections wrap...')
   const prepared = await preparePdfHtml(html, config)
-  if (!prepared) return
+  if (!prepared) {
+    return
+  }
 
   const { finalHtml, approxPageCount } = prepared
   const { N, chunkSize } = resolveChunkPlan(config, approxPageCount)
   logger.info(chalk.gray(`${endSetup()}, ~${approxPageCount} pages`))
 
+  const incrPlan = incremental
+    ? await resolveIncrementalPlan(buildPdfFolderPath, config.id, incremental.fileOrder, incremental.fileHashes, N, chunkSize)
+    : { cached: new Map<number, Buffer>(), toRebuild: new Set(Array.from({ length: N }, (_, i) => i)) }
+
   // ── Phase 2: parallel chunk rendering ─────────────────────────────────────
   const ranges = buildChunkRanges(N, chunkSize)
-  logger.info(chalk.gray(`rendering ${N} (by ${chunkSize}) chunks in parallel: ${ranges.join(', ')}`))
+  const toRenderRanges = ranges.filter((_, i) => incrPlan.toRebuild.has(i))
+  logger.info(
+    chalk.gray(
+      `rendering ${incrPlan.toRebuild.size}/${N} (by ${chunkSize}) chunks: ${toRenderRanges.join(', ') || 'none (all cached)'}`,
+    ),
+  )
   const endRender = measure('PDF render')
 
-  let chunkBuffers: Buffer[]
+  let chunkResults: Array<{ i: number; buf: Buffer | null }>
   try {
-    chunkBuffers = (await Promise.all(ranges.map((range) => renderChunk(finalHtml, range)))).filter(
-      (b): b is Buffer => !!b,
+    chunkResults = await Promise.all(
+      ranges.map(async (range, i) => {
+        if (incrPlan.cached.has(i)) {
+          return { i, buf: incrPlan.cached.get(i)! }
+        }
+
+        return { i, buf: await renderChunk(finalHtml, range) }
+      }),
     )
   } catch (err) {
     logger.error(err)
+
     return
   }
 
   logger.info(chalk.gray(endRender()))
 
+  // Persist newly rendered chunks and update the registry for future incremental builds.
+  await Promise.all([
+    ...chunkResults
+      .filter(({ i, buf }) => buf !== null && incrPlan.toRebuild.has(i))
+      .map(({ i, buf }) => fs.writeFile(chunkCachePath(buildPdfFolderPath, config.id, i), buf!)),
+    incremental
+      ? saveRegistry(buildPdfFolderPath, { partId: config.id, builtAt: Date.now(), N, chunkSize, fileHashes: incremental.fileHashes })
+      : Promise.resolve(),
+  ])
+
+  const chunkBuffers = chunkResults.map(({ buf }) => buf).filter((b): b is Buffer => b !== null)
+
+  const decorateOpts: IDecorateOptions = {
+    skipHeaderAndFooter: config.skipHeaderAndFooter,
+    skipHeader: config.skipHeader,
+    skipFooter: config.skipFooter,
+  }
+
   // ── Phase 3: merge + link repair + headers/footers ─────────────────────────
   const endMerge = measure('Merge PDF chunks')
+  const anchorPageOut = config.tocConfig ? new Map<string, number>() : undefined
   try {
-    const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '', {
-      skipHeaderAndFooter: config.skipHeaderAndFooter,
-      skipHeader: config.skipHeader,
-      skipFooter: config.skipFooter,
-    })
+    const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '', decorateOpts, anchorPageOut)
+
+    // ── Phase 4: splice TOC pages with page numbers ─────────────────────────
+    // Pass 1 already produced the final decorated PDF. Here we:
+    //   1. Determine which pages are TOC pages
+    //   2. Re-render only those pages with page numbers injected (jsdom + 1 small render)
+    //   3. Splice the new pages into the merged PDF in place
+    //   4. Decorate only the spliced pages (header/footer)
+    if (process.env.BUILD_TOC_PAGENUMS && config.tocConfig && anchorPageOut && anchorPageOut.size > 0) {
+      const tocRootId = config.tocConfig.rootId ?? 'toc-main'
+      // Primary: look up the named destination Chrome emitted for the TOC root element.
+      // Fallback: skipFirstPages tells us how many pre-TOC pages there are.
+      const tocStartPage =
+        anchorPageOut.get(tocRootId) ?? (config.bookmarksConfig?.skipFirstPages ?? 0) + 1
+
+      let tocEndPage: number | undefined
+      try {
+        const tocJsonPath = path.join(__dirname, `../../build/$toc-${config.id}.json`)
+        const tocItems: ITocItem[] = JSON.parse(await fs.readFile(tocJsonPath, 'utf8'))
+        const pages = flattenTocIds(tocItems)
+          .map((id) => anchorPageOut!.get(id))
+          .filter((p): p is number => p !== undefined)
+        if (pages.length > 0) {
+          tocEndPage = Math.min(...pages) - 1
+        }
+      } catch {
+        logger.debug('Could not load TOC JSON to determine TOC page range')
+      }
+
+      if (tocEndPage !== undefined && tocEndPage >= tocStartPage) {
+        logger.info(chalk.gray(`Patching TOC pages ${tocStartPage}–${tocEndPage} with page numbers...`))
+
+        // 1. Inject page numbers into the TOC links (in-process, no browser)
+        const dom = new JSDOM(finalHtml)
+        const tocRoot = dom.window.document.getElementById(tocRootId)
+        if (tocRoot) {
+          for (const a of tocRoot.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')) {
+            const anchorId = a.getAttribute('href')!.slice(1)
+            if (anchorId === tocRootId) {continue} // skip the self-link sentinel
+            const pageNum = anchorPageOut!.get(anchorId)
+            if (pageNum !== undefined) {
+              const span = dom.window.document.createElement('span')
+              span.className = 'toc-page-num'
+              span.textContent = String(pageNum)
+              // Insert after .toc-dots but before any child <ul>, so flex-wrap
+              // puts it on the same row as the label — not after the children.
+              const dotsSpan = a.nextElementSibling
+              a.parentElement!.insertBefore(span, dotsSpan?.nextElementSibling ?? null)
+            }
+          }
+        }
+        const patchedHtml = dom.serialize()
+
+        // 2. Render only the TOC pages
+        const tocBuffer = await renderChunk(patchedHtml, `${tocStartPage}-${tocEndPage}`)
+        if (tocBuffer) {
+          // 3. Splice new TOC pages into the merged PDF
+          const mergedDoc = await PDFDocument.load(mergedBytes)
+          const tocDoc = await PDFDocument.load(tocBuffer)
+
+          // Remove old TOC pages in reverse order to keep indices stable
+          for (let i = tocEndPage - 1; i >= tocStartPage - 1; i--) {
+            mergedDoc.removePage(i)
+          }
+
+          // Insert the new TOC pages at the same position
+          const tocPageCount = tocEndPage - tocStartPage + 1
+          const newPages = await mergedDoc.copyPages(tocDoc, [...Array(tocPageCount).keys()])
+          newPages.forEach((page, i) => mergedDoc.insertPage(tocStartPage - 1 + i, page))
+
+          // 4. Decorate only the spliced pages (merged PDF is already decorated elsewhere)
+          mergedDoc.registerFontkit(fontkit)
+          const patchFont = await mergedDoc.embedFont(await fs.readFile(philosopherFontPath))
+          decoratePagesInRange(mergedDoc, config.header ?? '', patchFont, tocStartPage, tocEndPage, decorateOpts)
+
+          await fs.writeFile(outputPath, await mergedDoc.save())
+          logger.info(chalk.gray(endMerge()))
+
+          return
+        }
+      }
+    }
+
     await fs.writeFile(outputPath, mergedBytes)
   } catch (err) {
     logger.error(err)
+
     return
   }
 
@@ -552,15 +651,60 @@ export const buildPdf = async (config: IPartProperties): Promise<void> => {
     await mkdir(buildPdfFolderPath, { recursive: true })
 
     const moduleDir = path.join(buildHtmlFolderPath, `module-${config.id}`)
-    const [coverContent, backCoverContent] = await Promise.all([
+    const [coverContent, backCoverContent, cssContent] = await Promise.all([
       coverHtmlFile ? fs.readFile(path.join(moduleDir, coverHtmlFile), 'utf8') : Promise.resolve(null),
       backCoverHtmlFile ? fs.readFile(path.join(moduleDir, backCoverHtmlFile), 'utf8') : Promise.resolve(null),
+      fs.readFile(cssPath, 'utf8').catch(() => ''),
     ])
 
-    const sortedPages = await readModuleHtmlPages(config, [coverHtmlFile, backCoverHtmlFile])
+    const sortedPages = await readModuleHtmlPages(moduleDir, [coverHtmlFile, backCoverHtmlFile])
+
+    // Compute content hashes for incremental build tracking.
+    // Files are already in memory so this adds no I/O.
+    const htmlFileOrder = [
+      ...(coverHtmlFile ? [coverHtmlFile] : []),
+      ...sortedPages.map(([name]) => name),
+      ...(backCoverHtmlFile ? [backCoverHtmlFile] : []),
+    ]
+    const fileHashes: Record<string, string> = { '__css__': hashContent(cssContent) }
+    if (coverHtmlFile && coverContent) {fileHashes[coverHtmlFile] = hashContent(coverContent)}
+    sortedPages.forEach(([name, content]) => { fileHashes[name] = hashContent(content) })
+    if (backCoverHtmlFile && backCoverContent) {fileHashes[backCoverHtmlFile] = hashContent(backCoverContent)}
+
+    // Fast path: when N and chunkSize are determinable without running the browser
+    // and all chunks are cached with no file changes, skip Puppeteer entirely.
+    // Disabled when BUILD_TOC_PAGENUMS is set because that phase requires finalHtml.
+    if (!process.env.BUILD_TOC_PAGENUMS) {
+      const registry = await loadRegistry(buildPdfFolderPath, config.id)
+      const fastN = config.buildProcessesNum ?? registry?.N
+      const fastChunkSize = config.buildPartSize ?? registry?.chunkSize
+      if (fastN && fastChunkSize) {
+        const plan = await resolveIncrementalPlan(buildPdfFolderPath, config.id, htmlFileOrder, fileHashes, fastN, fastChunkSize)
+        if (plan.toRebuild.size === 0) {
+          logger.info(chalk.gray(`All HTML unchanged — reusing ${fastN} cached chunks, skipping render`))
+          const decorateOpts: IDecorateOptions = {
+            skipHeaderAndFooter: config.skipHeaderAndFooter,
+            skipHeader: config.skipHeader,
+            skipFooter: config.skipFooter,
+          }
+          const cachedBuffers = Array.from({ length: fastN }, (_, i) => plan.cached.get(i)).filter(
+            (b): b is Buffer => b !== undefined,
+          )
+          const mergedBytes = await mergeChunks(cachedBuffers, config.header ?? '', decorateOpts)
+          await fs.writeFile(outputFilenamePath, mergedBytes)
+          logger.info(chalk.green(`>> Generated PDF document for ${outputFilenamePath}`))
+
+          return
+        }
+      }
+    }
+
     const fullHtmlContent = assembleDocumentHtml(config, coverContent, sortedPages, backCoverContent)
 
-    await createDocumentContentPdf(getFullPageTemplate(fullHtmlContent), outputFilenamePath, config)
+    await createDocumentContentPdf(getFullPageTemplate(fullHtmlContent), outputFilenamePath, config, {
+      fileOrder: htmlFileOrder,
+      fileHashes,
+    })
 
     logger.info(chalk.green(`>> Generated PDF document for ${outputFilenamePath}`))
   } catch (error) {

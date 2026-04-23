@@ -7,11 +7,11 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 import packageConfig from '../../package.json' with { type: 'json' }
-import handleCommands from './commands/index'
 import { getBuildFilePath, isFileChangedSinceLastBuild, recalculatePages, updateLastBuildTime } from './lib/build-utils'
 import { logger } from './lib/logger'
 import { getMarkdownRenderer } from './lib/markdown'
 import { measure } from './lib/measure'
+import handleMacros from './macros/index'
 import type { IDocPage, IPartProperties } from './types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -68,9 +68,9 @@ const convertMarkdownToHtml = async (
 
   let processedContent
   try {
-    processedContent = handleCommands(frontMatter.content, config)
+    processedContent = handleMacros(frontMatter.content, config)
   } catch (err) {
-    throw new Error(`handleCommands failed for ${filePath}`, { cause: err })
+    throw new Error(`handleMacros failed for ${filePath}`, { cause: err })
   }
 
   let htmlContent
@@ -145,7 +145,7 @@ export const prepareHtmlBuild = async (): Promise<void> => {
 }
 
 const shouldRebuildAllFiles = (
-  markdownSourcesDir: string,
+  markdownSrcDir: string,
   markdownFiles: string[],
   { id, invalidateBuildOnPattern }: IPartProperties,
 ): boolean => {
@@ -159,7 +159,7 @@ const shouldRebuildAllFiles = (
 
     for (const file of allMarkdownFiles) {
       if (invalidateBuildOnPattern.test(file)) {
-        const filePath = path.join(markdownSourcesDir, file)
+        const filePath = path.join(markdownSrcDir, file)
         let changed = false
         try {
           changed = isFileChangedSinceLastBuild(buildFilePath, filePath)

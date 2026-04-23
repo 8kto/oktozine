@@ -1,4 +1,4 @@
-import { addAliases } from '../cmd-alias'
+import { addAliases } from '../alias'
 
 describe('alias cmd tests', () => {
   const defaultCondig = { id: 'main' }

@@ -1,9 +1,15 @@
-// ── Shared TypeScript interfaces for the oktozine build system ───────────────
+// FIXME config
+export type PartId = 'main' | 'osr' | 'bestiary' | 'bestiary-osr' | 'items' | 'cover' | 'test-doc' | 'map'
 
-export interface ITocOverrides {
+export type ITocOverridesBase = {
   dropLabels?: string[]
   dropItemsFromLabels?: string[]
   alwaysInclude?: string[]
+}
+
+export interface ITocOverrides extends ITocOverridesBase {
+  /** Per-part overrides, merged with the top-level defaults (part values take priority). */
+  parts?: Partial<Record<PartId, ITocOverridesBase>>
 }
 
 export interface ITocConfig {
@@ -13,6 +19,8 @@ export interface ITocConfig {
   targetId?: string
   renderMaxLevel?: number
   tocOverrides?: ITocOverrides
+  /** Anchor ID → 1-based page number. When provided, page numbers are rendered next to each TOC item. */
+  pageNumbers?: Record<string, number>
 }
 
 export interface ITocItem {
@@ -92,4 +100,4 @@ export interface IRefEntry {
 }
 
 /** A function that transforms a markdown string given a build config. */
-export type CommandHandlerFn = (markdown: string, config: IPartProperties) => string
+export type MacroFn = (markdown: string, config: IPartProperties) => string

@@ -20,7 +20,7 @@
     "dev:radar": "npx live-server --port=3010 --no-browser maps/crt/",
     "dev:add-links-to-map": "npx live-server --port=3011 --no-browser maps/add-links-to-map/",
     "format": "prettier . --check",
-    "format:fix": "yarn lint --fix && prettier --write .",
+    "format:fix": "eslint . --ext .js,.mjs,.cjs,.ts,.d.ts --fix && prettier --write .",
     "pdf:accept": "node scripts/pdf-visual-diff/pdf-run.mjs accept",
     "pdf:baseline": "node scripts/pdf-visual-diff/pdf-run.mjs baseline",
     "pdf:diff": "node scripts/pdf-visual-diff/pdf-run.mjs diff",
@@ -28,7 +28,7 @@
     "pdf:open": "node scripts/pdf-visual-diff/pdf-run.mjs open",
     "radar:get-token": "(cd maps/crt/; node gm-link.js http://localhost:3010/ grounds)",
     "radar:deploy": "./scripts/deploy-radar-map.sh",
-    "lint": "eslint",
+    "lint": "eslint . --ext .js,.mjs,.cjs,.ts,.d.ts",
     "release-check": "node scripts/release/check-release.mjs",
     "release": "./scripts/release/release.sh",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
@@ -63,9 +63,12 @@
     "@types/jsdom": "^28.0.0",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^25.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.58.0",
+    "@typescript-eslint/parser": "^8.58.0",
     "babel-plugin-transform-import-meta": "^2.2.1",
     "eslint": "^8",
     "eslint-config-prettier": "^9.0.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-jsdoc": "^48.0.2",
     "eslint-plugin-markdown": "^3.0.1",
@@ -83,6 +86,6 @@
     "prettier-plugin-tailwindcss": "^0.5.7",
     "ts-jest": "^29.4.6",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.2"
   }
 }
