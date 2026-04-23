@@ -3,6 +3,7 @@ import fs from 'fs-extra'
 import os from 'os'
 import path from 'path'
 
+import type { IPartProperties } from '../../types'
 import {
   assembleDocumentHtml,
   compareHtmlFiles,
@@ -11,7 +12,6 @@ import {
   getPageTemplate,
   readModuleHtmlPages,
 } from '../pdf-html-assembler'
-import type { IPartProperties } from '../../types'
 
 // ── getPageClassname ─────────────────────────────────────────────────────────
 

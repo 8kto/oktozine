@@ -1,3 +1,4 @@
+// FIXME config
 export type PartId = 'main' | 'osr' | 'bestiary' | 'bestiary-osr' | 'items' | 'cover' | 'test-doc' | 'map'
 
 export type ITocOverridesBase = {

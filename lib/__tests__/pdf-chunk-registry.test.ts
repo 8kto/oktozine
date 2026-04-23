@@ -3,6 +3,7 @@ import fs from 'fs-extra'
 import os from 'os'
 import path from 'path'
 
+import type { IChunkRegistry } from '../pdf-chunk-registry'
 import {
   assignFilesToChunks,
   chunkCachePath,
@@ -12,7 +13,6 @@ import {
   resolveIncrementalPlan,
   saveRegistry,
 } from '../pdf-chunk-registry'
-import type { IChunkRegistry } from '../pdf-chunk-registry'
 
 // ── hashContent ──────────────────────────────────────────────────────────────
 
