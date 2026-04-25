@@ -16,6 +16,7 @@ interface ICliArgs {
   htmlNoSkip: boolean
   parallel: boolean
   config?: string
+  outputDir?: string
 }
 
 /** ---------- CLI parsing -------------------------------------------------- */
@@ -29,6 +30,7 @@ Usage: tsx scripts/oktozine/build-module.ts <partIds> [options]
 --parallel                          Build PDFs in parallel (default: serial)
 --log-level <level>                 Set pino logger level (trace|debug|info|warn|error|fatal)
 --config <path>                     Path to build config file (e.g. ./conf/build.conf.ts)
+--output-dir <path>                 Base output directory (default: <project-root>/build); final PDFs go into <path>/release/
 `.trim()
 
 const parseArgs = (): ICliArgs => {
@@ -81,6 +83,17 @@ const parseArgs = (): ICliArgs => {
         break
       }
 
+      case '--output-dir': {
+        const val = args[i + 1]
+        if (!val || val.startsWith('-')) {
+          logger.error(chalk.red('Error: --output-dir requires a path'))
+          process.exit(1)
+        }
+        out.outputDir = val
+        i += 2
+        break
+      }
+
       default:
         if (arg.startsWith('-')) {
           logger.error(chalk.red(`Error: unknown option ${arg}`))
@@ -117,7 +130,7 @@ const runPhase = async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
 /** ---------------------------- main build --------------------------------- */
 
 export const main = async (): Promise<void> => {
-  const { partIds, help, logLevel, htmlNoSkip, parallel, config: configPath } = parseArgs()
+  const { partIds, help, logLevel, htmlNoSkip, parallel, config: configPath, outputDir } = parseArgs()
 
   if (help) {
     // eslint-disable-next-line no-console
@@ -155,12 +168,12 @@ export const main = async (): Promise<void> => {
     process.exit(1)
   }
 
-  await runPhase('prepareHtmlBuild() failed', () => prepareHtmlBuild())
+  await runPhase('prepareHtmlBuild() failed', () => prepareHtmlBuild(outputDir))
 
   // Serial HTML build (avoid clobbering overlapping files)
   for (const conf of docsToBuild) {
     const merged = deepmerge(defaults, conf)
-    await runPhase(`buildHtml() failed for part "${conf.id}"`, () => buildHtml(merged))
+    await runPhase(`buildHtml() failed for part "${conf.id}"`, () => buildHtml(merged, outputDir))
   }
 
   // PDF build — serial by default, parallel with --parallel flag
@@ -169,13 +182,13 @@ export const main = async (): Promise<void> => {
       await Promise.all(
         docsToBuild.map(async (conf) => {
           const merged = deepmerge(defaults, conf)
-          await runPhase(`buildPdf() failed for part "${conf.id}"`, () => buildPdf(merged))
+          await runPhase(`buildPdf() failed for part "${conf.id}"`, () => buildPdf(merged, outputDir))
         }),
       )
     } else {
       for (const conf of docsToBuild) {
         const merged = deepmerge(defaults, conf)
-        await runPhase(`buildPdf() failed for part "${conf.id}"`, () => buildPdf(merged))
+        await runPhase(`buildPdf() failed for part "${conf.id}"`, () => buildPdf(merged, outputDir))
       }
     }
   })

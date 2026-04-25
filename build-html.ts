@@ -4,19 +4,19 @@ import chalk from 'chalk'
 import fs from 'fs-extra'
 import matter from 'gray-matter'
 import path from 'path'
-import { fileURLToPath } from 'url'
 
 import packageConfig from '../../package.json' with { type: 'json' }
 import { getBuildFilePath, isFileChangedSinceLastBuild, recalculatePages, updateLastBuildTime } from './lib/build-utils'
 import { logger } from './lib/logger'
 import { getMarkdownRenderer } from './lib/markdown'
 import { measure } from './lib/measure'
+import { PROJECT_ROOT } from './lib/project-root'
 import handleMacros from './macros/index'
 import type { IDocPage, IPartProperties } from './types'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const markdownSourcesDir = path.join(__dirname, '../../src/markdown')
-const htmTemplateslDir = path.join(__dirname, '../../src/html')
+const defaultOutputDir = path.join(PROJECT_ROOT, 'build')
+const markdownSourcesDir = path.join(PROJECT_ROOT, 'src/markdown')
+const htmTemplateslDir = path.join(PROJECT_ROOT, 'src/html')
 
 /** ---------------------------- fs helpers --------------------------------- */
 
@@ -126,8 +126,8 @@ const applyTemplate = async (data: IDocPage, templatePath: string): Promise<stri
   return res
 }
 
-export const prepareHtmlBuild = async (): Promise<void> => {
-  const buildDir = path.join(__dirname, '../../build/chunks-html')
+export const prepareHtmlBuild = async (outputDir?: string): Promise<void> => {
+  const buildDir = path.join(outputDir ?? defaultOutputDir, 'chunks-html')
 
   if (!fs.existsSync(buildDir)) {
     fs.mkdirSync(buildDir, { recursive: true })
@@ -136,10 +136,11 @@ export const prepareHtmlBuild = async (): Promise<void> => {
   await fsPhase('copy static assets into chunks-html', async () => {
     await Promise.all([
       // FIXME abstract
-      fs.copy(path.join(__dirname, '../../server/index.html'), path.join(buildDir, 'server.html')),
-      fs.copy(path.join(__dirname, '../../build/output.css'), path.join(buildDir, 'output.css')),
-      fs.copy(path.join(__dirname, '../../src/images/'), path.join(buildDir, 'images/')),
-      fs.copy(path.join(__dirname, '../../src/styles/fonts'), path.join(buildDir, 'fonts/')),
+      fs.copy(path.join(PROJECT_ROOT, 'server/index.html'), path.join(buildDir, 'server.html')),
+      // FIXME use build path
+      fs.copy(path.join(PROJECT_ROOT, 'build/output.css'), path.join(buildDir, 'output.css')),
+      fs.copy(path.join(PROJECT_ROOT, 'src/images/'), path.join(buildDir, 'images/')),
+      fs.copy(path.join(PROJECT_ROOT, 'src/styles/fonts'), path.join(buildDir, 'fonts/')),
     ])
   })
 }
@@ -225,7 +226,7 @@ const renderToHtml = async (pageData: IDocPage, buildDir: string, fileName: stri
   logger.info(chalk.cyan(`>> Generated HTML for ${fileName}`))
 }
 
-export const buildHtml = async (config: IPartProperties): Promise<void> => {
+export const buildHtml = async (config: IPartProperties, outputDir?: string): Promise<void> => {
   logger.info(chalk.cyan(`Building HTML for "${config.documentTitle}" (${config.documentFileName})...`))
   const endBuildHtmlMeasure = measure()
 
@@ -235,7 +236,7 @@ export const buildHtml = async (config: IPartProperties): Promise<void> => {
     return
   }
 
-  const buildDir = path.join(__dirname, '../../build/chunks-html', `module-${config.id}`)
+  const buildDir = path.join(outputDir ?? defaultOutputDir, 'chunks-html', `module-${config.id}`)
   const markdownRenderer = getMarkdownRenderer()
 
   await fsPhase(`ensureDir ${buildDir}`, () => fs.ensureDir(buildDir))
