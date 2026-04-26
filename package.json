@@ -6,7 +6,7 @@
   "scripts": {
     "build": "yarn build:main",
     "build:main": "yarn build:styles && tsx scripts/oktozine/build-module.ts main --html-no-skip",
-    "build:clean": "node scripts/release/clean-build.mjs --dir build/pdf",
+    "build:clean": "node scripts/release/clean-build.mjs --dir build/release",
     "build:all": "yarn build:styles && tsx scripts/oktozine/build-module.ts --html-no-skip; yarn build:bestiaries",
     "build:styles": "npx tailwindcss -i ./src/styles/styles.css -o ./build/output.css",
     "build:bestiary": "scripts/build/build-bestiary.sh --id bestiary",
