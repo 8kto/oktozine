@@ -1,5 +1,7 @@
 #!/usr/bin/env tsx
 
+import path from 'node:path'
+
 import chalk from 'chalk'
 import deepmerge from 'deepmerge'
 
@@ -89,7 +91,7 @@ const parseArgs = (): ICliArgs => {
           logger.error(chalk.red('Error: --output-dir requires a path'))
           process.exit(1)
         }
-        out.outputDir = val
+        out.outputDir = path.resolve(val)
         i += 2
         break
       }

@@ -14,7 +14,7 @@ import { PROJECT_ROOT } from './lib/project-root'
 import handleMacros from './macros/index'
 import type { IDocPage, IPartProperties } from './types'
 
-const defaultOutputDir = path.join(PROJECT_ROOT, 'build')
+const defaultBuildDir = path.join(PROJECT_ROOT, 'build')
 const markdownSourcesDir = path.join(PROJECT_ROOT, 'src/markdown')
 const htmTemplateslDir = path.join(PROJECT_ROOT, 'src/html')
 
@@ -127,20 +127,20 @@ const applyTemplate = async (data: IDocPage, templatePath: string): Promise<stri
 }
 
 export const prepareHtmlBuild = async (outputDir?: string): Promise<void> => {
-  const buildDir = path.join(outputDir ?? defaultOutputDir, 'chunks-html')
+  const buildDir = outputDir ?? defaultBuildDir
+  const htmlBuildDir = path.join(buildDir, 'chunks-html')
 
-  if (!fs.existsSync(buildDir)) {
-    fs.mkdirSync(buildDir, { recursive: true })
+  if (!fs.existsSync(htmlBuildDir)) {
+    fs.mkdirSync(htmlBuildDir, { recursive: true })
   }
 
   await fsPhase('copy static assets into chunks-html', async () => {
     await Promise.all([
-      // FIXME abstract
-      fs.copy(path.join(PROJECT_ROOT, 'server/index.html'), path.join(buildDir, 'server.html')),
-      // FIXME use build path
-      fs.copy(path.join(PROJECT_ROOT, 'build/output.css'), path.join(buildDir, 'output.css')),
-      fs.copy(path.join(PROJECT_ROOT, 'src/images/'), path.join(buildDir, 'images/')),
-      fs.copy(path.join(PROJECT_ROOT, 'src/styles/fonts'), path.join(buildDir, 'fonts/')),
+      // FIXME paths set outside of the oktozine codebase
+      fs.copy(path.join(PROJECT_ROOT, 'server/index.html'), path.join(htmlBuildDir, 'server.html')),
+      fs.copy(path.join(buildDir, 'output.css'), path.join(htmlBuildDir, 'output.css')),
+      fs.copy(path.join(PROJECT_ROOT, 'src/images/'), path.join(htmlBuildDir, 'images/')),
+      fs.copy(path.join(PROJECT_ROOT, 'src/styles/fonts'), path.join(htmlBuildDir, 'fonts/')),
     ])
   })
 }
@@ -236,7 +236,7 @@ export const buildHtml = async (config: IPartProperties, outputDir?: string): Pr
     return
   }
 
-  const buildDir = path.join(outputDir ?? defaultOutputDir, 'chunks-html', `module-${config.id}`)
+  const buildDir = path.join(outputDir ?? defaultBuildDir, 'chunks-html', `module-${config.id}`)
   const markdownRenderer = getMarkdownRenderer()
 
   await fsPhase(`ensureDir ${buildDir}`, () => fs.ensureDir(buildDir))

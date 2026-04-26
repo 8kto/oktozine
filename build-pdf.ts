@@ -22,19 +22,14 @@ import {
   resolveIncrementalPlan,
   saveRegistry,
 } from './lib/pdf-chunk-registry'
-import {
-  assembleDocumentHtml,
-  getFullPageTemplate,
-  readModuleHtmlPages,
-} from './lib/pdf-html-assembler'
+import { assembleDocumentHtml, getFullPageTemplate, readModuleHtmlPages } from './lib/pdf-html-assembler'
 import { PROJECT_ROOT } from './lib/project-root'
 import { buildToc } from './lib/table-of-contents'
 import { wrapContentSections } from './lib/wrap-sections'
 import type { IPartProperties, ITocItem, PartId } from './types'
 
-const defaultOutputDir = path.join(PROJECT_ROOT, 'build')
-const cssPath = path.join(PROJECT_ROOT, 'build/output.css')
-const philosopherFontPath = path.join(PROJECT_ROOT, 'src/styles/fonts/Philosopher/Philosopher-Regular.ttf')
+const defaultBuildPath = path.join(PROJECT_ROOT, 'build')
+const pageNumbersFontPath = path.join(PROJECT_ROOT, 'src/styles/fonts/Philosopher/Philosopher-Regular.ttf')
 
 // Number of parallel Chromium instances for PDF rendering.
 // Override with PDF_PARALLEL=N environment variable.
@@ -59,7 +54,10 @@ const BROWSER_ARGS = [
 
 const launchBrowser = () => puppeteer.launch({ headless: 'new' as const, defaultViewport: null, args: BROWSER_ARGS })
 
-const setupPage = async (browser: Awaited<ReturnType<typeof launchBrowser>>, html: string) => {
+const setupPage = async (browser: Awaited<ReturnType<typeof launchBrowser>>, html: string, outputPath: string) => {
+  const resolvedOutputPath = outputPath ?? defaultBuildPath
+  const cssPath = path.join(resolvedOutputPath, 'output.css')
+
   const page = await browser.newPage()
   await page.setExtraHTTPHeaders({ 'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7' })
   page.on('console', (msg) => logger.info(`PAGE LOG: ${msg.text()}`))
@@ -88,10 +86,10 @@ const injectNamePolyfill = (page: Awaited<ReturnType<typeof setupPage>>) =>
 
 // ── Chunk rendering ──────────────────────────────────────────────────────────
 
-const renderChunkOnce = async (html: string, pageRange: string): Promise<Buffer> => {
+const renderChunkOnce = async (html: string, pageRange: string, outputPath: string): Promise<Buffer> => {
   const browser = await launchBrowser()
   try {
-    const page = await setupPage(browser, html)
+    const page = await setupPage(browser, html, outputPath)
     await page.emulateMediaType('print')
 
     // No displayHeaderFooter — we add headers/footers via pdf-lib after merge
@@ -112,11 +110,11 @@ const renderChunkOnce = async (html: string, pageRange: string): Promise<Buffer>
 
 // Retry once on failure — parallel Chrome instances can fail transiently
 // due to resource contention (shared memory, CPU spikes, etc.).
-const renderChunk = async (html: string, pageRange: string): Promise<Buffer | null> => {
+const renderChunk = async (html: string, pageRange: string, outputPath: string): Promise<Buffer | null> => {
   try {
     logger.debug(chalk.gray(`Rendering PDF chunk ${pageRange}`))
 
-    return await renderChunkOnce(html, pageRange)
+    return await renderChunkOnce(html, pageRange, outputPath)
   } catch (err) {
     if ((err as Error)?.message.includes('Page range exceeds page count')) {
       return null
@@ -124,11 +122,11 @@ const renderChunk = async (html: string, pageRange: string): Promise<Buffer | nu
 
     logger.debug(chalk.gray(`chunk ${pageRange}: retrying after error — ${(err as Error).message}`))
 
-    return renderChunkOnce(html, pageRange)
+    return renderChunkOnce(html, pageRange, outputPath)
   }
 }
 
-const writeFullContentToFile = (id: string, content: string, htmlChunksDir: string): void => {
+const writeFullContentToFile = (id: string, content: string, htmlChunksPath: string): void => {
   const htmlPage = `
     <!doctype html>
     <html lang="ru">
@@ -145,25 +143,33 @@ const writeFullContentToFile = (id: string, content: string, htmlChunksDir: stri
     </html>
   `
   const fileName = `$fullHtmlContent-${id}.html`
-  fs.writeFile(path.join(htmlChunksDir, fileName), htmlPage)
+  fs.writeFile(path.join(htmlChunksPath, fileName), htmlPage)
   logger.info(chalk.bgBlueBright(`HTML dumped into "${fileName}" file`))
 }
 
 // ── PDF DOM preparation ──────────────────────────────────────────────────────
 
-const buildTocForPage = async (page: Awaited<ReturnType<typeof setupPage>>, config: IPartProperties, htmlChunksDir: string): Promise<void> => {
+const buildTocForPage = async (
+  page: Awaited<ReturnType<typeof setupPage>>,
+  config: IPartProperties,
+  htmlChunksPath: string,
+  outputPath: string,
+): Promise<void> => {
   if (!config.tocConfig) {
     return
   }
 
   try {
+    const resolvedOutputPath = outputPath ?? defaultBuildPath
+
     const { parts, ...tocDefaults } = tocOverrides
     const mergedTocOverrides = { ...tocDefaults, ...parts?.[config.id as PartId] }
     const toc = await page.evaluate(buildToc, { ...config.tocConfig, tocOverrides: mergedTocOverrides })
     const rootId = config.tocConfig.rootId ?? 'toc-main'
     const tocHtml = await page.evaluate((id: string) => document.getElementById(id)?.innerHTML || '', rootId)
-    fs.writeFile(path.join(htmlChunksDir, `$toc-${config.id}.html`), tocHtml)
-    fs.writeFile(path.join(PROJECT_ROOT, `build/$toc-${config.id}.json`), JSON.stringify(toc, null, 2))
+
+    fs.writeFile(path.join(htmlChunksPath, `$toc-${config.id}.html`), tocHtml)
+    fs.writeFile(path.join(resolvedOutputPath, `$toc-${config.id}.json`), JSON.stringify(toc, null, 2))
   } catch (err) {
     logger.error(err, 'build-pdf: cannot create TOC')
   }
@@ -195,12 +201,17 @@ interface IPreparedPdf {
  * page count, and serialise the resulting HTML for chunk rendering.
  * Returns null on error (already logged).
  */
-const preparePdfHtml = async (html: string, config: IPartProperties, htmlChunksDir: string): Promise<IPreparedPdf | null> => {
+const preparePdfHtml = async (
+  html: string,
+  config: IPartProperties,
+  htmlChunksPath: string,
+  outputPath: string,
+): Promise<IPreparedPdf | null> => {
   const browser = await launchBrowser()
   try {
-    const page = await setupPage(browser, html)
+    const page = await setupPage(browser, html, outputPath)
     await injectNamePolyfill(page)
-    await buildTocForPage(page, config, htmlChunksDir)
+    await buildTocForPage(page, config, htmlChunksPath, outputPath)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await page.evaluate(wrapContentSections as any, { selector: '.content', wrapperClass: 'room-section' })
 
@@ -210,7 +221,7 @@ const preparePdfHtml = async (html: string, config: IPartProperties, htmlChunksD
     if (process.env.BUILD_DUMP_HTML !== 'false') {
       // FIXME use finalHtml?
       const body = await page.evaluate(() => document.body.innerHTML || '')
-      writeFullContentToFile(config.id, body, htmlChunksDir)
+      writeFullContentToFile(config.id, body, htmlChunksPath)
     }
 
     return { finalHtml, approxPageCount }
@@ -332,7 +343,9 @@ const rebuildNamedDestinations = (
 
 /** Recursively collects all anchor IDs from TOC items. */
 const flattenTocIds = (items: ITocItem[]): string[] =>
-  items.flatMap((item) => [item.id, ...(item.items ? flattenTocIds(item.items) : [])].filter((id): id is string => !!id))
+  items.flatMap((item) =>
+    [item.id, ...(item.items ? flattenTocIds(item.items) : [])].filter((id): id is string => !!id),
+  )
 
 // ── PDF page decoration ──────────────────────────────────────────────────────
 
@@ -423,7 +436,7 @@ const mergeChunks = async (
 ): Promise<Uint8Array> => {
   const mergedPdf = await PDFDocument.create()
   mergedPdf.registerFontkit(fontkit)
-  const philosopherBytes = await fs.readFile(philosopherFontPath)
+  const philosopherBytes = await fs.readFile(pageNumbersFontPath)
   const font = await mergedPdf.embedFont(philosopherBytes)
 
   const chunkMeta: Array<{ doc: PDFDocument; pageOffset: number; pageCount: number }> = []
@@ -471,15 +484,16 @@ export const buildChunkRanges = (N: number, chunkSize: number): string[] =>
 
 const createDocumentContentPdf = async (
   html: string,
+  outputFilenamePath: string,
   outputPath: string,
   config: IPartProperties,
-  pdfCacheDir: string,
-  htmlChunksDir: string,
+  pdfCachePath: string,
+  htmlChunksPath: string,
   incremental?: IIncrementalBuildInfo,
 ): Promise<void> => {
   // ── Phase 1: DOM setup (TOC, section-wrap, page count, HTML serialisation) ─
   const endSetup = measure('Setup PDF doc: TOC, sections wrap...')
-  const prepared = await preparePdfHtml(html, config, htmlChunksDir)
+  const prepared = await preparePdfHtml(html, config, htmlChunksPath, outputPath)
   if (!prepared) {
     return
   }
@@ -489,7 +503,7 @@ const createDocumentContentPdf = async (
   logger.info(chalk.gray(`${endSetup()}, ~${approxPageCount} pages`))
 
   const incrPlan = incremental
-    ? await resolveIncrementalPlan(pdfCacheDir, config.id, incremental.fileOrder, incremental.fileHashes, N, chunkSize)
+    ? await resolveIncrementalPlan(pdfCachePath, config.id, incremental.fileOrder, incremental.fileHashes, N, chunkSize)
     : { cached: new Map<number, Buffer>(), toRebuild: new Set(Array.from({ length: N }, (_, i) => i)) }
 
   // ── Phase 2: parallel chunk rendering ─────────────────────────────────────
@@ -510,7 +524,7 @@ const createDocumentContentPdf = async (
           return { i, buf: incrPlan.cached.get(i)! }
         }
 
-        return { i, buf: await renderChunk(finalHtml, range) }
+        return { i, buf: await renderChunk(finalHtml, range, outputPath) }
       }),
     )
   } catch (err) {
@@ -525,9 +539,15 @@ const createDocumentContentPdf = async (
   await Promise.all([
     ...chunkResults
       .filter(({ i, buf }) => buf !== null && incrPlan.toRebuild.has(i))
-      .map(({ i, buf }) => fs.writeFile(chunkCachePath(pdfCacheDir, config.id, i), buf!)),
+      .map(({ i, buf }) => fs.writeFile(chunkCachePath(pdfCachePath, config.id, i), buf!)),
     incremental
-      ? saveRegistry(pdfCacheDir, { partId: config.id, builtAt: Date.now(), N, chunkSize, fileHashes: incremental.fileHashes })
+      ? saveRegistry(pdfCachePath, {
+          partId: config.id,
+          builtAt: Date.now(),
+          N,
+          chunkSize,
+          fileHashes: incremental.fileHashes,
+        })
       : Promise.resolve(),
   ])
 
@@ -555,12 +575,11 @@ const createDocumentContentPdf = async (
       const tocRootId = config.tocConfig.rootId ?? 'toc-main'
       // Primary: look up the named destination Chrome emitted for the TOC root element.
       // Fallback: skipFirstPages tells us how many pre-TOC pages there are.
-      const tocStartPage =
-        anchorPageOut.get(tocRootId) ?? (config.bookmarksConfig?.skipFirstPages ?? 0) + 1
+      const tocStartPage = anchorPageOut.get(tocRootId) ?? (config.bookmarksConfig?.skipFirstPages ?? 0) + 1
 
       let tocEndPage: number | undefined
       try {
-        const tocJsonPath = path.join(PROJECT_ROOT, `build/$toc-${config.id}.json`)
+        const tocJsonPath = path.join(outputPath, `$toc-${config.id}.json`)
         const tocItems: ITocItem[] = JSON.parse(await fs.readFile(tocJsonPath, 'utf8'))
         const pages = flattenTocIds(tocItems)
           .map((id) => anchorPageOut!.get(id))
@@ -581,7 +600,9 @@ const createDocumentContentPdf = async (
         if (tocRoot) {
           for (const a of tocRoot.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')) {
             const anchorId = a.getAttribute('href')!.slice(1)
-            if (anchorId === tocRootId) {continue} // skip the self-link sentinel
+            if (anchorId === tocRootId) {
+              continue
+            } // skip the self-link sentinel
             const pageNum = anchorPageOut!.get(anchorId)
             if (pageNum !== undefined) {
               const span = dom.window.document.createElement('span')
@@ -597,7 +618,7 @@ const createDocumentContentPdf = async (
         const patchedHtml = dom.serialize()
 
         // 2. Render only the TOC pages
-        const tocBuffer = await renderChunk(patchedHtml, `${tocStartPage}-${tocEndPage}`)
+        const tocBuffer = await renderChunk(patchedHtml, `${tocStartPage}-${tocEndPage}`, outputPath)
         if (tocBuffer) {
           // 3. Splice new TOC pages into the merged PDF
           const mergedDoc = await PDFDocument.load(mergedBytes)
@@ -615,10 +636,10 @@ const createDocumentContentPdf = async (
 
           // 4. Decorate only the spliced pages (merged PDF is already decorated elsewhere)
           mergedDoc.registerFontkit(fontkit)
-          const patchFont = await mergedDoc.embedFont(await fs.readFile(philosopherFontPath))
+          const patchFont = await mergedDoc.embedFont(await fs.readFile(pageNumbersFontPath))
           decoratePagesInRange(mergedDoc, config.header ?? '', patchFont, tocStartPage, tocEndPage, decorateOpts)
 
-          await fs.writeFile(outputPath, await mergedDoc.save())
+          await fs.writeFile(outputFilenamePath, await mergedDoc.save())
           logger.info(chalk.gray(endMerge()))
 
           return
@@ -626,7 +647,7 @@ const createDocumentContentPdf = async (
       }
     }
 
-    await fs.writeFile(outputPath, mergedBytes)
+    await fs.writeFile(outputFilenamePath, mergedBytes)
   } catch (err) {
     logger.error(err)
 
@@ -638,33 +659,32 @@ const createDocumentContentPdf = async (
 
 // ── Public entry point ───────────────────────────────────────────────────────
 
-export const buildPdf = async (config: IPartProperties, outputDir?: string): Promise<void> => {
+export const buildPdf = async (config: IPartProperties, outputPath?: string): Promise<void> => {
   logger.info(chalk.green(`Building PDF for "${config.documentTitle}" (${config.documentFileName})...`))
 
-  const resolvedOutputDir = outputDir ?? defaultOutputDir
-  const pdfCacheDir = path.join(resolvedOutputDir, 'pdf')
-  const htmlChunksDir = path.join(resolvedOutputDir, 'chunks-html')
-  const releaseDir = path.join(resolvedOutputDir, 'release')
+  const resolvedOutputPath = outputPath ?? defaultBuildPath
+  const pdfCachePath = path.join(resolvedOutputPath, 'pdf')
+  const htmlChunksPath = path.join(resolvedOutputPath, 'chunks-html')
+  const releasePath = path.join(resolvedOutputPath, 'release')
+  const cssPath = path.join(resolvedOutputPath, 'output.css')
+
   const version = packageConfig.version
   const outputFilename = config.documentFileName!.replace('{{version}}', version)
-  const outputFilenamePath = path.join(releaseDir, outputFilename)
+  const outputFilenamePath = path.join(releasePath, outputFilename)
   const coverHtmlFile = config.coverHtmlFile ? `${config.coverHtmlFile}.html` : null
   const backCoverHtmlFile = config.backCoverHtmlFile ? `${config.backCoverHtmlFile}.html` : null
 
   try {
-    await Promise.all([
-      mkdir(pdfCacheDir, { recursive: true }),
-      mkdir(releaseDir, { recursive: true }),
-    ])
+    await Promise.all([mkdir(pdfCachePath, { recursive: true }), mkdir(releasePath, { recursive: true })])
 
-    const moduleDir = path.join(htmlChunksDir, `module-${config.id}`)
+    const modulePath = path.join(htmlChunksPath, `module-${config.id}`)
     const [coverContent, backCoverContent, cssContent] = await Promise.all([
-      coverHtmlFile ? fs.readFile(path.join(moduleDir, coverHtmlFile), 'utf8') : Promise.resolve(null),
-      backCoverHtmlFile ? fs.readFile(path.join(moduleDir, backCoverHtmlFile), 'utf8') : Promise.resolve(null),
+      coverHtmlFile ? fs.readFile(path.join(modulePath, coverHtmlFile), 'utf8') : Promise.resolve(null),
+      backCoverHtmlFile ? fs.readFile(path.join(modulePath, backCoverHtmlFile), 'utf8') : Promise.resolve(null),
       fs.readFile(cssPath, 'utf8').catch(() => ''),
     ])
 
-    const sortedPages = await readModuleHtmlPages(moduleDir, [coverHtmlFile, backCoverHtmlFile])
+    const sortedPages = await readModuleHtmlPages(modulePath, [coverHtmlFile, backCoverHtmlFile])
 
     // Compute content hashes for incremental build tracking.
     // Files are already in memory so this adds no I/O.
@@ -673,20 +693,33 @@ export const buildPdf = async (config: IPartProperties, outputDir?: string): Pro
       ...sortedPages.map(([name]) => name),
       ...(backCoverHtmlFile ? [backCoverHtmlFile] : []),
     ]
-    const fileHashes: Record<string, string> = { '__css__': hashContent(cssContent) }
-    if (coverHtmlFile && coverContent) {fileHashes[coverHtmlFile] = hashContent(coverContent)}
-    sortedPages.forEach(([name, content]) => { fileHashes[name] = hashContent(content) })
-    if (backCoverHtmlFile && backCoverContent) {fileHashes[backCoverHtmlFile] = hashContent(backCoverContent)}
+    const fileHashes: Record<string, string> = { __css__: hashContent(cssContent) }
+    if (coverHtmlFile && coverContent) {
+      fileHashes[coverHtmlFile] = hashContent(coverContent)
+    }
+    sortedPages.forEach(([name, content]) => {
+      fileHashes[name] = hashContent(content)
+    })
+    if (backCoverHtmlFile && backCoverContent) {
+      fileHashes[backCoverHtmlFile] = hashContent(backCoverContent)
+    }
 
     // Fast path: when N and chunkSize are determinable without running the browser
     // and all chunks are cached with no file changes, skip Puppeteer entirely.
     // Disabled when BUILD_TOC_PAGENUMS is set because that phase requires finalHtml.
     if (!process.env.BUILD_TOC_PAGENUMS) {
-      const registry = await loadRegistry(pdfCacheDir, config.id)
+      const registry = await loadRegistry(pdfCachePath, config.id)
       const fastN = config.buildProcessesNum ?? registry?.N
       const fastChunkSize = config.buildPartSize ?? registry?.chunkSize
       if (fastN && fastChunkSize) {
-        const plan = await resolveIncrementalPlan(pdfCacheDir, config.id, htmlFileOrder, fileHashes, fastN, fastChunkSize)
+        const plan = await resolveIncrementalPlan(
+          pdfCachePath,
+          config.id,
+          htmlFileOrder,
+          fileHashes,
+          fastN,
+          fastChunkSize,
+        )
         if (plan.toRebuild.size === 0) {
           logger.info(chalk.gray(`All HTML unchanged — reusing ${fastN} cached chunks, skipping render`))
           const decorateOpts: IDecorateOptions = {
@@ -708,10 +741,18 @@ export const buildPdf = async (config: IPartProperties, outputDir?: string): Pro
 
     const fullHtmlContent = assembleDocumentHtml(config, coverContent, sortedPages, backCoverContent)
 
-    await createDocumentContentPdf(getFullPageTemplate(fullHtmlContent), outputFilenamePath, config, pdfCacheDir, htmlChunksDir, {
-      fileOrder: htmlFileOrder,
-      fileHashes,
-    })
+    await createDocumentContentPdf(
+      getFullPageTemplate(fullHtmlContent),
+      outputFilenamePath,
+      resolvedOutputPath,
+      config,
+      pdfCachePath,
+      htmlChunksPath,
+      {
+        fileOrder: htmlFileOrder,
+        fileHashes,
+      },
+    )
 
     logger.info(chalk.green(`>> Generated PDF document for ${outputFilenamePath}`))
   } catch (error) {
