@@ -7,7 +7,7 @@ import chalk from 'chalk'
 import fs from 'fs-extra'
 import { JSDOM } from 'jsdom'
 import path from 'path'
-import { PDFArray, PDFDict, PDFDocument, PDFFont, PDFName, PDFRef, rgb } from 'pdf-lib'
+import { PDFArray, PDFDict, PDFDocument, PDFFont, PDFName, PDFRawStream, PDFRef, rgb } from 'pdf-lib'
 import puppeteer from 'puppeteer'
 
 import { tocOverrides } from '../../conf/oktozin.toc.conf'
@@ -428,6 +428,30 @@ const decoratePagesInRange = (
   }
 }
 
+const isBlankPage = (doc: PDFDocument, page: ReturnType<typeof doc.getPage>): boolean => {
+  const resolve = (ref: unknown): unknown =>
+    ref instanceof PDFRef ? doc.context.lookup(ref) : ref
+
+  const contents = page.node.get(PDFName.of('Contents'))
+  if (!contents) {return true}
+
+  const resolved = resolve(contents)
+
+  if (resolved instanceof PDFArray) {
+    if (resolved.size() === 0) {return true}
+    for (let i = 0; i < resolved.size(); i++) {
+      const stream = resolve(resolved.get(i))
+      if (stream instanceof PDFRawStream && stream.contents.length > 20) {return false}
+    }
+
+    return true
+  }
+
+  if (resolved instanceof PDFRawStream) {return resolved.contents.length <= 20}
+
+  return false
+}
+
 const mergeChunks = async (
   chunkBuffers: Buffer[],
   headerText: string,
@@ -455,6 +479,16 @@ const mergeChunks = async (
     chunkMeta.push({ doc, pageOffset, pageCount: srcIndices.length })
     pageOffset += srcIndices.length
   }
+
+  const endBlankPageDetection = measure('Detect blank page artifacts')
+  // Chrome generates a trailing blank page when the last element uses a named CSS page
+  // (e.g. `page: fullpage_image` on the back cover). Strip any such blank tail pages
+  // before rebuilding named destinations, so page indices remain accurate.
+  while (mergedPdf.getPageCount() > 0 && isBlankPage(mergedPdf, mergedPdf.getPage(mergedPdf.getPageCount() - 1))) {
+    logger.debug(chalk.gray(`Trimmed trailing blank page; pages remaining: ${mergedPdf.getPageCount() - 1}`))
+    mergedPdf.removePage(mergedPdf.getPageCount() - 1)
+  }
+  logger.info(chalk.gray(endBlankPageDetection()))
 
   const endRebuildNamedDestinations = measure('Rebuild PDF links')
   rebuildNamedDestinations(mergedPdf, chunkMeta, anchorPageOut)
