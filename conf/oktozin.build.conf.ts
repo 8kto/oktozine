@@ -50,6 +50,7 @@ const mainBestiaryConf: Partial<IPartProperties> = {
 }
 
 const config: IModuleBuilderConfig = {
+  version: '1.11.23',
   releasePartIds: ['main', 'bestiary', 'map', 'osr', 'bestiary-osr'],
   template: 'two-columns.html',
   footer: '2025-2026, undefined Okto',

@@ -73,6 +73,7 @@ export interface IPartProperties extends IDocProperties {
 }
 
 export interface IModuleBuilderConfig extends IDocProperties {
+  version: string
   parts: IPartProperties[]
   releasePartIds?: string[]
 }

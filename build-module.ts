@@ -155,6 +155,20 @@ export const main = async (): Promise<void> => {
     loadBuildConfig(configPath),
   )
 
+  const MIN_CONFIG_VERSION = '1.11.23'
+  const MAX_CONFIG_MAJOR = 2
+  const [major, minor, patch] = buildConfig.version.split('.').map(Number)
+  const [minMajor, minMinor, minPatch] = MIN_CONFIG_VERSION.split('.').map(Number)
+  const tooOld =
+    major < minMajor ||
+    (major === minMajor && minor < minMinor) ||
+    (major === minMajor && minor === minMinor && patch < minPatch)
+  if (tooOld || major > MAX_CONFIG_MAJOR) {
+    throw new Error(
+      `Config version "${buildConfig.version}" is out of supported range [${MIN_CONFIG_VERSION}, ${MAX_CONFIG_MAJOR}.x].`,
+    )
+  }
+
   let requestedIds = partIds
   if (!requestedIds.length) {
     requestedIds = buildConfig.parts.filter((p) => !p.skipBuild).map((p) => p.id)
