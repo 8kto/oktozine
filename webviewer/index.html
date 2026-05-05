@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>HTML files viewer</title>
+  </head>
+  <style>
+    #frame-html-viewer {
+      position: absolute;
+      width: 90%;
+      height: 95vh;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      border: 1px solid #888;
+    }
+  </style>
+  <body lang="ru">
+    <iframe id="frame-html-viewer" src="./"></iframe>
+
+    <script>
+      ;(() => {
+        const stylesheets = ['output.css']
+
+        function throttle(func, delay) {
+          var lastCall = 0
+          return function () {
+            var now = Date.now()
+            if (now - lastCall >= delay) {
+              lastCall = now
+              func()
+            }
+          }
+        }
+
+        window.addEventListener('load', function () {
+          const iframe = document.getElementById('frame-html-viewer')
+
+          // Функция для загрузки файла в iframe
+          function loadFileIntoIframe(file) {
+            const iframeURL = file ? `./${file}` : './'
+            iframe.src = iframeURL
+          }
+
+          // Проверка наличия хэша в URL и загрузка соответствующего файла
+          const currentHash = window.location.hash
+          const match = /#file=(.+)/.exec(currentHash)
+          if (match && match[1]) {
+            loadFileIntoIframe(match[1])
+          }
+
+          // Добавление стилей и обновление хэша URL при загрузке нового документа в iframe
+          iframe.addEventListener('load', function () {
+            const iframeDocument = iframe.contentDocument || iframe.contentWindow.document
+
+            stylesheets.forEach((path) => {
+              const link = iframeDocument.createElement('link')
+              link.rel = 'stylesheet'
+              link.type = 'text/css'
+              link.href = path
+              iframeDocument.head.appendChild(link)
+            })
+
+            const newHash = `#file=${iframe.contentWindow.location.pathname.replace(/^\//, '')}`
+            window.location.hash = newHash
+
+            var savedPosition = sessionStorage.getItem('frameScrollPosition-' + newHash)
+            if (savedPosition !== null) {
+              iframe.contentWindow.scrollTo(0, parseInt(savedPosition))
+            }
+
+            var saveScroll = function () {
+              var position = iframe.contentWindow.scrollY
+              sessionStorage.setItem('frameScrollPosition-' + newHash, position)
+            }
+
+            iframe.contentWindow.addEventListener('scroll', throttle(saveScroll, 200))
+          })
+        })
+      })()
+    </script>
+  </body>
+</html>
