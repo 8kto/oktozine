@@ -7,3 +7,5 @@ import { fileURLToPath } from 'node:url'
 // When this pipeline is extracted as a standalone library, callers should supply
 // the project root via config rather than relying on this module-level constant.
 export const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
+
+export const OKTOZINE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')

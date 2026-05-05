@@ -10,7 +10,7 @@ import { getBuildFilePath, isFileChangedSinceLastBuild, recalculatePages, update
 import { logger } from './lib/logger'
 import { getMarkdownRenderer } from './lib/markdown'
 import { measure } from './lib/measure'
-import { PROJECT_ROOT } from './lib/project-root'
+import { OKTOZINE_ROOT, PROJECT_ROOT } from './lib/project-root'
 import handleMacros from './macros/index'
 import type { IDocPage, IPartProperties } from './types'
 
@@ -137,8 +137,8 @@ export const prepareHtmlBuild = async (outputDir?: string): Promise<void> => {
   await fsPhase('copy static assets into chunks-html', async () => {
     await Promise.all([
       // FIXME paths set outside of the oktozine codebase
-      fs.copy(path.join(PROJECT_ROOT, 'server/index.html'), path.join(htmlBuildDir, 'server.html')),
       fs.copy(path.join(buildDir, 'output.css'), path.join(htmlBuildDir, 'output.css')),
+      fs.copy(path.join(OKTOZINE_ROOT, 'webviewer/index.html'), path.join(htmlBuildDir, 'server.html')),
       fs.copy(path.join(PROJECT_ROOT, 'src/images/'), path.join(htmlBuildDir, 'images/')),
       fs.copy(path.join(PROJECT_ROOT, 'src/styles/fonts'), path.join(htmlBuildDir, 'fonts/')),
     ])

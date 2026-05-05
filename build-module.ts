@@ -10,6 +10,7 @@ import { buildPdf } from './build-pdf'
 import { loadBuildConfig } from './lib/build-config-loader'
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
+import { IModuleBuilderConfig } from './types'
 
 interface ICliArgs {
   partIds: string[]
@@ -131,6 +132,24 @@ const runPhase = async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
 
 /** ---------------------------- main build --------------------------------- */
 
+const validateConfigVersion = (buildConfig: IModuleBuilderConfig) => {
+  // TODO version should be consumed from the package json when the oktozine is extracted as a lib
+  const MIN_CONFIG_VERSION = '1.11.23'
+
+  const [major, minor, patch] = buildConfig.version.split('.').map(Number)
+  const [minMajor, minMinor, minPatch] = MIN_CONFIG_VERSION.split('.').map(Number)
+  const tooOld =
+    major < minMajor ||
+    (major === minMajor && minor < minMinor) ||
+    (major === minMajor && minor === minMinor && patch < minPatch)
+  if (tooOld || major > minMajor + 1) {
+    throw new Error(
+      `Config version "${buildConfig.version}" is out of supported range [${MIN_CONFIG_VERSION}, ${minMajor + 1}.x].`,
+    )
+  }
+
+}
+
 export const main = async (): Promise<void> => {
   const { partIds, help, logLevel, htmlNoSkip, parallel, config: configPath, outputDir } = parseArgs()
 
@@ -154,20 +173,6 @@ export const main = async (): Promise<void> => {
   const buildConfig = await runPhase(`Failed to load build config${configPath ? ` (${configPath})` : ''}`, () =>
     loadBuildConfig(configPath),
   )
-
-  const MIN_CONFIG_VERSION = '1.11.23'
-  const MAX_CONFIG_MAJOR = 2
-  const [major, minor, patch] = buildConfig.version.split('.').map(Number)
-  const [minMajor, minMinor, minPatch] = MIN_CONFIG_VERSION.split('.').map(Number)
-  const tooOld =
-    major < minMajor ||
-    (major === minMajor && minor < minMinor) ||
-    (major === minMajor && minor === minMinor && patch < minPatch)
-  if (tooOld || major > MAX_CONFIG_MAJOR) {
-    throw new Error(
-      `Config version "${buildConfig.version}" is out of supported range [${MIN_CONFIG_VERSION}, ${MAX_CONFIG_MAJOR}.x].`,
-    )
-  }
 
   let requestedIds = partIds
   if (!requestedIds.length) {
