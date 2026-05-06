@@ -88,7 +88,8 @@ All top-level defaults apply. Parts can override any field. Part-specific additi
 
 ### PDF chunk tuning — measured build times (main module)
 
-`buildPartSize` and `buildProcessesNum` trade off full-rebuild speed against incremental-rebuild speed. Fewer pages per chunk means fewer pages re-rendered when a single file changes, at the cost of more parallel processes.
+`buildPartSize` and `buildProcessesNum` trade off full-rebuild speed against incremental-rebuild speed. Fewer pages per
+chunk means fewer pages re-rendered when a single file changes, at the cost of more parallel processes.
 
 | `buildPartSize × buildProcessesNum` | Full rebuild | 1 file changed | 2 files changed |
 | ----------------------------------- | ------------ | -------------- | --------------- |
@@ -97,7 +98,8 @@ All top-level defaults apply. Parts can override any field. Part-specific additi
 | 3 × 20                              | 11.6–12.6 s  | 7.2 s          | 7.3 s           |
 | 5 × 12                              | 10.8 s       | 8–8.2 s        | 8.2 s           |
 
-Measurements taken with `PDF_PARALLEL` ≥ `buildProcessesNum` (no queuing). Incremental times assume the chunk cache is warm (second build after a change).
+Measurements taken with `PDF_PARALLEL` ≥ `buildProcessesNum` (no queuing). Incremental times assume the chunk cache is
+warm (second build after a change).
 
 ### Example
 
