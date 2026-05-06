@@ -23,9 +23,7 @@ describe('getPageClassname', () => {
   })
 
   it('handles filename without numeric prefix', () => {
-    expect(getPageClassname('main', 'cover.md.html')).toBe(
-      'page--wrapper page--main page--main-cover page-name--cover',
-    )
+    expect(getPageClassname('main', 'cover.md.html')).toBe('page--wrapper page--main page--main-cover page-name--cover')
   })
 
   it('uses moduleId in all class positions', () => {
@@ -129,8 +127,7 @@ describe('readModuleHtmlPages', () => {
     await fs.rm(tmpDir, { recursive: true, force: true })
   })
 
-  const write = (name: string, content = `content of ${name}`) =>
-    fs.writeFile(path.join(tmpDir, name), content, 'utf8')
+  const write = (name: string, content = `content of ${name}`) => fs.writeFile(path.join(tmpDir, name), content, 'utf8')
 
   it('reads and returns html files sorted', async () => {
     await write('b.md.html', 'B')

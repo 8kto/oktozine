@@ -24,7 +24,7 @@
  * ```
  */
 
-import type {MacroFn } from '../types'
+import type { MacroFn } from '../types'
 
 /**
  * Extract the text for a given branch from the raw conditional content.

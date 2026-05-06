@@ -429,25 +429,32 @@ const decoratePagesInRange = (
 }
 
 const isBlankPage = (doc: PDFDocument, page: ReturnType<typeof doc.getPage>): boolean => {
-  const resolve = (ref: unknown): unknown =>
-    ref instanceof PDFRef ? doc.context.lookup(ref) : ref
+  const resolve = (ref: unknown): unknown => (ref instanceof PDFRef ? doc.context.lookup(ref) : ref)
 
   const contents = page.node.get(PDFName.of('Contents'))
-  if (!contents) {return true}
+  if (!contents) {
+    return true
+  }
 
   const resolved = resolve(contents)
 
   if (resolved instanceof PDFArray) {
-    if (resolved.size() === 0) {return true}
+    if (resolved.size() === 0) {
+      return true
+    }
     for (let i = 0; i < resolved.size(); i++) {
       const stream = resolve(resolved.get(i))
-      if (stream instanceof PDFRawStream && stream.contents.length > 20) {return false}
+      if (stream instanceof PDFRawStream && stream.contents.length > 20) {
+        return false
+      }
     }
 
     return true
   }
 
-  if (resolved instanceof PDFRawStream) {return resolved.contents.length <= 20}
+  if (resolved instanceof PDFRawStream) {
+    return resolved.contents.length <= 20
+  }
 
   return false
 }

@@ -38,7 +38,6 @@
  * ```
  */
 
-
 /**
  * Convert fenced `<!-- cmd[list-to-table] … -->` blocks into Markdown tables.
  *

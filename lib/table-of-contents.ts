@@ -148,13 +148,13 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
           pageSpan.className = 'toc-page-num'
           pageSpan.textContent = String(pageNum)
           li.appendChild(pageSpan)
-        // } else {
-        //   // DEBUG
-        //   // li.removeChild(document.querySelector('.toc-page-num')!)
-        //   const pageSpan = document.createElement('span')
-        //   pageSpan.className = 'toc-page-num'
-        //   pageSpan.textContent = String('99')
-        //   li.appendChild(pageSpan)
+          // } else {
+          //   // DEBUG
+          //   // li.removeChild(document.querySelector('.toc-page-num')!)
+          //   const pageSpan = document.createElement('span')
+          //   pageSpan.className = 'toc-page-num'
+          //   pageSpan.textContent = String('99')
+          //   li.appendChild(pageSpan)
         }
 
         const hasChildren = Array.isArray(item.items) && item.items.length > 0

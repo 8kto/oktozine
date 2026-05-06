@@ -19,7 +19,7 @@
  */
 
 import { logger } from '../lib/logger'
-import type { IPartProperties,MacroFn } from '../types'
+import type { IPartProperties, MacroFn } from '../types'
 import { addAliases } from './alias'
 import { parseConditionalMode } from './conditionals'
 import {

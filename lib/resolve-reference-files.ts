@@ -9,16 +9,22 @@ const findProjectRoot = (startDir?: string): string => {
   let dir = path.resolve(startDir || process.cwd())
   for (;;) {
     const candidate = path.join(dir, 'package.json')
-    if (existsSync(candidate)) {return dir}
+    if (existsSync(candidate)) {
+      return dir
+    }
     const parent = path.dirname(dir)
-    if (parent === dir) {break}
+    if (parent === dir) {
+      break
+    }
     dir = parent
   }
   throw new Error('package.json not found while resolving project root')
 }
 
 export const resolveReferenceFiles = (buildConf: Partial<IModuleBuilderConfig>): string[] => {
-  if (!buildConf || !Array.isArray(buildConf.referenceFiles)) {return []}
+  if (!buildConf || !Array.isArray(buildConf.referenceFiles)) {
+    return []
+  }
   const root = findProjectRoot(process.cwd())
 
   return buildConf.referenceFiles.map((f) => (path.isAbsolute(f) ? f : path.resolve(root, f)))

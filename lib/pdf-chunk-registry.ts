@@ -50,8 +50,7 @@ export const assignFilesToChunks = (names: string[], N: number): Map<string, num
 
 // ── Path helpers ─────────────────────────────────────────────────────────────
 
-export const registryPath = (basePath: string, partId: string): string =>
-  path.join(basePath, `${partId}-registry.json`)
+export const registryPath = (basePath: string, partId: string): string => path.join(basePath, `${partId}-registry.json`)
 
 export const chunkCachePath = (basePath: string, partId: string, i: number): string =>
   path.join(basePath, `${partId}-chunk-${i}.pdf`)
