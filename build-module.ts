@@ -147,7 +147,6 @@ const validateConfigVersion = (buildConfig: IModuleBuilderConfig) => {
       `Config version "${buildConfig.version}" is out of supported range [${MIN_CONFIG_VERSION}, ${minMajor + 1}.x].`,
     )
   }
-
 }
 
 export const main = async (): Promise<void> => {
@@ -174,6 +173,7 @@ export const main = async (): Promise<void> => {
     loadBuildConfig(configPath),
   )
 
+  validateConfigVersion(buildConfig)
   let requestedIds = partIds
   if (!requestedIds.length) {
     requestedIds = buildConfig.parts.filter((p) => !p.skipBuild).map((p) => p.id)
