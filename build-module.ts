@@ -18,6 +18,7 @@ interface ICliArgs {
   logLevel?: string
   htmlNoSkip: boolean
   parallel: boolean
+  addBookmarks: boolean
   config?: string
   outputDir?: string
 }
@@ -31,6 +32,7 @@ Usage: tsx scripts/oktozine/build-module.ts <partIds> [options]
 -h, --help                          Show this help and exit
 -x, --html-no-skip, no-html-skip    Rebuild every HTML file, skipping the cache
 --parallel                          Build PDFs in parallel (default: serial)
+--add-bookmarks                     Inject PDF outline (bookmarks) from the TOC after merge
 --log-level <level>                 Set pino logger level (trace|debug|info|warn|error|fatal)
 --config <path>                     Path to build config file (e.g. ./conf/build.conf.ts)
 --output-dir <path>                 Base output directory (default: <project-root>/build); final PDFs go into <path>/release/
@@ -38,7 +40,7 @@ Usage: tsx scripts/oktozine/build-module.ts <partIds> [options]
 
 const parseArgs = (): ICliArgs => {
   const args = process.argv.slice(2)
-  const out: ICliArgs = { partIds: [], help: false, htmlNoSkip: false, parallel: false }
+  const out: ICliArgs = { partIds: [], help: false, htmlNoSkip: false, parallel: false, addBookmarks: false }
 
   let i = 0
   while (i < args.length) {
@@ -72,6 +74,11 @@ const parseArgs = (): ICliArgs => {
 
       case '--parallel':
         out.parallel = true
+        i += 1
+        break
+
+      case '--add-bookmarks':
+        out.addBookmarks = true
         i += 1
         break
 
@@ -150,7 +157,7 @@ const validateConfigVersion = (buildConfig: IModuleBuilderConfig) => {
 }
 
 export const main = async (): Promise<void> => {
-  const { partIds, help, logLevel, htmlNoSkip, parallel, config: configPath, outputDir } = parseArgs()
+  const { partIds, help, logLevel, htmlNoSkip, parallel, addBookmarks, config: configPath, outputDir } = parseArgs()
 
   if (help) {
     // eslint-disable-next-line no-console
@@ -203,13 +210,13 @@ export const main = async (): Promise<void> => {
       await Promise.all(
         docsToBuild.map(async (conf) => {
           const merged = deepmerge(defaults, conf)
-          await runPhase(`buildPdf() failed for part "${conf.id}"`, () => buildPdf(merged, outputDir))
+          await runPhase(`buildPdf() failed for part "${conf.id}"`, () => buildPdf(merged, outputDir, addBookmarks))
         }),
       )
     } else {
       for (const conf of docsToBuild) {
         const merged = deepmerge(defaults, conf)
-        await runPhase(`buildPdf() failed for part "${conf.id}"`, () => buildPdf(merged, outputDir))
+        await runPhase(`buildPdf() failed for part "${conf.id}"`, () => buildPdf(merged, outputDir, addBookmarks))
       }
     }
   })

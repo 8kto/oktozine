@@ -7,7 +7,7 @@ import chalk from 'chalk'
 import fs from 'fs-extra'
 import { JSDOM } from 'jsdom'
 import path from 'path'
-import { PDFArray, PDFDict, PDFDocument, PDFFont, PDFName, PDFRawStream, PDFRef, rgb } from 'pdf-lib'
+import { PDFArray, PDFDict, PDFDocument, PDFFont, PDFHexString, PDFName, PDFRawStream, PDFRef, rgb } from 'pdf-lib'
 import puppeteer from 'puppeteer'
 
 import { tocOverrides } from '../../conf/oktozin.toc.conf'
@@ -347,6 +347,92 @@ const flattenTocIds = (items: ITocItem[]): string[] =>
     [item.id, ...(item.items ? flattenTocIds(item.items) : [])].filter((id): id is string => !!id),
   )
 
+// ── PDF outlines (bookmarks) ─────────────────────────────────────────────────
+
+/**
+ * Injects a PDF /Outlines tree into `pdf` using the TOC hierarchy and the
+ * anchor→page map produced by rebuildNamedDestinations.
+ *
+ * Items without an `id` or whose id is not in `anchorPageOut` are silently
+ * skipped. The outline is fully expanded by default (positive /Count at every
+ * level so PDF readers show all items immediately).
+ */
+const addPdfOutlines = (pdf: PDFDocument, tocItems: ITocItem[], anchorPageOut: Map<string, number>): void => {
+  const { context } = pdf
+  const pages = pdf.getPages()
+
+  type OutlineNode = { ref: PDFRef; dict: PDFDict; descendantCount: number }
+
+  const buildLevel = (items: ITocItem[], parentRef: PDFRef): OutlineNode[] => {
+    const nodes: OutlineNode[] = []
+
+    for (const item of items) {
+      if (item.$skipped) {
+        continue
+      }
+      const pageNum = item.id ? anchorPageOut.get(item.id) : undefined
+      if (pageNum === undefined) {
+        continue
+      }
+      const page = pages[pageNum - 1]
+      if (!page) {
+        continue
+      }
+
+      const dict = context.obj({}) as PDFDict
+      const ref = context.register(dict)
+
+      dict.set(PDFName.of('Title'), PDFHexString.fromText(item.label))
+      dict.set(PDFName.of('Dest'), context.obj([page.ref, PDFName.of('XYZ'), null, null, null]))
+      dict.set(PDFName.of('Parent'), parentRef)
+
+      let descendantCount = 0
+      if (item.items && item.items.length > 0) {
+        const children = buildLevel(item.items, ref)
+        if (children.length > 0) {
+          linkSiblings(children)
+          dict.set(PDFName.of('First'), children[0].ref)
+          dict.set(PDFName.of('Last'), children[children.length - 1].ref)
+          descendantCount = children.reduce((n, c) => n + 1 + c.descendantCount, 0)
+          // Positive = subtree open/expanded by default
+          dict.set(PDFName.of('Count'), context.obj(descendantCount))
+        }
+      }
+
+      nodes.push({ ref, dict, descendantCount })
+    }
+
+    return nodes
+  }
+
+  const linkSiblings = (nodes: OutlineNode[]): void => {
+    for (let i = 0; i < nodes.length; i++) {
+      if (i > 0) {
+        nodes[i].dict.set(PDFName.of('Prev'), nodes[i - 1].ref)
+        nodes[i - 1].dict.set(PDFName.of('Next'), nodes[i].ref)
+      }
+    }
+  }
+
+  const rootDict = context.obj({}) as PDFDict
+  const rootRef = context.register(rootDict)
+  rootDict.set(PDFName.of('Type'), PDFName.of('Outlines'))
+
+  const topNodes = buildLevel(tocItems, rootRef)
+  if (topNodes.length === 0) {
+    return
+  }
+
+  linkSiblings(topNodes)
+  rootDict.set(PDFName.of('First'), topNodes[0].ref)
+  rootDict.set(PDFName.of('Last'), topNodes[topNodes.length - 1].ref)
+  const totalCount = topNodes.reduce((n, c) => n + 1 + c.descendantCount, 0)
+  rootDict.set(PDFName.of('Count'), context.obj(totalCount))
+
+  pdf.catalog.set(PDFName.of('Outlines'), rootRef)
+  logger.debug(chalk.gray(`Added PDF outline: ${totalCount} bookmark entries`))
+}
+
 // ── PDF page decoration ──────────────────────────────────────────────────────
 
 const rgb255 = (r: number, g: number, b: number) => rgb(r / 255, g / 255, b / 255)
@@ -523,6 +609,26 @@ export const buildChunkRanges = (N: number, chunkSize: number): string[] =>
 
 // ── Main PDF builder ─────────────────────────────────────────────────────────
 
+const applyOutlines = async (
+  bytes: Uint8Array,
+  outputPath: string,
+  config: IPartProperties,
+  anchorPageOut: Map<string, number>,
+): Promise<Uint8Array> => {
+  const tocJsonPath = path.join(outputPath, `$toc-${config.id}.json`)
+  try {
+    const tocItems: ITocItem[] = JSON.parse(await fs.readFile(tocJsonPath, 'utf8'))
+    const doc = await PDFDocument.load(bytes)
+    addPdfOutlines(doc, tocItems, anchorPageOut)
+
+    return doc.save()
+  } catch (err) {
+    logger.warn(err, 'Could not add PDF outlines; saving without bookmarks')
+
+    return bytes
+  }
+}
+
 const createDocumentContentPdf = async (
   html: string,
   outputFilenamePath: string,
@@ -531,6 +637,7 @@ const createDocumentContentPdf = async (
   pdfCachePath: string,
   htmlChunksPath: string,
   incremental?: IIncrementalBuildInfo,
+  addBookmarks?: boolean,
 ): Promise<void> => {
   // ── Phase 1: DOM setup (TOC, section-wrap, page count, HTML serialisation) ─
   const endSetup = measure('Setup PDF doc: TOC, sections wrap...')
@@ -680,7 +787,13 @@ const createDocumentContentPdf = async (
           const patchFont = await mergedDoc.embedFont(await fs.readFile(pageNumbersFontPath))
           decoratePagesInRange(mergedDoc, config.header ?? '', patchFont, tocStartPage, tocEndPage, decorateOpts)
 
-          await fs.writeFile(outputFilenamePath, await mergedDoc.save())
+          let phase4Bytes = await mergedDoc.save()
+          if (addBookmarks && anchorPageOut && anchorPageOut.size > 0) {
+            const endPdfBookmarks = measure('Adding bookmarks to PDF')
+            phase4Bytes = await applyOutlines(phase4Bytes, outputPath, config, anchorPageOut)
+            logger.info(chalk.gray(endPdfBookmarks()))
+          }
+          await fs.writeFile(outputFilenamePath, phase4Bytes)
           logger.info(chalk.gray(endMerge()))
 
           return
@@ -688,7 +801,16 @@ const createDocumentContentPdf = async (
       }
     }
 
-    await fs.writeFile(outputFilenamePath, mergedBytes)
+    let outBytes
+    if (addBookmarks && anchorPageOut && anchorPageOut.size > 0) {
+      const endPdfBookmarks = measure('Adding bookmarks to PDF')
+      outBytes = await applyOutlines(mergedBytes, outputPath, config, anchorPageOut)
+      logger.info(chalk.gray(endPdfBookmarks()))
+    } else {
+      outBytes = mergedBytes
+    }
+
+    await fs.writeFile(outputFilenamePath, outBytes)
   } catch (err) {
     logger.error(err)
 
@@ -700,7 +822,7 @@ const createDocumentContentPdf = async (
 
 // ── Public entry point ───────────────────────────────────────────────────────
 
-export const buildPdf = async (config: IPartProperties, outputPath?: string): Promise<void> => {
+export const buildPdf = async (config: IPartProperties, outputPath?: string, addBookmarks?: boolean): Promise<void> => {
   logger.info(chalk.green(`Building PDF for "${config.documentTitle}" (${config.documentFileName})...`))
 
   const resolvedOutputPath = outputPath ?? defaultBuildPath
@@ -747,8 +869,9 @@ export const buildPdf = async (config: IPartProperties, outputPath?: string): Pr
 
     // Fast path: when N and chunkSize are determinable without running the browser
     // and all chunks are cached with no file changes, skip Puppeteer entirely.
-    // Disabled when BUILD_TOC_PAGENUMS is set because that phase requires finalHtml.
-    if (!process.env.BUILD_TOC_PAGENUMS) {
+    // Disabled when BUILD_TOC_PAGENUMS or addBookmarks is set — both need anchorPageOut
+    // which is only populated by the full preparePdfHtml + merge pipeline.
+    if (!process.env.BUILD_TOC_PAGENUMS && !addBookmarks) {
       const registry = await loadRegistry(pdfCachePath, config.id)
       const fastN = config.buildProcessesNum ?? registry?.N
       const fastChunkSize = config.buildPartSize ?? registry?.chunkSize
@@ -793,6 +916,7 @@ export const buildPdf = async (config: IPartProperties, outputPath?: string): Pr
         fileOrder: htmlFileOrder,
         fileHashes,
       },
+      addBookmarks,
     )
 
     logger.info(chalk.green(`>> Generated PDF document for ${outputFilenamePath}`))
