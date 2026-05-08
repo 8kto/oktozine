@@ -32,7 +32,7 @@ Usage: tsx scripts/oktozine/build-module.ts <partIds> [options]
 -h, --help                          Show this help and exit
 -x, --html-no-skip, no-html-skip    Rebuild every HTML file, skipping the cache
 --parallel                          Build PDFs in parallel (default: serial)
---add-bookmarks                     Inject PDF outline (bookmarks) from the TOC after merge
+--skip-bookmarks                    Skip adding PDF bookmarks (default: adds)
 --log-level <level>                 Set pino logger level (trace|debug|info|warn|error|fatal)
 --config <path>                     Path to build config file (e.g. ./conf/build.conf.ts)
 --output-dir <path>                 Base output directory (default: <project-root>/build); final PDFs go into <path>/release/
@@ -40,7 +40,13 @@ Usage: tsx scripts/oktozine/build-module.ts <partIds> [options]
 
 const parseArgs = (): ICliArgs => {
   const args = process.argv.slice(2)
-  const out: ICliArgs = { partIds: [], help: false, htmlNoSkip: false, parallel: false, addBookmarks: false }
+  const out: ICliArgs = { 
+    partIds: [], 
+    help: false, 
+    htmlNoSkip: false, 
+    parallel: false, 
+    addBookmarks: true
+  }
 
   let i = 0
   while (i < args.length) {
@@ -77,8 +83,8 @@ const parseArgs = (): ICliArgs => {
         i += 1
         break
 
-      case '--add-bookmarks':
-        out.addBookmarks = true
+      case '--skip-bookmarks':
+        out.addBookmarks = false
         i += 1
         break
 
