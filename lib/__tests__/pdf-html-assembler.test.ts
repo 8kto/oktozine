@@ -3,7 +3,7 @@ import fs from 'fs-extra'
 import os from 'os'
 import path from 'path'
 
-import type { IPartProperties } from '../../types'
+import type { IDocumentConfig } from '../../types'
 import {
   assembleDocumentHtml,
   compareHtmlFiles,
@@ -189,7 +189,7 @@ describe('readModuleHtmlPages', () => {
 // ── assembleDocumentHtml ─────────────────────────────────────────────────────
 
 describe('assembleDocumentHtml', () => {
-  const config = { id: 'mod', coverHtmlFile: 'cover', backCoverHtmlFile: 'back' } as unknown as IPartProperties
+  const config = { id: 'mod', coverHtmlFile: 'cover', backCoverHtmlFile: 'back' } as unknown as IDocumentConfig
 
   const pageClass = (name: string) => {
     const pageName = name.replace('.md.html', '').replace(/^\d+-/, '')
@@ -198,7 +198,7 @@ describe('assembleDocumentHtml', () => {
   }
 
   it('wraps a single page without a delimiter (it is the last page)', () => {
-    const html = assembleDocumentHtml({ id: 'mod' } as IPartProperties, null, [['intro.md.html', '<p>hi</p>']], null)
+    const html = assembleDocumentHtml({ id: 'mod' } as IDocumentConfig, null, [['intro.md.html', '<p>hi</p>']], null)
     expect(html).toContain(`class="${pageClass('intro.md.html')}"`)
     expect(html).toContain('<p>hi</p>')
     expect(html).not.toContain('page-delimiter')
@@ -210,7 +210,7 @@ describe('assembleDocumentHtml', () => {
       ['b.md.html', 'B'],
       ['c.md.html', 'C'],
     ]
-    const html = assembleDocumentHtml({ id: 'mod' } as IPartProperties, null, pages, null)
+    const html = assembleDocumentHtml({ id: 'mod' } as IDocumentConfig, null, pages, null)
     expect((html.match(/page-delimiter/g) ?? []).length).toBe(2)
   })
 
@@ -228,7 +228,7 @@ describe('assembleDocumentHtml', () => {
   })
 
   it('returns an empty string when there is no content', () => {
-    expect(assembleDocumentHtml({ id: 'mod' } as IPartProperties, null, [], null)).toBe('')
+    expect(assembleDocumentHtml({ id: 'mod' } as IDocumentConfig, null, [], null)).toBe('')
   })
 
   it('puts cover before pages and back-cover after', () => {

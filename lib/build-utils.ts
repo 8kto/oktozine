@@ -1,6 +1,6 @@
 import fs from 'fs-extra'
 
-import type { IDocPage } from '../types'
+import type { IDocumentPage } from '../types'
 
 /**
  * Reads the last build timestamp from disk.
@@ -45,7 +45,7 @@ export const getBuildFilePath = (id: string): string => {
 
 export const PAGE_BREAK_DELIMITER = '<!-- cmd[break-page] /-->'
 
-export const recalculatePages = (docPageData: IDocPage): IDocPage[] => {
+export const recalculatePages = (docPageData: IDocumentPage): IDocumentPage[] => {
   const { content } = docPageData
   const name = docPageData.metadata.name
 

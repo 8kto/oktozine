@@ -13,8 +13,21 @@ export type BuildModuleOptions = {
   logLevel?: string
 }
 
-// FIXME should not be hardcoded
-export type PartId = 'main' | 'osr' | 'bestiary' | 'bestiary-osr' | 'items' | 'cover' | 'test-doc' | 'map'
+/**
+ * A reference (dictionary) file entry.
+ */
+export interface IRefEntry {
+  fullText: string
+  shortText: string
+  buffer?: string[]
+}
+
+/** A function that transforms a markdown string given a build config. */
+export type MacroFn = (markdown: string, config: IDocumentConfig) => string
+
+//-----------------------------------------------------------------------------
+// TOC
+//-----------------------------------------------------------------------------
 
 export type ITocOverridesBase = {
   dropLabels?: string[]
@@ -52,7 +65,14 @@ export interface IBookmarksConfig {
   skipLastPages?: number
 }
 
-export interface IDocProperties {
+//-----------------------------------------------------------------------------
+// BUILD
+//-----------------------------------------------------------------------------
+
+// FIXME should not be hardcoded
+export type PartId = 'main' | 'osr' | 'bestiary' | 'bestiary-osr' | 'items' | 'cover' | 'test-doc' | 'map'
+
+export interface IBaseConfig {
   outputPath: string
   isProduction?: boolean
   template?: string
@@ -78,9 +98,22 @@ export interface IDocProperties {
   skipFooter?: number[]
   /** Should skip adding PDF bookmarks? [false] */
   usePdfBookmarks?: boolean
+  /** Should rebuild HTML files before rendering to PDF */
+  useHtmlRebuild: boolean
 }
 
-export interface IPartProperties extends IDocProperties {
+/**
+ * The entire module config, consists of default options (IBaseConfig),
+ * which will be merged with each of `.parts: IPartConfig[]`.
+ * Part options have precedence over the default root-level options.
+ */
+export interface IModuleBuilderConfig extends IBaseConfig {
+  version: string
+  parts: IDocumentConfig[]
+  releasePartIds?: string[]
+}
+
+export interface IDocumentConfig extends IBaseConfig {
   id: string
   documentTitle?: string
   documentFileName?: string
@@ -91,7 +124,7 @@ export interface IPartProperties extends IDocProperties {
   buildProcessesNum?: number
 }
 
-export interface IDocPageMetadata {
+export interface IDocumentPageMetadata {
   template?: string
   name?: string
   use?: string[]
@@ -102,23 +135,11 @@ export interface IDocPageMetadata {
   [key: string]: unknown
 }
 
-export interface IDocPage {
-  metadata: IPartProperties & IDocPageMetadata
+/**
+ * A markdown file converted into HTML.
+ * A page means 1 file, which is not neccessary represents 1 rendered page
+ */
+export interface IDocumentPage {
+  metadata: IDocumentConfig & IDocumentPageMetadata
   content: string
-}
-
-export interface IRefEntry {
-  fullText: string
-  shortText: string
-  buffer?: string[]
-}
-
-/** A function that transforms a markdown string given a build config. */
-export type MacroFn = (markdown: string, config: IPartProperties) => string
-
-// TODO should the inheritance be reversed? "doc props extends module conf"
-export interface IModuleBuilderConfig extends IDocProperties {
-  version: string
-  parts: IPartProperties[]
-  releasePartIds?: string[]
 }

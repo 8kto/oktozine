@@ -1,8 +1,8 @@
-import type { IPartProperties } from '../../types'
+import type { IDocumentConfig } from '../../types'
 import { addAliases } from '../alias'
 
 describe('alias cmd tests', () => {
-  const defaultCondig = { id: 'main' } as IPartProperties
+  const defaultCondig = { id: 'main' } as IDocumentConfig
 
   it.each([[`<!-- item[Щит Викинга] /-->`, `<!-- cmd[ref] header[Щит Викинга] detailed   /-->`]])(
     'should resolve alias for %s',

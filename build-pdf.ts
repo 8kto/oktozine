@@ -27,7 +27,7 @@ import { assembleDocumentHtml, getFullPageTemplate, readModuleHtmlPages } from '
 import { buildToc } from './lib/table-of-contents'
 import { getBuildFileVersion } from './lib/version'
 import { wrapContentSections } from './lib/wrap-sections'
-import type { IPartProperties, ITocItem, PartId } from './types'
+import type { IDocumentConfig, ITocItem, PartId } from './types'
 
 // FIXME hardcoded
 const pageNumbersFontPath = path.join(PROJECT_ROOT, 'src/styles/fonts/Philosopher/Philosopher-Regular.ttf')
@@ -150,7 +150,7 @@ const writeFullContentToFile = (id: string, content: string, htmlChunksPath: str
 
 const buildTocForPage = async (
   page: Awaited<ReturnType<typeof setupPage>>,
-  config: IPartProperties,
+  config: IDocumentConfig,
   htmlChunksPath: string,
 ): Promise<void> => {
   const { tocConfig, outputPath } = config
@@ -181,7 +181,7 @@ const buildTocForPage = async (
  * are configured the user knows the real page count; the delimiter count is
  * only used as a fallback estimate when those props are absent.
  */
-const estimatePageCount = (page: Awaited<ReturnType<typeof setupPage>>, config: IPartProperties): Promise<number> => {
+const estimatePageCount = (page: Awaited<ReturnType<typeof setupPage>>, config: IDocumentConfig): Promise<number> => {
   if (config.buildPartSize && config.buildProcessesNum) {
     return Promise.resolve(config.buildPartSize * config.buildProcessesNum)
   }
@@ -201,7 +201,7 @@ interface IPreparedPdf {
  */
 const preparePdfHtml = async (
   html: string,
-  config: IPartProperties,
+  config: IDocumentConfig,
   htmlChunksPath: string,
 ): Promise<IPreparedPdf | null> => {
   const browser = await launchBrowser()
@@ -242,7 +242,7 @@ interface IChunkPlan {
  * Uses config values when available; falls back to dividing approxPageCount
  * evenly across up to PDF_PARALLEL workers.
  */
-export const resolveChunkPlan = (config: IPartProperties, approxPageCount: number): IChunkPlan => {
+export const resolveChunkPlan = (config: IDocumentConfig, approxPageCount: number): IChunkPlan => {
   const N = config.buildProcessesNum ?? Math.min(PDF_PARALLEL, approxPageCount)
   const chunkSize = config.buildPartSize ?? Math.ceil(approxPageCount / N)
 
@@ -609,7 +609,7 @@ export const buildChunkRanges = (N: number, chunkSize: number): string[] =>
 
 const applyOutlines = async (
   bytes: Uint8Array,
-  config: IPartProperties,
+  config: IDocumentConfig,
   anchorPageOut: Map<string, number>,
 ): Promise<Uint8Array> => {
   const tocJsonPath = path.join(config.outputPath, `$toc-${config.id}.json`)
@@ -629,7 +629,7 @@ const applyOutlines = async (
 const createDocumentContentPdf = async (
   html: string,
   outputFilenamePath: string,
-  config: IPartProperties,
+  config: IDocumentConfig,
   pdfCachePath: string,
   htmlChunksPath: string,
   incremental?: IIncrementalBuildInfo,
@@ -818,7 +818,7 @@ const createDocumentContentPdf = async (
 
 // ── Public entry point ───────────────────────────────────────────────────────
 
-export const buildPdf = async (config: IPartProperties): Promise<void> => {
+export const buildPdf = async (config: IDocumentConfig): Promise<void> => {
   logger.info(chalk.green(`Building PDF for "${config.documentTitle}" (${config.documentFileName})...`))
 
   const pdfCachePath = getPdfBuildPath(config)

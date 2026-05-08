@@ -1,8 +1,8 @@
-import type { IPartProperties } from '../../types'
+import type { IDocumentConfig } from '../../types'
 import { parseConditionalMode } from '../conditionals'
 
-const p = (id: string, extra?: Partial<IPartProperties>): IPartProperties =>
-  ({ id, ...extra }) as unknown as IPartProperties
+const p = (id: string, extra?: Partial<IDocumentConfig>): IDocumentConfig =>
+  ({ id, ...extra }) as unknown as IDocumentConfig
 
 describe('parses conditionals', () => {
   it('should parse mode [main]', () => {

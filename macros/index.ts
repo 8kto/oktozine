@@ -19,7 +19,7 @@
  */
 
 import { logger } from '../lib/logger'
-import type { IPartProperties, MacroFn } from '../types'
+import type { IDocumentConfig, MacroFn } from '../types'
 import { addAliases } from './alias'
 import { parseConditionalMode } from './conditionals'
 import {
@@ -72,7 +72,7 @@ const getMacroHandlers = (): MacroFn[] => {
  * @param config   - Part-level build configuration (part id, aliases, etc.).
  * @returns The fully transformed Markdown string.
  */
-const handleMacros = (markdown: string, config: IPartProperties): string =>
+const handleMacros = (markdown: string, config: IDocumentConfig): string =>
   getMacroHandlers().reduce((acc, handler) => {
     try {
       return typeof handler === 'function' ? handler(acc, config) : acc

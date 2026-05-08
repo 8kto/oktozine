@@ -34,7 +34,7 @@ import chalk from 'chalk'
 import { logger } from '../lib/logger'
 import { renderReferenceBlock } from '../lib/render-reference-block'
 import { getReferenceResolver } from '../lib/resolve-reference-files'
-import type { IModuleBuilderConfig, IPartProperties } from '../types'
+import type { IDocumentConfig, IModuleBuilderConfig } from '../types'
 
 /**
  * Replace `<!-- cmd[ref] header[…] … /-->` directives with rendered
@@ -57,7 +57,7 @@ import type { IModuleBuilderConfig, IPartProperties } from '../types'
  * @returns Markdown with reference directives replaced by rendered HTML blocks.
  *          Unresolved references are logged as errors and left unchanged.
  */
-export const convertRefInserts = (markdown: string, buildConf?: IPartProperties): string => {
+export const convertRefInserts = (markdown: string, buildConf?: IDocumentConfig): string => {
   const commandPattern = /<!--\s*cmd\[ref]\s*header\[(.*?)]\s*(.*?)\/-->/gms
   if (!commandPattern.test(markdown)) {
     return markdown

@@ -1,6 +1,6 @@
-import type { IModuleBuilderConfig, IPartProperties } from '../scripts/oktozine/types'
+import type { IDocumentConfig, IModuleBuilderConfig } from '../scripts/oktozine/types'
 
-const mainModuleConf: Partial<IPartProperties> = {
+const mainModuleConf: Partial<IDocumentConfig> = {
   id: 'main',
   documentTitle: 'Зеница Варготара',
   documentFileName: 'Зеница Варготара ({{version}}).pdf',
@@ -25,7 +25,7 @@ const mainModuleConf: Partial<IPartProperties> = {
   skipFooter: [17, 23, 25, 36, 45, 55],
 }
 
-const mainBestiaryConf: Partial<IPartProperties> = {
+const mainBestiaryConf: Partial<IDocumentConfig> = {
   id: 'bestiary',
   documentTitle: 'Каталог Аномалий',
   documentFileName: 'Каталог Аномалий ({{version}}).pdf',
@@ -80,7 +80,7 @@ const config: IModuleBuilderConfig = {
   },
   skipHeaderAndFooter: [1, -1], // skip first and last pages
   parts: [
-    mainModuleConf as IPartProperties,
+    mainModuleConf as IDocumentConfig,
     {
       ...mainModuleConf,
       id: 'osr',
@@ -90,8 +90,8 @@ const config: IModuleBuilderConfig = {
         config: 'build/$toc-osr.json',
       },
       skipped: ['0405-appendix-q1--micomant.md'],
-    } as IPartProperties,
-    mainBestiaryConf as IPartProperties,
+    } as IDocumentConfig,
+    mainBestiaryConf as IDocumentConfig,
     {
       ...mainBestiaryConf,
       id: 'bestiary-osr',
@@ -100,12 +100,12 @@ const config: IModuleBuilderConfig = {
         ...mainBestiaryConf.bookmarksConfig,
         config: 'build/$toc-bestiary-osr.json',
       },
-    } as IPartProperties,
+    } as IDocumentConfig,
     {
       id: 'items',
       referenceFiles: ['src/markdown/$refs-items.md'],
       skipBuild: true,
-    } as IPartProperties,
+    } as IDocumentConfig,
     {
       id: 'cover',
       documentTitle: 'Зеница Варготара',
@@ -115,7 +115,7 @@ const config: IModuleBuilderConfig = {
       includePattern: /front-cover-main|back-cover/,
       invalidateBuildOnPattern: /front-cover-main/,
       skipBuild: true,
-    } as IPartProperties,
+    } as IDocumentConfig,
     {
       id: 'test-doc',
       documentTitle: 'Зеница Варготара',
@@ -125,7 +125,7 @@ const config: IModuleBuilderConfig = {
       backCoverHtmlFile: '9999-back-cover.md',
       skipped: [],
       skipBuild: true,
-    } as IPartProperties,
+    } as IDocumentConfig,
     {
       id: 'map',
       documentTitle: 'Карты Зеницы Варготара',
@@ -154,7 +154,7 @@ const config: IModuleBuilderConfig = {
         skipFirstPages: 1,
       },
       skipHeaderAndFooter: [2, 3, 4, 5, 6, 7, 8, 9],
-    } as IPartProperties,
+    } as IDocumentConfig,
   ],
 }
 
