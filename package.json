@@ -4,6 +4,7 @@
   "description": "TTRPG Module",
   "author": "undefined Okto",
   "scripts": {
+    "clean": "rimraf build",
     "build": "yarn build:main",
     "build:main": "yarn build:styles && tsx scripts/oktozine/build-module.ts main --html-no-skip",
     "build:clean": "node scripts/release/clean-build.mjs --dir build/release",
@@ -13,8 +14,8 @@
     "build:map": "yarn build:styles && tsx scripts/oktozine/build-module.ts map --no-skip-html",
     "build:osr": "yarn build:styles && tsx scripts/oktozine/build-module.ts osr --no-skip-html",
     "build:bestiary-osr": "scripts/build/build-bestiary.sh --id bestiary-osr",
-    "build-prod": "sh -c 'banner PROD BUILD; yarn build:$1 --production; banner PROD BUILD END;' --",
-    "build-prod:all": "sh -c 'banner PROD BUILD; yarn build:styles && tsx scripts/oktozine/build-module.ts --html-no-skip --production && yarn build:bestiaries && banner PROD BUILD END;' --",
+    "build-prod": "sh -c 'banner PROD BUILD; yarn clean && yarn build:$1 --production; banner PROD BUILD END;' --",
+    "build-prod:all": "sh -c 'banner PROD BUILD; yarn clean && yarn build:styles && tsx scripts/oktozine/build-module.ts --html-no-skip --production && yarn build-prod:bestiaries && banner PROD BUILD END;' --",
     "build-prod:bestiaries": "yarn build:bestiary --production && yarn build:bestiary-osr --production",
     "dev": "npx http-server ./build/chunks-html -p 3001 --cors",
     "dev:radar": "npx live-server --port=3010 --no-browser maps/crt/",
@@ -51,6 +52,7 @@
     "markdown-it-ins": "^4.0.0",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^21.7.0",
+    "rimraf": "^6.1.3",
     "tailwindcss": "^3.4.1",
     "transliteration": "^2.3.5"
   },
