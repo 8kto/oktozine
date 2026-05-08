@@ -14,6 +14,7 @@ import { tocOverrides } from '../../conf/oktozin.toc.conf'
 import packageConfig from '../../package.json' with { type: 'json' }
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
+import { PROJECT_ROOT } from './lib/paths'
 import {
   chunkCachePath,
   hashContent,
@@ -23,7 +24,6 @@ import {
   saveRegistry,
 } from './lib/pdf-chunk-registry'
 import { assembleDocumentHtml, getFullPageTemplate, readModuleHtmlPages } from './lib/pdf-html-assembler'
-import { PROJECT_ROOT } from './lib/project-root'
 import { buildToc } from './lib/table-of-contents'
 import { wrapContentSections } from './lib/wrap-sections'
 import type { IPartProperties, ITocItem, PartId } from './types'

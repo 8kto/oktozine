@@ -1,4 +1,16 @@
-// FIXME config
+export type BuildModuleOptions = {
+  partIds: string[]
+  help: boolean
+  htmlNoSkip: boolean
+  parallel: boolean
+  addBookmarks: boolean
+  production: boolean
+  configPath?: string
+  outputDir?: string
+  logLevel?: string
+}
+
+// FIXME should not be hardcoded
 export type PartId = 'main' | 'osr' | 'bestiary' | 'bestiary-osr' | 'items' | 'cover' | 'test-doc' | 'map'
 
 export type ITocOverridesBase = {
@@ -59,6 +71,8 @@ export interface IDocProperties {
   skipHeader?: number[]
   /** Same as skipHeaderAndFooter but skips only the footer. */
   skipFooter?: number[]
+  /** Should skip adding PDF bookmarks? [false] */
+  skipPdfBookmarks?: boolean
 }
 
 export interface IPartProperties extends IDocProperties {

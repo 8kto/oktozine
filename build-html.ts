@@ -10,7 +10,8 @@ import { getBuildFilePath, isFileChangedSinceLastBuild, recalculatePages, update
 import { logger } from './lib/logger'
 import { getMarkdownRenderer } from './lib/markdown'
 import { measure } from './lib/measure'
-import { OKTOZINE_ROOT, PROJECT_ROOT } from './lib/project-root'
+import { OKTOZINE_ROOT, PROJECT_ROOT } from './lib/paths'
+import { runPhase, runPhaseSync } from './lib/phase'
 import handleMacros from './macros/index'
 import type { IDocPage, IPartProperties } from './types'
 
@@ -18,46 +19,12 @@ const defaultBuildDir = path.join(PROJECT_ROOT, 'build')
 const markdownSourcesDir = path.join(PROJECT_ROOT, 'src/markdown')
 const htmTemplateslDir = path.join(PROJECT_ROOT, 'src/html')
 
-/** ---------------------------- fs helpers --------------------------------- */
-
-const errToShort = (err: unknown): string => {
-  if (err && typeof err === 'object') {
-    const e = err as Record<string, unknown>
-    const code = e.code ? ` code=${String(e.code)}` : ''
-    const p = e.path ? ` path=${String(e.path)}` : ''
-    const sc = e.syscall ? ` syscall=${String(e.syscall)}` : ''
-    const msg = e.message ? ` msg=${String(e.message)}` : ` ${String(err)}`
-
-    return `${msg}${code}${sc}${p}`
-  }
-
-  return String(err)
-}
-
-const fsPhase = async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
-  try {
-    return await fn()
-  } catch (err) {
-    throw new Error(`${label} (${errToShort(err)})`, { cause: err })
-  }
-}
-
-const fsPhaseSync = <T>(label: string, fn: () => T): T => {
-  try {
-    return fn()
-  } catch (err) {
-    throw new Error(`${label} (${errToShort(err)})`, { cause: err })
-  }
-}
-
-/** -------------------------- core transforms ------------------------------ */
-
 const convertMarkdownToHtml = async (
   filePath: string,
   mdRenderer: ReturnType<typeof getMarkdownRenderer>,
   config: IPartProperties,
 ): Promise<IDocPage> => {
-  const content = await fsPhase(`read markdown`, () => fs.readFile(filePath, 'utf8'))
+  const content = await runPhase(`read markdown`, () => fs.readFile(filePath, 'utf8'))
 
   let frontMatter
   try {
@@ -92,7 +59,7 @@ const convertMarkdownToHtml = async (
 
 const applyTemplate = async (data: IDocPage, templatePath: string): Promise<string> => {
   const { content, metadata } = data
-  const template = await fsPhase(`read template`, () => fs.readFile(templatePath, 'utf8'))
+  const template = await runPhase(`read template`, () => fs.readFile(templatePath, 'utf8'))
 
   let res = template
     .replace('{{header}}', metadata.header ?? '')
@@ -134,7 +101,7 @@ export const prepareHtmlBuild = async (outputDir?: string): Promise<void> => {
     fs.mkdirSync(htmlBuildDir, { recursive: true })
   }
 
-  await fsPhase('copy static assets into chunks-html', async () => {
+  await runPhase('copy static assets into chunks-html', async () => {
     await Promise.all([
       // FIXME paths set outside of the oktozine codebase
       fs.copy(path.join(buildDir, 'output.css'), path.join(htmlBuildDir, 'output.css')),
@@ -221,7 +188,7 @@ const renderToHtml = async (pageData: IDocPage, buildDir: string, fileName: stri
   const html = await applyTemplate(pageData, templatePath)
 
   const outPath = path.join(buildDir, `${fileName}.html`)
-  await fsPhase(`write html ${outPath}`, () => fs.writeFile(outPath, html))
+  await runPhase(`write html ${outPath}`, () => fs.writeFile(outPath, html))
 
   logger.info(chalk.cyan(`>> Generated HTML for ${fileName}`))
 }
@@ -239,8 +206,8 @@ export const buildHtml = async (config: IPartProperties, outputDir?: string): Pr
   const buildDir = path.join(outputDir ?? defaultBuildDir, 'chunks-html', `module-${config.id}`)
   const markdownRenderer = getMarkdownRenderer()
 
-  await fsPhase(`ensureDir ${buildDir}`, () => fs.ensureDir(buildDir))
-  let markdownFiles = await fsPhase(`readdir ${markdownSourcesDir}`, () => fs.readdir(markdownSourcesDir))
+  await runPhase(`ensureDir ${buildDir}`, () => fs.ensureDir(buildDir))
+  let markdownFiles = await runPhase(`readdir ${markdownSourcesDir}`, () => fs.readdir(markdownSourcesDir))
 
   const forceRebuildAll = shouldRebuildAllFiles(markdownSourcesDir, markdownFiles, config)
   markdownFiles = filterFiles(config, markdownFiles)
@@ -252,7 +219,7 @@ export const buildHtml = async (config: IPartProperties, outputDir?: string): Pr
   const isHtmlBuilt = (file: string): boolean => {
     const outPath = path.join(buildDir, `${file}.html`)
 
-    return fsPhaseSync(`pathExistsSync ${outPath}`, () => fs.pathExistsSync(outPath))
+    return runPhaseSync(`pathExistsSync ${outPath}`, () => fs.pathExistsSync(outPath))
   }
 
   const buildFilePath = getBuildFilePath(config.id)
@@ -296,7 +263,7 @@ export const buildHtml = async (config: IPartProperties, outputDir?: string): Pr
     }
   })
 
-  await fsPhase(`Promise.all(html generation) for part "${config.id}"`, () => Promise.all(processes))
+  await runPhase(`Promise.all(html generation) for part "${config.id}"`, () => Promise.all(processes))
 
   try {
     updateLastBuildTime(buildFilePath)
