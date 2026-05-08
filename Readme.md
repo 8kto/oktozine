@@ -9,14 +9,42 @@ macro system.
 ## Quick Start
 
 ```bash
-# Build the main document only
-yarn build
+# --- Clean ---
+yarn clean                  # remove build/ output
+yarn clean:release          # remove build/release/
 
-# Build all documents (main, osr, map) + bestiaries
-yarn build:all
+# --- Styles ---
+yarn build:styles           # compile Tailwind CSS once
+yarn watch:styles           # watch + recompile on change
 
-# Build a specific document
-tsx scripts/oktozine/build-module.ts <documentId> [options]
+# --- Dev builds ---
+yarn build                  # main (default)
+yarn build:main
+yarn build:map
+yarn build:osr
+yarn build:all              # all documents + bestiaries
+
+yarn build:bestiary
+yarn build:bestiary-osr
+yarn build:bestiaries       # both bestiaries
+
+# --- Production builds (clean + no dev watermark) ---
+yarn prod                   # main (default)
+yarn prod:main
+yarn prod:map
+yarn prod:osr
+yarn prod:all               # all documents + bestiaries
+
+yarn prod:bestiary
+yarn prod:bestiary-osr
+yarn prod:bestiaries        # both bestiaries
+
+# --- Release ---
+yarn release-check          # verify release readiness
+yarn release                # run full release
+
+# --- Invoke the build script directly ---
+yarn tsx scripts/oktozine/build-module.ts <documentId> [options]
 ```
 
 ---
