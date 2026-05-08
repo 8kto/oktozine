@@ -14,7 +14,7 @@ import { tocOverrides } from '../../conf/oktozin.toc.conf'
 import packageConfig from '../../package.json' with { type: 'json' }
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
-import { PROJECT_ROOT } from './lib/paths'
+import { getCssPath, getHtmlModuleBuildPath, getPdfBuildPath, getReleasePath, PROJECT_ROOT } from './lib/paths'
 import {
   chunkCachePath,
   hashContent,
@@ -28,7 +28,7 @@ import { buildToc } from './lib/table-of-contents'
 import { wrapContentSections } from './lib/wrap-sections'
 import type { IPartProperties, ITocItem, PartId } from './types'
 
-const defaultBuildPath = path.join(PROJECT_ROOT, 'build')
+// FIXME hardcoded
 const pageNumbersFontPath = path.join(PROJECT_ROOT, 'src/styles/fonts/Philosopher/Philosopher-Regular.ttf')
 
 // Number of parallel Chromium instances for PDF rendering.
@@ -54,10 +54,7 @@ const BROWSER_ARGS = [
 
 const launchBrowser = () => puppeteer.launch({ headless: 'new' as const, defaultViewport: null, args: BROWSER_ARGS })
 
-const setupPage = async (browser: Awaited<ReturnType<typeof launchBrowser>>, html: string, outputPath: string) => {
-  const resolvedOutputPath = outputPath ?? defaultBuildPath
-  const cssPath = path.join(resolvedOutputPath, 'output.css')
-
+const setupPage = async (browser: Awaited<ReturnType<typeof launchBrowser>>, html: string, cssPath: string) => {
   const page = await browser.newPage()
   await page.setExtraHTTPHeaders({ 'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7' })
   page.on('console', (msg) => logger.info(`PAGE LOG: ${msg.text()}`))
@@ -86,10 +83,11 @@ const injectNamePolyfill = (page: Awaited<ReturnType<typeof setupPage>>) =>
 
 // ── Chunk rendering ──────────────────────────────────────────────────────────
 
-const renderChunkOnce = async (html: string, pageRange: string, outputPath: string): Promise<Buffer> => {
+const renderChunkOnce = async (html: string, pageRange: string, cssPath: string): Promise<Buffer> => {
   const browser = await launchBrowser()
+
   try {
-    const page = await setupPage(browser, html, outputPath)
+    const page = await setupPage(browser, html, cssPath)
     await page.emulateMediaType('print')
 
     // No displayHeaderFooter — we add headers/footers via pdf-lib after merge
@@ -110,11 +108,11 @@ const renderChunkOnce = async (html: string, pageRange: string, outputPath: stri
 
 // Retry once on failure — parallel Chrome instances can fail transiently
 // due to resource contention (shared memory, CPU spikes, etc.).
-const renderChunk = async (html: string, pageRange: string, outputPath: string): Promise<Buffer | null> => {
+const renderChunk = async (html: string, pageRange: string, cssPath: string): Promise<Buffer | null> => {
   try {
     logger.debug(chalk.gray(`Rendering PDF chunk ${pageRange}`))
 
-    return await renderChunkOnce(html, pageRange, outputPath)
+    return await renderChunkOnce(html, pageRange, cssPath)
   } catch (err) {
     if ((err as Error)?.message.includes('Page range exceeds page count')) {
       return null
@@ -122,7 +120,7 @@ const renderChunk = async (html: string, pageRange: string, outputPath: string):
 
     logger.debug(chalk.gray(`chunk ${pageRange}: retrying after error — ${(err as Error).message}`))
 
-    return renderChunkOnce(html, pageRange, outputPath)
+    return renderChunkOnce(html, pageRange, cssPath)
   }
 }
 
@@ -153,23 +151,22 @@ const buildTocForPage = async (
   page: Awaited<ReturnType<typeof setupPage>>,
   config: IPartProperties,
   htmlChunksPath: string,
-  outputPath: string,
 ): Promise<void> => {
-  if (!config.tocConfig) {
+  const { tocConfig, outputPath } = config
+
+  if (!tocConfig) {
     return
   }
 
   try {
-    const resolvedOutputPath = outputPath ?? defaultBuildPath
-
     const { parts, ...tocDefaults } = tocOverrides
     const mergedTocOverrides = { ...tocDefaults, ...parts?.[config.id as PartId] }
     const toc = await page.evaluate(buildToc, { ...config.tocConfig, tocOverrides: mergedTocOverrides })
-    const rootId = config.tocConfig.rootId ?? 'toc-main'
+    const rootId = tocConfig.rootId ?? 'toc-main'
     const tocHtml = await page.evaluate((id: string) => document.getElementById(id)?.innerHTML || '', rootId)
 
     fs.writeFile(path.join(htmlChunksPath, `$toc-${config.id}.html`), tocHtml)
-    fs.writeFile(path.join(resolvedOutputPath, `$toc-${config.id}.json`), JSON.stringify(toc, null, 2))
+    fs.writeFile(path.join(outputPath, `$toc-${config.id}.json`), JSON.stringify(toc, null, 2))
   } catch (err) {
     logger.error(err, 'build-pdf: cannot create TOC')
   }
@@ -205,13 +202,13 @@ const preparePdfHtml = async (
   html: string,
   config: IPartProperties,
   htmlChunksPath: string,
-  outputPath: string,
 ): Promise<IPreparedPdf | null> => {
   const browser = await launchBrowser()
+
   try {
-    const page = await setupPage(browser, html, outputPath)
+    const page = await setupPage(browser, html, getCssPath(config))
     await injectNamePolyfill(page)
-    await buildTocForPage(page, config, htmlChunksPath, outputPath)
+    await buildTocForPage(page, config, htmlChunksPath)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await page.evaluate(wrapContentSections as any, { selector: '.content', wrapperClass: 'room-section' })
 
@@ -611,11 +608,10 @@ export const buildChunkRanges = (N: number, chunkSize: number): string[] =>
 
 const applyOutlines = async (
   bytes: Uint8Array,
-  outputPath: string,
   config: IPartProperties,
   anchorPageOut: Map<string, number>,
 ): Promise<Uint8Array> => {
-  const tocJsonPath = path.join(outputPath, `$toc-${config.id}.json`)
+  const tocJsonPath = path.join(config.outputPath, `$toc-${config.id}.json`)
   try {
     const tocItems: ITocItem[] = JSON.parse(await fs.readFile(tocJsonPath, 'utf8'))
     const doc = await PDFDocument.load(bytes)
@@ -632,21 +628,20 @@ const applyOutlines = async (
 const createDocumentContentPdf = async (
   html: string,
   outputFilenamePath: string,
-  outputPath: string,
   config: IPartProperties,
   pdfCachePath: string,
   htmlChunksPath: string,
   incremental?: IIncrementalBuildInfo,
-  addBookmarks?: boolean,
 ): Promise<void> => {
   // ── Phase 1: DOM setup (TOC, section-wrap, page count, HTML serialisation) ─
   const endSetup = measure('Setup PDF doc: TOC, sections wrap...')
-  const prepared = await preparePdfHtml(html, config, htmlChunksPath, outputPath)
+  const prepared = await preparePdfHtml(html, config, htmlChunksPath)
   if (!prepared) {
     return
   }
 
   const { finalHtml, approxPageCount } = prepared
+  const { outputPath } = config
   const { N, chunkSize } = resolveChunkPlan(config, approxPageCount)
   logger.info(chalk.gray(`${endSetup()}, ~${approxPageCount} pages`))
 
@@ -672,7 +667,7 @@ const createDocumentContentPdf = async (
           return { i, buf: incrPlan.cached.get(i)! }
         }
 
-        return { i, buf: await renderChunk(finalHtml, range, outputPath) }
+        return { i, buf: await renderChunk(finalHtml, range, getCssPath(config)) }
       }),
     )
   } catch (err) {
@@ -788,9 +783,9 @@ const createDocumentContentPdf = async (
           decoratePagesInRange(mergedDoc, config.header ?? '', patchFont, tocStartPage, tocEndPage, decorateOpts)
 
           let phase4Bytes = await mergedDoc.save()
-          if (addBookmarks && anchorPageOut && anchorPageOut.size > 0) {
+          if (config.usePdfBookmarks && anchorPageOut && anchorPageOut.size > 0) {
             const endPdfBookmarks = measure('Adding bookmarks to PDF')
-            phase4Bytes = await applyOutlines(phase4Bytes, outputPath, config, anchorPageOut)
+            phase4Bytes = await applyOutlines(phase4Bytes, config, anchorPageOut)
             logger.info(chalk.gray(endPdfBookmarks()))
           }
           await fs.writeFile(outputFilenamePath, phase4Bytes)
@@ -802,9 +797,9 @@ const createDocumentContentPdf = async (
     }
 
     let outBytes
-    if (addBookmarks && anchorPageOut && anchorPageOut.size > 0) {
+    if (config.usePdfBookmarks && anchorPageOut && anchorPageOut.size > 0) {
       const endPdfBookmarks = measure('Adding bookmarks to PDF')
-      outBytes = await applyOutlines(mergedBytes, outputPath, config, anchorPageOut)
+      outBytes = await applyOutlines(mergedBytes, config, anchorPageOut)
       logger.info(chalk.gray(endPdfBookmarks()))
     } else {
       outBytes = mergedBytes
@@ -822,15 +817,15 @@ const createDocumentContentPdf = async (
 
 // ── Public entry point ───────────────────────────────────────────────────────
 
-export const buildPdf = async (config: IPartProperties, outputPath?: string, addBookmarks?: boolean): Promise<void> => {
+export const buildPdf = async (config: IPartProperties): Promise<void> => {
   logger.info(chalk.green(`Building PDF for "${config.documentTitle}" (${config.documentFileName})...`))
 
-  const resolvedOutputPath = outputPath ?? defaultBuildPath
-  const pdfCachePath = path.join(resolvedOutputPath, 'pdf')
-  const htmlChunksPath = path.join(resolvedOutputPath, 'chunks-html')
-  const releasePath = path.join(resolvedOutputPath, 'release')
-  const cssPath = path.join(resolvedOutputPath, 'output.css')
+  const pdfCachePath = getPdfBuildPath(config)
+  const releasePath = getReleasePath(config)
+  const htmlChunksPath = getHtmlModuleBuildPath(config)
+  const cssPath = getCssPath(config)
 
+  // FIXME extract version util
   const version = packageConfig.version
   const outputFilename = config.documentFileName!.replace('{{version}}', version)
   const outputFilenamePath = path.join(releasePath, outputFilename)
@@ -840,7 +835,7 @@ export const buildPdf = async (config: IPartProperties, outputPath?: string, add
   try {
     await Promise.all([mkdir(pdfCachePath, { recursive: true }), mkdir(releasePath, { recursive: true })])
 
-    const modulePath = path.join(htmlChunksPath, `module-${config.id}`)
+    const modulePath = htmlChunksPath
     const [coverContent, backCoverContent, cssContent] = await Promise.all([
       coverHtmlFile ? fs.readFile(path.join(modulePath, coverHtmlFile), 'utf8') : Promise.resolve(null),
       backCoverHtmlFile ? fs.readFile(path.join(modulePath, backCoverHtmlFile), 'utf8') : Promise.resolve(null),
@@ -869,9 +864,9 @@ export const buildPdf = async (config: IPartProperties, outputPath?: string, add
 
     // Fast path: when N and chunkSize are determinable without running the browser
     // and all chunks are cached with no file changes, skip Puppeteer entirely.
-    // Disabled when BUILD_TOC_PAGENUMS or addBookmarks is set — both need anchorPageOut
+    // Disabled when BUILD_TOC_PAGENUMS or config.skipPdfBookmarks=false is set — both need anchorPageOut
     // which is only populated by the full preparePdfHtml + merge pipeline.
-    if (!process.env.BUILD_TOC_PAGENUMS && !addBookmarks) {
+    if (!process.env.BUILD_TOC_PAGENUMS && config.usePdfBookmarks) {
       const registry = await loadRegistry(pdfCachePath, config.id)
       const fastN = config.buildProcessesNum ?? registry?.N
       const fastChunkSize = config.buildPartSize ?? registry?.chunkSize
@@ -908,7 +903,6 @@ export const buildPdf = async (config: IPartProperties, outputPath?: string, add
     await createDocumentContentPdf(
       getFullPageTemplate(fullHtmlContent),
       outputFilenamePath,
-      resolvedOutputPath,
       config,
       pdfCachePath,
       htmlChunksPath,
@@ -916,7 +910,6 @@ export const buildPdf = async (config: IPartProperties, outputPath?: string, add
         fileOrder: htmlFileOrder,
         fileHashes,
       },
-      addBookmarks,
     )
 
     logger.info(chalk.green(`>> Generated PDF document for ${outputFilenamePath}`))

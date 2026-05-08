@@ -49,6 +49,7 @@ const mainBestiaryConf: Partial<IPartProperties> = {
   skipHeaderAndFooter: [2],
 }
 
+// FIXME outputPath can be omitted here, but is required everywhere in the scripts
 const config: IModuleBuilderConfig = {
   version: '1.11.23',
   releasePartIds: ['main', 'bestiary', 'map', 'osr', 'bestiary-osr'],

@@ -1,12 +1,15 @@
+/**
+ * Script args converted to the module options
+ */
 export type BuildModuleOptions = {
   partIds: string[]
-  help: boolean
-  htmlNoSkip: boolean
-  parallel: boolean
-  addBookmarks: boolean
-  production: boolean
+  isParallel: boolean
+  isProduction: boolean
+  useHelp: boolean
+  useHtmlRebuild: boolean
+  usePdfBookmarks: boolean
   configPath?: string
-  outputDir?: string
+  outputPath?: string
   logLevel?: string
 }
 
@@ -50,6 +53,7 @@ export interface IBookmarksConfig {
 }
 
 export interface IDocProperties {
+  outputPath: string
   template?: string
   footer?: string
   header?: string
@@ -72,7 +76,7 @@ export interface IDocProperties {
   /** Same as skipHeaderAndFooter but skips only the footer. */
   skipFooter?: number[]
   /** Should skip adding PDF bookmarks? [false] */
-  skipPdfBookmarks?: boolean
+  usePdfBookmarks?: boolean
 }
 
 export interface IPartProperties extends IDocProperties {
@@ -84,12 +88,6 @@ export interface IPartProperties extends IDocProperties {
   skipBuild?: boolean
   buildPartSize?: number
   buildProcessesNum?: number
-}
-
-export interface IModuleBuilderConfig extends IDocProperties {
-  version: string
-  parts: IPartProperties[]
-  releasePartIds?: string[]
 }
 
 export interface IDocPageMetadata {
@@ -116,3 +114,10 @@ export interface IRefEntry {
 
 /** A function that transforms a markdown string given a build config. */
 export type MacroFn = (markdown: string, config: IPartProperties) => string
+
+// TODO should the inheritance be reversed? "doc props extends module conf"
+export interface IModuleBuilderConfig extends IDocProperties {
+  version: string
+  parts: IPartProperties[]
+  releasePartIds?: string[]
+}

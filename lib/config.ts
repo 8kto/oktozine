@@ -2,7 +2,15 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import type { BuildModuleOptions, IModuleBuilderConfig } from '../types'
-import { PROJECT_ROOT } from './paths'
+import { DEFAULT_BUILD_PATH, PROJECT_ROOT } from './paths'
+
+const enrichConfigWithModuleOptions = (conf: IModuleBuilderConfig, moduleOptions: BuildModuleOptions) => {
+  return {
+    ...conf,
+    usePdfBookmarks: moduleOptions.usePdfBookmarks,
+    outputPath: moduleOptions.outputPath ?? DEFAULT_BUILD_PATH,
+  }
+}
 
 export const loadBuildConfig = async (
   moduleOptions: BuildModuleOptions,
@@ -15,9 +23,10 @@ export const loadBuildConfig = async (
   }
 
   if (cliPath) {
-    const abs = resolve(process.cwd(), cliPath)
+    const absPath = resolve(process.cwd(), cliPath)
+    const conf = await importConfig(absPath)
 
-    return importConfig(abs)
+    return enrichConfigWithModuleOptions(conf, moduleOptions)
   }
 
   const candidates = [
@@ -33,7 +42,7 @@ export const loadBuildConfig = async (
     try {
       const conf = await importConfig(p)
 
-      return conf
+      return enrichConfigWithModuleOptions(conf, moduleOptions)
     } catch {
       // try next candidate
     }

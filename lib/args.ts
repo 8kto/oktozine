@@ -23,11 +23,11 @@ export const parseScriptArgs = (): BuildModuleOptions => {
   const args = process.argv.slice(2)
   const options: BuildModuleOptions = {
     partIds: [],
-    help: false,
-    htmlNoSkip: false,
-    parallel: false,
-    addBookmarks: true,
-    production: false,
+    isParallel: false,
+    isProduction: false,
+    useHelp: false,
+    useHtmlRebuild: false,
+    usePdfBookmarks: true,
   }
 
   let i = 0
@@ -37,7 +37,7 @@ export const parseScriptArgs = (): BuildModuleOptions => {
     switch (arg) {
       case '-h':
       case '--help':
-        options.help = true
+        options.useHelp = true
         i += 1
         break
 
@@ -56,17 +56,17 @@ export const parseScriptArgs = (): BuildModuleOptions => {
       case '--html-no-skip':
       case '--no-html-skip':
       case '--no-skip-html':
-        options.htmlNoSkip = true
+        options.useHtmlRebuild = true
         i += 1
         break
 
       case '--parallel':
-        options.parallel = true
+        options.isParallel = true
         i += 1
         break
 
       case '--skip-bookmarks':
-        options.addBookmarks = false
+        options.usePdfBookmarks = false
         i += 1
         break
 
@@ -87,7 +87,7 @@ export const parseScriptArgs = (): BuildModuleOptions => {
           logger.error(chalk.red('Error: --output-dir requires a path'))
           process.exit(1)
         }
-        options.outputDir = path.resolve(val)
+        options.outputPath = path.resolve(val)
         i += 2
         break
       }

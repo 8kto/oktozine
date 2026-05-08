@@ -10,12 +10,12 @@ import { getBuildFilePath, isFileChangedSinceLastBuild, recalculatePages, update
 import { logger } from './lib/logger'
 import { getMarkdownRenderer } from './lib/markdown'
 import { measure } from './lib/measure'
-import { OKTOZINE_ROOT, PROJECT_ROOT } from './lib/paths'
+import { getCssPath, getHtmlBuildPath, getHtmlModuleBuildPath, OKTOZINE_ROOT, PROJECT_ROOT } from './lib/paths'
 import { runPhase, runPhaseSync } from './lib/phase'
 import handleMacros from './macros/index'
 import type { IDocPage, IPartProperties } from './types'
 
-const defaultBuildDir = path.join(PROJECT_ROOT, 'build')
+// FIXME hardcoded
 const markdownSourcesDir = path.join(PROJECT_ROOT, 'src/markdown')
 const htmTemplateslDir = path.join(PROJECT_ROOT, 'src/html')
 
@@ -66,6 +66,7 @@ const applyTemplate = async (data: IDocPage, templatePath: string): Promise<stri
     .replace('{{footer}}', metadata.footer ?? '')
     .replace('{{content}}', content)
 
+  // TODO document metadata
   if (Array.isArray(metadata.use)) {
     // Quick workaround
     if (metadata.use.includes('version')) {
@@ -93,9 +94,9 @@ const applyTemplate = async (data: IDocPage, templatePath: string): Promise<stri
   return res
 }
 
-export const prepareHtmlBuild = async (outputDir?: string): Promise<void> => {
-  const buildDir = outputDir ?? defaultBuildDir
-  const htmlBuildDir = path.join(buildDir, 'chunks-html')
+export const copyHtmlBuildAssets = async (config: IPartProperties): Promise<void> => {
+  const htmlBuildDir = getHtmlBuildPath(config)
+  const cssPath = getCssPath(config)
 
   if (!fs.existsSync(htmlBuildDir)) {
     fs.mkdirSync(htmlBuildDir, { recursive: true })
@@ -104,7 +105,7 @@ export const prepareHtmlBuild = async (outputDir?: string): Promise<void> => {
   await runPhase('copy static assets into chunks-html', async () => {
     await Promise.all([
       // FIXME paths set outside of the oktozine codebase
-      fs.copy(path.join(buildDir, 'output.css'), path.join(htmlBuildDir, 'output.css')),
+      fs.copy(cssPath, path.join(htmlBuildDir, 'output.css')),
       fs.copy(path.join(OKTOZINE_ROOT, 'webviewer/index.html'), path.join(htmlBuildDir, 'server.html')),
       fs.copy(path.join(PROJECT_ROOT, 'src/images/'), path.join(htmlBuildDir, 'images/')),
       fs.copy(path.join(PROJECT_ROOT, 'src/styles/fonts'), path.join(htmlBuildDir, 'fonts/')),
@@ -193,7 +194,7 @@ const renderToHtml = async (pageData: IDocPage, buildDir: string, fileName: stri
   logger.info(chalk.cyan(`>> Generated HTML for ${fileName}`))
 }
 
-export const buildHtml = async (config: IPartProperties, outputDir?: string): Promise<void> => {
+export const buildHtml = async (config: IPartProperties): Promise<void> => {
   logger.info(chalk.cyan(`Building HTML for "${config.documentTitle}" (${config.documentFileName})...`))
   const endBuildHtmlMeasure = measure()
 
@@ -203,10 +204,10 @@ export const buildHtml = async (config: IPartProperties, outputDir?: string): Pr
     return
   }
 
-  const buildDir = path.join(outputDir ?? defaultBuildDir, 'chunks-html', `module-${config.id}`)
+  const htmlBuildPath = getHtmlModuleBuildPath(config)
   const markdownRenderer = getMarkdownRenderer()
 
-  await runPhase(`ensureDir ${buildDir}`, () => fs.ensureDir(buildDir))
+  await runPhase(`ensureDir ${htmlBuildPath}`, () => fs.ensureDir(htmlBuildPath))
   let markdownFiles = await runPhase(`readdir ${markdownSourcesDir}`, () => fs.readdir(markdownSourcesDir))
 
   const forceRebuildAll = shouldRebuildAllFiles(markdownSourcesDir, markdownFiles, config)
@@ -217,7 +218,7 @@ export const buildHtml = async (config: IPartProperties, outputDir?: string): Pr
   }
 
   const isHtmlBuilt = (file: string): boolean => {
-    const outPath = path.join(buildDir, `${file}.html`)
+    const outPath = path.join(htmlBuildPath, `${file}.html`)
 
     return runPhaseSync(`pathExistsSync ${outPath}`, () => fs.pathExistsSync(outPath))
   }
@@ -256,7 +257,7 @@ export const buildHtml = async (config: IPartProperties, outputDir?: string): Pr
       const data = await convertMarkdownToHtml(filePath, markdownRenderer, config)
       const pagesData = recalculatePages(data)
 
-      return Promise.all(pagesData.map(async (pageData) => renderToHtml(pageData, buildDir, fileName)))
+      return Promise.all(pagesData.map(async (pageData) => renderToHtml(pageData, htmlBuildPath, fileName)))
     } catch (err) {
       // Add per-file context so Promise.all surfaces a helpful label.
       throw new Error(`HTML generation failed for source "${fileName}" (part "${config.id}")`, { cause: err })
