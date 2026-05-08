@@ -103,7 +103,7 @@ describe('loadRegistry / saveRegistry', () => {
   })
 
   const makeRegistry = (overrides: Partial<IChunkRegistry> = {}): IChunkRegistry => ({
-    partId: 'main',
+    documentId: 'main',
     builtAt: 1000,
     N: 4,
     chunkSize: 10,
@@ -148,7 +148,7 @@ describe('resolveIncrementalPlan', () => {
 
   const writeRegistry = (reg: Partial<IChunkRegistry> = {}) =>
     saveRegistry(tmpDir, {
-      partId: 'main',
+      documentId: 'main',
       builtAt: Date.now(),
       N,
       chunkSize,

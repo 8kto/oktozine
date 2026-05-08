@@ -2,7 +2,7 @@
  * @file Inline conditional blocks parser with alias fallback.
  *
  * Replaces fenced conditional expressions with the branch that matches the
- * current part's `id`. When no direct match is found, the part's
+ * current document's `id`. When no direct match is found, the document's
  * `conditionalsAlias` mapping is consulted as a fallback.
  *
  * @module macros/parse-conditional-mode
@@ -24,7 +24,7 @@
  * ```
  */
 
-import type { MacroFn } from '../types'
+import type { IDocumentConfig, MacroFn } from '../types'
 
 /**
  * Extract the text for a given branch from the raw conditional content.
@@ -60,12 +60,12 @@ const getContent = (blockContent: string, mode: string): string => {
  * `config.id`, falling back to `config.conditionalsAlias` when needed.
  *
  * @param markdown - Source Markdown string.
- * @param config   - Part configuration; uses `config.id` for branch matching
+ * @param config   - Document configuration; uses `config.id` for branch matching
  *                   and `config.conditionalsAlias` for fallback resolution.
  * @returns Markdown with conditionals resolved to plain text wrapped in
  *          `<span class="conditional-block conditional-block--<id>">`.
  */
-export const parseConditionalMode: MacroFn = (markdown, config) => {
+export const parseConditionalMode: MacroFn = (markdown: string, config: IDocumentConfig) => {
   if (typeof markdown !== 'string' || !markdown) {
     return markdown
   }

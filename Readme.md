@@ -9,14 +9,14 @@ system.
 ## Quick Start
 
 ```bash
-# Build the main part only
+# Build the main document only
 yarn build
 
 # Build all parts (main, osr, map) + bestiaries
 yarn build:all
 
-# Build a specific part
-tsx scripts/oktozine/build-module.ts <partId> [options]
+# Build a specific document
+tsx scripts/oktozine/build-module.ts <documentId> [options]
 ```
 
 ---
@@ -26,9 +26,9 @@ tsx scripts/oktozine/build-module.ts <partId> [options]
 The entry point for all builds.
 
 ```
-Usage: tsx scripts/oktozine/build-module.ts <partIds> [options]
+Usage: tsx scripts/oktozine/build-module.ts <documentIds> [options]
 
-<partIds>        Comma-separated part IDs to build (omit to build all non-skipped parts)
+<documentIds>        Comma-separated document IDs to build (omit to build all non-skipped parts)
 -h, --help       Show help and exit
 -x, --html-no-skip
                  Rebuild every HTML file, ignoring the timestamp cache
@@ -40,51 +40,51 @@ Usage: tsx scripts/oktozine/build-module.ts <partIds> [options]
 **Build phases** (always in this order):
 
 1. `prepareHtmlBuild` — copies static assets (CSS, fonts, images) into `build/chunks-html/`
-2. `buildHtml` — processes Markdown → HTML for every part, **serially** (parts can share source files)
-3. `buildPdf` — renders HTML → PDF for every part, serially by default or in parallel with `--parallel`
+2. `buildHtml` — processes Markdown → HTML for every document, **serially** (parts can share source files)
+3. `buildPdf` — renders HTML → PDF for every document, serially by default or in parallel with `--parallel`
 
-Each part config is deep-merged over the top-level defaults before being passed to the builders.
+Each document config is deep-merged over the top-level defaults before being passed to the builders.
 
 ---
 
 ## Build Config — `conf/oktozin.build.conf.ts`
 
-Exports a default `IModuleBuilderConfig` object that describes every document part.
+Exports a default `IModuleBuilderConfig` object that describes every document document.
 
 ### Top-level fields (defaults shared by all parts)
 
 | Field                      | Type                     | Description                                                                                                             |
 | -------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `parts`                    | `IPartProperties[]`      | List of document parts to build                                                                                         |
-| `releasePartIds`           | `string[]`               | Part IDs included in a production release                                                                               |
+| `releaseDocumentIds`       | `string[]`               | Document IDs included in a production release                                                                           |
 | `template`                 | `string`                 | Default HTML template filename (relative to `src/html/`)                                                                |
 | `header`                   | `string`                 | Default running header text                                                                                             |
 | `footer`                   | `string`                 | Default running footer text                                                                                             |
 | `skipped`                  | `string[]`               | Markdown filenames excluded from all parts (global blocklist)                                                           |
 | `referenceFiles`           | `string[]`               | Paths to `$refs-*.md` files loaded into the reference dictionary                                                        |
-| `conditionalsAlias`        | `Record<string, string>` | Maps a part ID to another for `{{ }}` conditional fallback (e.g. `bestiary-osr → bestiary`)                             |
-| `tocConfig`                | `ITocConfig`             | Default TOC settings (merged per-part)                                                                                  |
+| `conditionalsAlias`        | `Record<string, string>` | Maps a document ID to another for `{{ }}` conditional fallback (e.g. `bestiary-osr → bestiary`)                         |
+| `tocConfig`                | `ITocConfig`             | Default TOC settings (merged per-document)                                                                              |
 | `skipHeaderAndFooter`      | `number[]`               | 1-based page numbers that skip both header and footer decoration. Negative values count from the end (`-1` = last page) |
 | `skipHeader`               | `number[]`               | Same, but header only                                                                                                   |
 | `skipFooter`               | `number[]`               | Same, but footer only                                                                                                   |
-| `invalidateBuildOnPattern` | `RegExp`                 | If any source file matching this pattern has changed, all HTML files for the part are rebuilt                           |
+| `invalidateBuildOnPattern` | `RegExp`                 | If any source file matching this pattern has changed, all HTML files for the document are rebuilt                       |
 
-### Per-part fields (`IPartProperties`)
+### Per-document fields (`IPartProperties`)
 
-All top-level defaults apply. Parts can override any field. Part-specific additions:
+All top-level defaults apply. Parts can override any field. Document-specific additions:
 
 | Field               | Type             | Description                                                                     |
 | ------------------- | ---------------- | ------------------------------------------------------------------------------- |
-| `id`                | `string`         | Unique part identifier used in file paths and conditionals                      |
+| `id`                | `string`         | Unique document identifier used in file paths and conditionals                  |
 | `documentTitle`     | `string`         | Title embedded in the PDF                                                       |
 | `documentFileName`  | `string`         | Output filename template, `{{version}}` is replaced with `package.json` version |
 | `coverHtmlFile`     | `string \| null` | Source filename for the front cover (no page delimiter appended)                |
 | `backCoverHtmlFile` | `string \| null` | Source filename for the back cover                                              |
-| `skipBuild`         | `boolean`        | Exclude this part from default (no-args) builds                                 |
+| `skipBuild`         | `boolean`        | Exclude this document from default (no-args) builds                             |
 | `include`           | `string[]`       | Allowlist of Markdown filenames; overrides `skipped` and `includePattern`       |
 | `includePattern`    | `RegExp`         | Regex allowlist; only matching filenames are built                              |
 | `buildPartSize`     | `number`         | Pages per PDF chunk (overrides auto-calculation)                                |
-| `buildProcessesNum` | `number`         | Number of parallel Chromium instances for this part                             |
+| `buildProcessesNum` | `number`         | Number of parallel Chromium instances for this document                         |
 
 ### PDF chunk tuning — measured build times (main module)
 
@@ -143,12 +143,12 @@ serialized and evaluated as a browser function.
 
 ### `ITocOverrides`
 
-| Field                 | Type                                         | Description                                                         |
-| --------------------- | -------------------------------------------- | ------------------------------------------------------------------- |
-| `dropLabels`          | `string[]`                                   | Heading texts to remove entirely (heading + all its children)       |
-| `dropItemsFromLabels` | `string[]`                                   | Headings whose _children_ are removed, but the heading itself stays |
-| `alwaysInclude`       | `string[]`                                   | Headings that are shown even if `renderMaxLevel` would hide them    |
-| `parts`               | `Partial<Record<PartId, ITocOverridesBase>>` | Per-part overrides merged on top of the top-level overrides         |
+| Field                 | Type                                             | Description                                                         |
+| --------------------- | ------------------------------------------------ | ------------------------------------------------------------------- |
+| `dropLabels`          | `string[]`                                       | Heading texts to remove entirely (heading + all its children)       |
+| `dropItemsFromLabels` | `string[]`                                       | Headings whose _children_ are removed, but the heading itself stays |
+| `alwaysInclude`       | `string[]`                                       | Headings that are shown even if `renderMaxLevel` would hide them    |
+| `documents`           | `Partial<Record<DocumentId, ITocOverridesBase>>` | Per-document overrides merged on top of the top-level overrides     |
 
 Overrides are defined in `conf/oktozin.toc.conf.ts` and passed into `buildToc` at PDF build time.
 
@@ -191,7 +191,7 @@ loops.
 
 ### `parseConditionalMode` — inline conditionals
 
-Replaces `` `{{ branchId: content | branchId: content }}` `` with the branch matching the current part's `id`. If no
+Replaces `` `{{ branchId: content | branchId: content }}` `` with the branch matching the current document's `id`. If no
 branch matches directly, falls back to `conditionalsAlias`.
 
 ```markdown
@@ -405,7 +405,7 @@ The passage leads to (A4). → …<a href="#room-a4">(A4)</a>.
 build/
   output.css                        Compiled Tailwind CSS
   chunks-html/
-    module-<id>/                    Per-part HTML chunks (one file per Markdown source)
+    module-<id>/                    Per-document HTML chunks (one file per Markdown source)
     $toc-<id>.html                  Rendered TOC HTML (extracted from DOM after buildToc)
     $fullHtmlContent-<id>.html      Full merged HTML (debug dump, written unless BUILD_DUMP_HTML=false)
   $toc-<id>.json                    TOC tree as JSON (used by bookmark builder)
@@ -415,10 +415,10 @@ build/
 
 ---
 
-## Adding a New Part
+## Adding a new Document
 
-1. Add a `Partial<IPartProperties>` object in `conf/oktozin.build.conf.ts`.
-2. Include it in the `parts` array.
-3. If needed, add per-part TOC overrides in `conf/oktozin.toc.conf.ts` under `tocOverrides.parts.<id>`.
-4. Add it to `releasePartIds` if it should be included in production releases.
+1. Add a `Partial<IDocumentConfig>` object in `conf/oktozin.build.conf.ts`.
+2. Include it in the `documents` array.
+3. If needed, add per-document TOC overrides in `conf/oktozin.toc.conf.ts` under `tocOverrides.documents.<id>`.
+4. Add it to `releaseDocumentIds` if it should be included in production releases.
 5. Run `tsx scripts/oktozine/build-module.ts <id> --html-no-skip` to verify.

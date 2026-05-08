@@ -27,7 +27,7 @@ import { assembleDocumentHtml, getFullPageTemplate, readModuleHtmlPages } from '
 import { buildToc } from './lib/table-of-contents'
 import { getBuildFileVersion } from './lib/version'
 import { wrapContentSections } from './lib/wrap-sections'
-import type { IDocumentConfig, ITocItem, PartId } from './types'
+import type { IDocumentConfig, ITocItem } from './types'
 
 // FIXME hardcoded
 const pageNumbersFontPath = path.join(PROJECT_ROOT, 'src/styles/fonts/Philosopher/Philosopher-Regular.ttf')
@@ -160,8 +160,8 @@ const buildTocForPage = async (
   }
 
   try {
-    const { parts, ...tocDefaults } = tocOverrides
-    const mergedTocOverrides = { ...tocDefaults, ...parts?.[config.id as PartId] }
+    const { documents, ...tocDefaults } = tocOverrides
+    const mergedTocOverrides = { ...tocDefaults, ...documents?.[config.id] }
     const toc = await page.evaluate(buildToc, { ...config.tocConfig, tocOverrides: mergedTocOverrides })
     const rootId = tocConfig.rootId ?? 'toc-main'
     const tocHtml = await page.evaluate((id: string) => document.getElementById(id)?.innerHTML || '', rootId)
@@ -686,7 +686,7 @@ const createDocumentContentPdf = async (
       .map(({ i, buf }) => fs.writeFile(chunkCachePath(pdfCachePath, config.id, i), buf!)),
     incremental
       ? saveRegistry(pdfCachePath, {
-          partId: config.id,
+          documentId: config.id,
           builtAt: Date.now(),
           N,
           chunkSize,

@@ -13,7 +13,7 @@
  *    into actual HTML elements (conditional blocks, column/page breaks,
  *    picture placeholders, etc.).
  *
- * For OSR builds (part id ending with `osr`), an additional text-level
+ * For OSR builds (document id ending with `osr`), an additional text-level
  * substitution replaces ` : ` with `:\u00A0` (non-breaking colon+space).
  *
  * @module macros/alias
@@ -42,7 +42,7 @@
  * ```
  */
 
-import type { MacroFn } from '../types'
+import type { IDocumentConfig, MacroFn } from '../types'
 
 /** Matches `<!-- item[…] … /-->` and `<!-- stats[…] … /-->`. */
 const ALIASES = /<!-- (?:item|stats)\[([^\]]+)]([^/]*)\/-->/g
@@ -84,11 +84,9 @@ const HTML_ALIASES_OSR: Array<[string | RegExp, string]> = [[' : ', `: `]]
 /**
  * Expand shorthand aliases and HTML-comment macros.
  *
- * @param markdown - Source Markdown string.
- * @param config   - Part configuration; uses `config.id` to detect OSR builds.
  * @returns Markdown with all aliases expanded.
  */
-export const addAliases: MacroFn = (markdown, config) => {
+export const addAliases: MacroFn = (markdown: string, config: IDocumentConfig) => {
   const replaced = markdown.replace(ALIASES, '<!-- cmd[ref] header[$1] detailed $2 /-->')
 
   let res = HTML_ALIASES.reduce((acc, cur) => {

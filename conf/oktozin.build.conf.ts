@@ -52,7 +52,7 @@ const mainBestiaryConf: Partial<IDocumentConfig> = {
 // FIXME outputPath can be omitted here, but is required everywhere in the scripts
 const config: IModuleBuilderConfig = {
   version: '1.11.23',
-  releasePartIds: ['main', 'bestiary', 'map', 'osr', 'bestiary-osr'],
+  releaseDocumentIds: ['main', 'bestiary', 'map', 'osr', 'bestiary-osr'],
   template: 'two-columns.html',
   footer: '2025-2026, undefined Okto',
   header: 'Зеница Варготара',
@@ -79,7 +79,7 @@ const config: IModuleBuilderConfig = {
     rootId: 'toc-main',
   },
   skipHeaderAndFooter: [1, -1], // skip first and last pages
-  parts: [
+  documents: [
     mainModuleConf as IDocumentConfig,
     {
       ...mainModuleConf,

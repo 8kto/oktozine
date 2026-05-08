@@ -13,7 +13,7 @@ const mainTocConf: ITocOverrides = {
 
 export const tocOverrides: ITocOverrides = {
   dropLabels: ['Содержание'],
-  parts: {
+  documents: {
     main: mainTocConf,
     osr: mainTocConf,
   },

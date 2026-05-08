@@ -14,7 +14,7 @@ import { IDocumentConfig } from './types'
 
 export const main = async (): Promise<void> => {
   const moduleOptions = parseScriptArgs()
-  const { partIds, useHelp, logLevel, isParallel, configPath } = moduleOptions
+  const { documentIds, useHelp, logLevel, isParallel, configPath } = moduleOptions
 
   if (useHelp) {
     return printUsage()
@@ -33,18 +33,18 @@ export const main = async (): Promise<void> => {
   )
 
   validateConfigVersion(buildConfig)
-  let requestedIds = partIds
+  let requestedIds = documentIds
 
   // If no part ID set, collect all
   if (!requestedIds.length) {
-    requestedIds = buildConfig.parts.filter((p) => !p.skipBuild).map((p) => p.id)
+    requestedIds = buildConfig.documents.filter((p) => !p.skipBuild).map((p) => p.id)
   }
 
   logger.info(chalk.yellow(`Building: ${requestedIds.join(', ')}`))
-  const { parts, ...defaults } = buildConfig
+  const { documents, ...defaults } = buildConfig
 
-  const docsToBuild = parts.filter((p) => requestedIds.includes(p.id))
-  const missingIds = requestedIds.filter((id) => !parts.some((p) => p.id === id))
+  const docsToBuild = documents.filter((p) => requestedIds.includes(p.id))
+  const missingIds = requestedIds.filter((id) => !documents.some((p) => p.id === id))
   if (missingIds.length) {
     logger.error(chalk.red(`Error: no part(s) found for id(s): ${missingIds.join(', ')}`))
     process.exit(1)
@@ -59,7 +59,7 @@ export const main = async (): Promise<void> => {
   }
 
   // PDF build — serial by default, parallel with --parallel flag
-  await runPhase('buildPdf() failed (one or more parts)', async () => {
+  await runPhase('buildPdf() failed (one or more documents)', async () => {
     if (isParallel) {
       await Promise.all(
         docsToBuild.map(async (conf: IDocumentConfig) => {

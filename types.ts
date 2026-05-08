@@ -2,7 +2,7 @@
  * Script args converted to the module options
  */
 export type BuildModuleOptions = {
-  partIds: string[]
+  documentIds: string[]
   isParallel: boolean
   isProduction: boolean
   useHelp: boolean
@@ -36,8 +36,8 @@ export type ITocOverridesBase = {
 }
 
 export interface ITocOverrides extends ITocOverridesBase {
-  /** Per-part overrides, merged with the top-level defaults (part values take priority). */
-  parts?: Partial<Record<PartId, ITocOverridesBase>>
+  /** Per-document overrides, merged with the top-level defaults (document values take priority). */
+  documents?: Partial<Record<string, ITocOverridesBase>>
 }
 
 export interface ITocConfig {
@@ -68,9 +68,6 @@ export interface IBookmarksConfig {
 //-----------------------------------------------------------------------------
 // BUILD
 //-----------------------------------------------------------------------------
-
-// FIXME should not be hardcoded
-export type PartId = 'main' | 'osr' | 'bestiary' | 'bestiary-osr' | 'items' | 'cover' | 'test-doc' | 'map'
 
 export interface IBaseConfig {
   outputPath: string
@@ -104,13 +101,13 @@ export interface IBaseConfig {
 
 /**
  * The entire module config, consists of default options (IBaseConfig),
- * which will be merged with each of `.parts: IPartConfig[]`.
- * Part options have precedence over the default root-level options.
+ * which will be merged with each of `.documents: IDocumentConfig[]`.
+ * Document options have precedence over the default root-level options.
  */
 export interface IModuleBuilderConfig extends IBaseConfig {
   version: string
-  parts: IDocumentConfig[]
-  releasePartIds?: string[]
+  documents: IDocumentConfig[]
+  releaseDocumentIds?: string[]
 }
 
 export interface IDocumentConfig extends IBaseConfig {
@@ -132,6 +129,7 @@ export interface IDocumentPageMetadata {
   seqPage?: boolean
   seqPageNum?: number
   documentTitle?: string
+  // FIXME
   [key: string]: unknown
 }
 

@@ -68,8 +68,6 @@ const getMacroHandlers = (): MacroFn[] => {
  * If a single handler throws, the error is logged and the previous
  * accumulator value is carried forward (the pipeline does not abort).
  *
- * @param markdown - Raw Markdown source to transform.
- * @param config   - Part-level build configuration (part id, aliases, etc.).
  * @returns The fully transformed Markdown string.
  */
 const handleMacros = (markdown: string, config: IDocumentConfig): string =>

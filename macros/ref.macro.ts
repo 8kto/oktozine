@@ -51,9 +51,6 @@ import type { IDocumentConfig, IModuleBuilderConfig } from '../types'
  * | `alt-header`   | Use the alternate heading style (`ref-header--alt` class). |
  * | `id[value]`    | Set `id="value"` on the wrapper `<section>` element. |
  *
- * @param markdown  - Source Markdown string.
- * @param buildConf - Part configuration; used to resolve reference file paths
- *                    and to run the macro pipeline on resolved content.
  * @returns Markdown with reference directives replaced by rendered HTML blocks.
  *          Unresolved references are logged as errors and left unchanged.
  */
@@ -63,6 +60,7 @@ export const convertRefInserts = (markdown: string, buildConf?: IDocumentConfig)
     return markdown
   }
 
+  // FIXME types
   const resolveContent = getReferenceResolver(buildConf as unknown as IModuleBuilderConfig)
 
   return markdown.replace(commandPattern, (match, title: string, extraArgs = '') => {

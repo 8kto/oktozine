@@ -6,9 +6,9 @@ import { BuildModuleOptions } from '../types'
 import { logger } from './logger'
 
 const USAGE = `
-Usage: tsx scripts/oktozine/build-module.ts <partIds> [options]
+Usage: tsx scripts/oktozine/build-module.ts <document IDs> [options]
 
-<partIds>                           Comma-separated list of part IDs to build (positional)
+<document IDs>                      Comma-separated list of document IDs to build (positional)
 -h, --help                          Show this help and exit
 -x, --html-no-skip, no-html-skip    Rebuild every HTML file, skipping the cache
 --parallel                          Build PDFs in parallel (default: serial)
@@ -22,7 +22,7 @@ Usage: tsx scripts/oktozine/build-module.ts <partIds> [options]
 export const parseScriptArgs = (): BuildModuleOptions => {
   const args = process.argv.slice(2)
   const options: BuildModuleOptions = {
-    partIds: [],
+    documentIds: [],
     isParallel: false,
     isProduction: false,
     useHelp: false,
@@ -103,14 +103,14 @@ export const parseScriptArgs = (): BuildModuleOptions => {
           process.exit(1)
         }
 
-        if (options.partIds.length === 0) {
-          options.partIds = arg
+        if (options.documentIds.length === 0) {
+          options.documentIds = arg
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean)
           i += 1
         } else {
-          logger.error(chalk.red('Error: only one positional <partIds> allowed'))
+          logger.error(chalk.red('Error: only one positional <documentIds> allowed'))
           process.exit(1)
         }
     }
