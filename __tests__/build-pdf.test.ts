@@ -31,7 +31,7 @@ describe('buildChunkRanges', () => {
 // ── resolveChunkPlan ─────────────────────────────────────────────────────────
 
 describe('resolveChunkPlan', () => {
-  const base: IPartProperties = { id: 'test' }
+  const base = { id: 'test' } as unknown as IPartProperties
 
   it('uses config values directly when both are provided', () => {
     const config = { ...base, buildProcessesNum: 3, buildPartSize: 60 }
