@@ -65,7 +65,6 @@ const config: IModuleBuilderConfig = {
     '0005-title-map.md',
     '0005-title-bestiary.md',
     '0015-notes-bestiary.md',
-    '0800-bestiary--autogen.md',
     '0801-bestiary.md',
     '0199-grounds-map.md',
   ],
