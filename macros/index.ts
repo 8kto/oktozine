@@ -22,6 +22,7 @@ import { logger } from '../lib/logger'
 import type { IDocumentConfig, MacroFn } from '../types'
 import { addAliases } from './alias'
 import { parseConditionalMode } from './conditionals'
+import { convertDumpInserts } from './dump.macro'
 import {
   glueCrystalsAlike,
   glueDamageUnits,
@@ -43,6 +44,7 @@ let _macroHandlers: MacroFn[] | null = null
 const getMacroHandlers = (): MacroFn[] => {
   if (!_macroHandlers) {
     _macroHandlers = [
+      convertDumpInserts,
       parseConditionalMode,
       addAliases,
       convertNamedSections,
