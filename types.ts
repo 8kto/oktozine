@@ -69,6 +69,9 @@ export interface IBookmarksConfig {
 // BUILD
 //-----------------------------------------------------------------------------
 
+/**
+ * Options available per document and per page.
+ */
 export interface IBaseConfig {
   outputPath: string
   isProduction?: boolean
@@ -110,6 +113,9 @@ export interface IModuleBuilderConfig extends IBaseConfig {
   releaseDocumentIds?: string[]
 }
 
+/**
+ * A document is eventually a PDF file.
+ */
 export interface IDocumentConfig extends IBaseConfig {
   id: string
   documentTitle?: string
