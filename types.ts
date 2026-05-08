@@ -54,6 +54,7 @@ export interface IBookmarksConfig {
 
 export interface IDocProperties {
   outputPath: string
+  isProduction?: boolean
   template?: string
   footer?: string
   header?: string

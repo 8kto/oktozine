@@ -65,6 +65,11 @@ export const parseScriptArgs = (): BuildModuleOptions => {
         i += 1
         break
 
+      case '--production':
+        options.isProduction = true
+        i += 1
+        break
+
       case '--skip-bookmarks':
         options.usePdfBookmarks = false
         i += 1

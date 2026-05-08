@@ -4,11 +4,15 @@ import { pathToFileURL } from 'node:url'
 import type { BuildModuleOptions, IModuleBuilderConfig } from '../types'
 import { DEFAULT_BUILD_PATH, PROJECT_ROOT } from './paths'
 
-const enrichConfigWithModuleOptions = (conf: IModuleBuilderConfig, moduleOptions: BuildModuleOptions) => {
+const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
+  conf: T,
+  moduleOptions: BuildModuleOptions,
+): T => {
   return {
     ...conf,
-    usePdfBookmarks: moduleOptions.usePdfBookmarks,
+    usePdfBookmarks: !!moduleOptions.usePdfBookmarks,
     outputPath: moduleOptions.outputPath ?? DEFAULT_BUILD_PATH,
+    isProduction: !!moduleOptions.isProduction,
   }
 }
 

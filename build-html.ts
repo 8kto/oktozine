@@ -78,7 +78,7 @@ const applyTemplate = async (data: IDocPage, templatePath: string): Promise<stri
     if (metadata.use.includes('buildMode')) {
       res = res.replace(
         '{{buildMode}}',
-        process.env.BUILD_MODE === 'production' ? '' : `<strong>Черновая версия, не для распространения</strong>`,
+        metadata.isProduction ? '' : `<strong>Черновая версия, не для распространения</strong>`,
       )
     }
   }

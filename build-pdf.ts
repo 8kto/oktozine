@@ -863,7 +863,7 @@ export const buildPdf = async (config: IPartProperties): Promise<void> => {
 
     // Fast path: when N and chunkSize are determinable without running the browser
     // and all chunks are cached with no file changes, skip Puppeteer entirely.
-    // Disabled when BUILD_TOC_PAGENUMS or config.skipPdfBookmarks=false is set — both need anchorPageOut
+    // Disabled when BUILD_TOC_PAGENUMS or !config.usePdfBookmarks is set — both need anchorPageOut
     // which is only populated by the full preparePdfHtml + merge pipeline.
     if (!process.env.BUILD_TOC_PAGENUMS && config.usePdfBookmarks) {
       const registry = await loadRegistry(pdfCachePath, config.id)
