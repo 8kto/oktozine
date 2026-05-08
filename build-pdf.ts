@@ -863,9 +863,9 @@ export const buildPdf = async (config: IPartProperties): Promise<void> => {
 
     // Fast path: when N and chunkSize are determinable without running the browser
     // and all chunks are cached with no file changes, skip Puppeteer entirely.
-    // Disabled when BUILD_TOC_PAGENUMS or !config.usePdfBookmarks is set — both need anchorPageOut
-    // which is only populated by the full preparePdfHtml + merge pipeline.
-    if (!process.env.BUILD_TOC_PAGENUMS && config.usePdfBookmarks) {
+    // Disabled when BUILD_TOC_PAGENUMS is set — it needs anchorPageOut from the full pipeline.
+    // anchorPageOut for bookmarks is populated by mergeChunks from cached PDFs without a browser.
+    if (!process.env.BUILD_TOC_PAGENUMS) {
       const registry = await loadRegistry(pdfCachePath, config.id)
       const fastN = config.buildProcessesNum ?? registry?.N
       const fastChunkSize = config.buildPartSize ?? registry?.chunkSize
@@ -888,8 +888,19 @@ export const buildPdf = async (config: IPartProperties): Promise<void> => {
           const cachedBuffers = Array.from({ length: fastN }, (_, i) => plan.cached.get(i)).filter(
             (b): b is Buffer => b !== undefined,
           )
-          const mergedBytes = await mergeChunks(cachedBuffers, config.header ?? '', decorateOpts)
-          await fs.writeFile(outputFilenamePath, mergedBytes)
+          const anchorPageOut = config.usePdfBookmarks && config.tocConfig ? new Map<string, number>() : undefined
+          const mergedBytes = await mergeChunks(cachedBuffers, config.header ?? '', decorateOpts, anchorPageOut)
+
+          let outBytes: Uint8Array
+          if (config.usePdfBookmarks && anchorPageOut && anchorPageOut.size > 0) {
+            const endPdfBookmarks = measure('Adding bookmarks to PDF')
+            outBytes = await applyOutlines(mergedBytes, config, anchorPageOut)
+            logger.info(chalk.gray(endPdfBookmarks()))
+          } else {
+            outBytes = mergedBytes
+          }
+
+          await fs.writeFile(outputFilenamePath, outBytes)
           logger.info(chalk.green(`>> Generated PDF document for ${outputFilenamePath}`))
 
           return
