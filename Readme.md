@@ -1,8 +1,8 @@
 # Oktozine Build System
 
 TypeScript build pipeline that converts Markdown source files into styled PDF documents via Puppeteer. Supports multiple
-document "parts" (e.g. main module, OSR variant, bestiary, maps), parallel PDF rendering, and a custom Markdown macro
-system.
+document "documents" (e.g. main module, OSR variant, bestiary, maps), parallel PDF rendering, and a custom Markdown
+macro system.
 
 ---
 
@@ -12,7 +12,7 @@ system.
 # Build the main document only
 yarn build
 
-# Build all parts (main, osr, map) + bestiaries
+# Build all documents (main, osr, map) + bestiaries
 yarn build:all
 
 # Build a specific document
@@ -28,11 +28,11 @@ The entry point for all builds.
 ```
 Usage: tsx scripts/oktozine/build-module.ts <documentIds> [options]
 
-<documentIds>        Comma-separated document IDs to build (omit to build all non-skipped parts)
+<documentIds>        Comma-separated document IDs to build (omit to build all non-skipped documents)
 -h, --help       Show help and exit
 -x, --html-no-skip
                  Rebuild every HTML file, ignoring the timestamp cache
---parallel       Render PDFs for all parts in parallel (default: serial)
+--parallel       Render PDFs for all documents in parallel (default: serial)
 --log-level      Pino log level: trace | debug | info | warn | error | fatal
 --config <path>  Path to a custom build config file (default: conf/oktozin.build.conf.ts)
 ```
@@ -40,7 +40,7 @@ Usage: tsx scripts/oktozine/build-module.ts <documentIds> [options]
 **Build phases** (always in this order):
 
 1. `prepareHtmlBuild` — copies static assets (CSS, fonts, images) into `build/chunks-html/`
-2. `buildHtml` — processes Markdown → HTML for every document, **serially** (parts can share source files)
+2. `buildHtml` — processes Markdown → HTML for every document, **serially** (documents can share source files)
 3. `buildPdf` — renders HTML → PDF for every document, serially by default or in parallel with `--parallel`
 
 Each document config is deep-merged over the top-level defaults before being passed to the builders.
@@ -51,16 +51,16 @@ Each document config is deep-merged over the top-level defaults before being pas
 
 Exports a default `IModuleBuilderConfig` object that describes every document document.
 
-### Top-level fields (defaults shared by all parts)
+### Top-level fields (defaults shared by all documents)
 
 | Field                      | Type                     | Description                                                                                                             |
 | -------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `parts`                    | `IPartProperties[]`      | List of document parts to build                                                                                         |
+| `documents`                | `IDocumentConfig[]`      | List of document documents to build                                                                                     |
 | `releaseDocumentIds`       | `string[]`               | Document IDs included in a production release                                                                           |
 | `template`                 | `string`                 | Default HTML template filename (relative to `src/html/`)                                                                |
 | `header`                   | `string`                 | Default running header text                                                                                             |
 | `footer`                   | `string`                 | Default running footer text                                                                                             |
-| `skipped`                  | `string[]`               | Markdown filenames excluded from all parts (global blocklist)                                                           |
+| `skipped`                  | `string[]`               | Markdown filenames excluded from all documents (global blocklist)                                                       |
 | `referenceFiles`           | `string[]`               | Paths to `$refs-*.md` files loaded into the reference dictionary                                                        |
 | `conditionalsAlias`        | `Record<string, string>` | Maps a document ID to another for `{{ }}` conditional fallback (e.g. `bestiary-osr → bestiary`)                         |
 | `tocConfig`                | `ITocConfig`             | Default TOC settings (merged per-document)                                                                              |
@@ -69,9 +69,9 @@ Exports a default `IModuleBuilderConfig` object that describes every document do
 | `skipFooter`               | `number[]`               | Same, but footer only                                                                                                   |
 | `invalidateBuildOnPattern` | `RegExp`                 | If any source file matching this pattern has changed, all HTML files for the document are rebuilt                       |
 
-### Per-document fields (`IPartProperties`)
+### Per-document fields (`IDocumentConfig`)
 
-All top-level defaults apply. Parts can override any field. Document-specific additions:
+All top-level defaults apply. Documents can override any field. Document-specific additions:
 
 | Field               | Type             | Description                                                                     |
 | ------------------- | ---------------- | ------------------------------------------------------------------------------- |
@@ -104,7 +104,7 @@ warm (second build after a change).
 ### Example
 
 ```typescript
-const mainModuleConf: Partial<IPartProperties> = {
+const mainModuleConf: Partial<IDocumentConfig> = {
   id: 'main',
   documentTitle: 'Зеница Варготара',
   documentFileName: 'Зеница Варготара ({{version}}).pdf',

@@ -10,15 +10,15 @@ extracted as a separate npm library** — keep code generic and avoid module-spe
 ## Commands
 
 ```bash
-# Full build (CSS + HTML + PDF for 'main' part)
+# Full build (CSS + HTML + PDF for 'main' document)
 yarn build
 
-# Build specific part
-yarn build:styles && tsx scripts/oktozine/build-module.ts <partId> [options]
+# Build specific document
+yarn build:styles && tsx scripts/oktozine/build-module.ts <documentId> [options]
 
 # Build options
 --html-no-skip     # Force rebuild all HTML files (bypass cache)
---parallel         # Build PDFs for multiple parts in parallel
+--parallel         # Build PDFs for multiple documents in parallel
 --log-level debug  # Set log verbosity (trace|debug|info|warn|error)
 --config <path>    # Override build config file path
 
@@ -52,8 +52,8 @@ yarn format:fix
 
 ```
 build-module.ts  (CLI orchestrator)
-  → build-html.ts       per part, serial
-  → build-pdf.ts        per part, serial by default
+  → build-html.ts       per document, serial
+  → build-pdf.ts        per document, serial by default
 ```
 
 ### HTML Build (`build-html.ts`)
@@ -64,9 +64,9 @@ Reads Markdown from `src/markdown/`, runs the macro pipeline, applies an EJS HTM
 **Incremental caching:** tracks a last-build timestamp in `/tmp/HTML_BUILDER_LAST_BUILD$-{id}.txt`. Files whose `mtime`
 is older than the timestamp are skipped. Pass `--html-no-skip` (sets `HTML_NO_SKIP=true`) to force a full rebuild.
 
-**Invalidation:** if `invalidateBuildOnPattern` matches any changed file, all files for that part are rebuilt.
+**Invalidation:** if `invalidateBuildOnPattern` matches any changed file, all files for that document are rebuilt.
 
-**File filtering** per part config: `include` (explicit list), `includePattern` (regex), `skipped` (exclusion list).
+**File filtering** per document config: `include` (explicit list), `includePattern` (regex), `skipped` (exclusion list).
 These are mutually exclusive; they combine as `include > includePattern > skipped`.
 
 ### Macro Pipeline (`macros/`)
@@ -87,7 +87,7 @@ Pipeline order matters — macros run in the order registered in `index.ts`:
 
 ### PDF Build (`build-pdf.ts`)
 
-Four phases per part:
+Four phases per document:
 
 1. **DOM setup** (`preparePdfHtml`) — single browser: builds TOC, wraps content sections, estimates page count,
    serialises final HTML
@@ -98,8 +98,8 @@ Four phases per part:
 4. **TOC patching** — (gated: `BUILD_TOC_PAGENUMS`) injects real page numbers into TOC, re-renders only TOC pages,
    splices them into the merged PDF
 
-**Incremental chunk cache:** chunk PDFs saved to `build/pdf/{partId}-chunk-{i}.pdf`; a registry at
-`build/pdf/{partId}-registry.json` stores N, chunkSize, and MD5 hashes of every source file. On subsequent builds:
+**Incremental chunk cache:** chunk PDFs saved to `build/pdf/{documentId}-chunk-{i}.pdf`; a registry at
+`build/pdf/{documentId}-registry.json` stores N, chunkSize, and MD5 hashes of every source file. On subsequent builds:
 
 - **Fast path** (all files unchanged + N/chunkSize known from config): skips Puppeteer entirely, loads cached chunks,
   merges. Disabled when `BUILD_TOC_PAGENUMS` is set.
@@ -108,16 +108,16 @@ Four phases per part:
 
 ### Config (`types.ts` + `conf/oktozin.build.conf.ts`)
 
-`IModuleBuilderConfig` has top-level defaults plus a `parts` array of `IPartProperties`. `build-module.ts` deep-merges
-each part config with the defaults before passing to the build functions.
+`IModuleBuilderConfig` has top-level defaults plus a `documents` array of `IDocumentConfig`. `build-module.ts`
+deep-merges each document config with the defaults before passing to the build functions.
 
-Config is loaded from `oktozin.build.conf.ts` at the project root or in `conf/`, or via `--config`. The `releasePartIds`
-array controls which parts are included in release builds.
+Config is loaded from `oktozin.build.conf.ts` at the project root or in `conf/`, or via `--config`. The
+`releasedocumentIds` array controls which documents are included in release builds.
 
 ### Two-Language Output
 
-Parts with `id: 'main'` and `id: 'osr'` share identical content but use `conditionals` macro to swap system-specific
-text. The `conditionalsAlias` config field maps part IDs for bestiary variants.
+Documents with `id: 'main'` and `id: 'osr'` share identical content but use `conditionals` macro to swap system-specific
+text. The `conditionalsAlias` config field maps document IDs for bestiary variants.
 
 ## Code Style
 
