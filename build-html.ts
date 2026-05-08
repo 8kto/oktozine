@@ -13,7 +13,7 @@ import { getCssPath, getHtmlBuildPath, getHtmlModuleBuildPath, OKTOZINE_ROOT, PR
 import { runPhase, runPhaseSync } from './lib/phase'
 import { getBuildFileVersion } from './lib/version'
 import handleMacros from './macros/index'
-import type { IDocPage, IPartProperties } from './types'
+import type { IDocumentConfig, IDocumentPage } from './types'
 
 // FIXME hardcoded
 const markdownSourcesDir = path.join(PROJECT_ROOT, 'src/markdown')
@@ -22,8 +22,8 @@ const htmTemplateslDir = path.join(PROJECT_ROOT, 'src/html')
 const convertMarkdownToHtml = async (
   filePath: string,
   mdRenderer: ReturnType<typeof getMarkdownRenderer>,
-  config: IPartProperties,
-): Promise<IDocPage> => {
+  config: IDocumentConfig,
+): Promise<IDocumentPage> => {
   const content = await runPhase(`read markdown`, () => fs.readFile(filePath, 'utf8'))
 
   let frontMatter
@@ -57,8 +57,8 @@ const convertMarkdownToHtml = async (
   }
 }
 
-const applyTemplate = async (data: IDocPage, templatePath: string): Promise<string> => {
-  const { content, metadata } = data
+const applyTemplate = async (page: IDocumentPage, templatePath: string): Promise<string> => {
+  const { content, metadata } = page
   const template = await runPhase(`read template`, () => fs.readFile(templatePath, 'utf8'))
 
   let res = template
@@ -70,7 +70,7 @@ const applyTemplate = async (data: IDocPage, templatePath: string): Promise<stri
   if (Array.isArray(metadata.use)) {
     // Quick workaround
     if (metadata.use.includes('version')) {
-      res = res.replace('{{version}}', getBuildFileVersion(data.metadata))
+      res = res.replace('{{version}}', getBuildFileVersion(page.metadata))
     }
     if (metadata.use.includes('documentTitle')) {
       res = res.replace('{{documentTitle}}', metadata.documentTitle ?? '')
@@ -93,7 +93,7 @@ const applyTemplate = async (data: IDocPage, templatePath: string): Promise<stri
   return res
 }
 
-export const copyHtmlBuildAssets = async (config: IPartProperties): Promise<void> => {
+export const copyHtmlBuildAssets = async (config: IDocumentConfig): Promise<void> => {
   const htmlBuildDir = getHtmlBuildPath(config)
   const cssPath = getCssPath(config)
 
@@ -115,7 +115,7 @@ export const copyHtmlBuildAssets = async (config: IPartProperties): Promise<void
 const shouldRebuildAllFiles = (
   markdownSrcDir: string,
   markdownFiles: string[],
-  { id, invalidateBuildOnPattern }: IPartProperties,
+  { id, invalidateBuildOnPattern }: IDocumentConfig,
 ): boolean => {
   let forceRebuildAll = false
 
@@ -148,7 +148,7 @@ const shouldRebuildAllFiles = (
   return forceRebuildAll
 }
 
-const filterFiles = (config: IPartProperties, files: string[]): string[] => {
+const filterFiles = (config: IDocumentConfig, files: string[]): string[] => {
   const { skipped, includePattern, include } = config
 
   const hasSkipped = Array.isArray(skipped) && skipped.length > 0
@@ -172,8 +172,8 @@ const filterFiles = (config: IPartProperties, files: string[]): string[] => {
   })
 }
 
-const renderToHtml = async (pageData: IDocPage, buildDir: string, fileName: string): Promise<void> => {
-  const { metadata } = pageData
+const renderToHtml = async (page: IDocumentPage, buildDir: string, fileName: string): Promise<void> => {
+  const { metadata } = page
   const { template, seqPage, seqPageNum } = metadata
 
   if (!metadata.template) {
@@ -185,7 +185,7 @@ const renderToHtml = async (pageData: IDocPage, buildDir: string, fileName: stri
   }
 
   const templatePath = path.join(htmTemplateslDir, template!)
-  const html = await applyTemplate(pageData, templatePath)
+  const html = await applyTemplate(page, templatePath)
 
   const outPath = path.join(buildDir, `${fileName}.html`)
   await runPhase(`write html ${outPath}`, () => fs.writeFile(outPath, html))
@@ -193,7 +193,7 @@ const renderToHtml = async (pageData: IDocPage, buildDir: string, fileName: stri
   logger.info(chalk.cyan(`>> Generated HTML for ${fileName}`))
 }
 
-export const buildHtml = async (config: IPartProperties): Promise<void> => {
+export const buildHtml = async (config: IDocumentConfig): Promise<void> => {
   logger.info(chalk.cyan(`Building HTML for "${config.documentTitle}" (${config.documentFileName})...`))
   const endBuildHtmlMeasure = measure()
 
@@ -212,8 +212,8 @@ export const buildHtml = async (config: IPartProperties): Promise<void> => {
   const forceRebuildAll = shouldRebuildAllFiles(markdownSourcesDir, markdownFiles, config)
   markdownFiles = filterFiles(config, markdownFiles)
 
-  if (process.env.HTML_NO_SKIP) {
-    logger.info(chalk.cyan('>> HTML_NO_SKIP flag: all files to rebuild'))
+  if (config.useHtmlRebuild) {
+    logger.info(chalk.cyan('>> All HTML files to rebuild'))
   }
 
   const isHtmlBuilt = (file: string): boolean => {
@@ -235,7 +235,7 @@ export const buildHtml = async (config: IPartProperties): Promise<void> => {
 
       const filePath = path.join(markdownSourcesDir, fileName)
 
-      if (!process.env.HTML_NO_SKIP) {
+      if (!config.useHtmlRebuild) {
         let changed = true
         try {
           changed = isFileChangedSinceLastBuild(buildFilePath, filePath)

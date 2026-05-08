@@ -10,11 +10,11 @@ import { loadBuildConfig, validateConfigVersion } from './lib/config'
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
 import { runPhase } from './lib/phase'
-import { IPartProperties } from './types'
+import { IDocumentConfig } from './types'
 
 export const main = async (): Promise<void> => {
   const moduleOptions = parseScriptArgs()
-  const { partIds, useHelp, logLevel, useHtmlRebuild, isParallel, configPath } = moduleOptions
+  const { partIds, useHelp, logLevel, isParallel, configPath } = moduleOptions
 
   if (useHelp) {
     return printUsage()
@@ -24,9 +24,6 @@ export const main = async (): Promise<void> => {
   if (logLevel) {
     process.env.LOG_LEVEL = logLevel
     logger.level = logLevel
-  }
-  if (useHtmlRebuild) {
-    process.env.HTML_NO_SKIP = 'true'
   }
 
   const endMeasure = measure()
@@ -53,7 +50,7 @@ export const main = async (): Promise<void> => {
     process.exit(1)
   }
 
-  await runPhase('prepareHtmlBuild() failed', () => copyHtmlBuildAssets(buildConfig as object as IPartProperties))
+  await runPhase('prepareHtmlBuild() failed', () => copyHtmlBuildAssets(buildConfig as object as IDocumentConfig))
 
   // Serial HTML build (avoid clobbering overlapping files)
   for (const conf of docsToBuild) {
@@ -65,7 +62,7 @@ export const main = async (): Promise<void> => {
   await runPhase('buildPdf() failed (one or more parts)', async () => {
     if (isParallel) {
       await Promise.all(
-        docsToBuild.map(async (conf) => {
+        docsToBuild.map(async (conf: IDocumentConfig) => {
           const merged = deepmerge(defaults, conf)
           await runPhase(`buildPdf() failed for part "${conf.id}"`, () => buildPdf(merged))
         }),
