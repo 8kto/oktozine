@@ -259,11 +259,11 @@ export const buildHtml = async (config: IDocumentConfig): Promise<void> => {
       return Promise.all(pagesData.map(async (pageData) => renderToHtml(pageData, htmlBuildPath, fileName)))
     } catch (err) {
       // Add per-file context so Promise.all surfaces a helpful label.
-      throw new Error(`HTML generation failed for source "${fileName}" (part "${config.id}")`, { cause: err })
+      throw new Error(`HTML generation failed for source "${fileName}" (document "${config.id}")`, { cause: err })
     }
   })
 
-  await runPhase(`Promise.all(html generation) for part "${config.id}"`, () => Promise.all(processes))
+  await runPhase(`Promise.all(html generation) for document "${config.id}"`, () => Promise.all(processes))
 
   try {
     updateLastBuildTime(buildFilePath)
