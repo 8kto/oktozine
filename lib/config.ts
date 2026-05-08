@@ -10,9 +10,10 @@ const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
 ): T => {
   return {
     ...conf,
-    usePdfBookmarks: !!moduleOptions.usePdfBookmarks,
-    outputPath: moduleOptions.outputPath ?? DEFAULT_BUILD_PATH,
     isProduction: !!moduleOptions.isProduction,
+    outputPath: moduleOptions.outputPath ?? DEFAULT_BUILD_PATH,
+    useHtmlRebuild: !!moduleOptions.useHtmlRebuild,
+    usePdfBookmarks: !!moduleOptions.usePdfBookmarks,
   }
 }
 
