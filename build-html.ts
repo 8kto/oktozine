@@ -5,13 +5,13 @@ import fs from 'fs-extra'
 import matter from 'gray-matter'
 import path from 'path'
 
-import packageConfig from '../../package.json' with { type: 'json' }
 import { getBuildFilePath, isFileChangedSinceLastBuild, recalculatePages, updateLastBuildTime } from './lib/build-utils'
 import { logger } from './lib/logger'
 import { getMarkdownRenderer } from './lib/markdown'
 import { measure } from './lib/measure'
 import { getCssPath, getHtmlBuildPath, getHtmlModuleBuildPath, OKTOZINE_ROOT, PROJECT_ROOT } from './lib/paths'
 import { runPhase, runPhaseSync } from './lib/phase'
+import { getBuildFileVersion } from './lib/version'
 import handleMacros from './macros/index'
 import type { IDocPage, IPartProperties } from './types'
 
@@ -70,8 +70,7 @@ const applyTemplate = async (data: IDocPage, templatePath: string): Promise<stri
   if (Array.isArray(metadata.use)) {
     // Quick workaround
     if (metadata.use.includes('version')) {
-      const sfx = process.env.BUILD_MODE === 'production' ? '' : '-dev'
-      res = res.replace('{{version}}', `v${packageConfig.version}${sfx}`)
+      res = res.replace('{{version}}', getBuildFileVersion(data.metadata))
     }
     if (metadata.use.includes('documentTitle')) {
       res = res.replace('{{documentTitle}}', metadata.documentTitle ?? '')

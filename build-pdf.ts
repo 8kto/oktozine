@@ -25,6 +25,7 @@ import {
 } from './lib/pdf-chunk-registry'
 import { assembleDocumentHtml, getFullPageTemplate, readModuleHtmlPages } from './lib/pdf-html-assembler'
 import { buildToc } from './lib/table-of-contents'
+import { getBuildFileVersion } from './lib/version'
 import { wrapContentSections } from './lib/wrap-sections'
 import type { IPartProperties, ITocItem, PartId } from './types'
 
@@ -825,9 +826,7 @@ export const buildPdf = async (config: IPartProperties): Promise<void> => {
   const htmlChunksPath = getHtmlModuleBuildPath(config)
   const cssPath = getCssPath(config)
 
-  // FIXME extract version util
-  const version = packageConfig.version
-  const outputFilename = config.documentFileName!.replace('{{version}}', version)
+  const outputFilename = config.documentFileName!.replace('{{version}}', getBuildFileVersion(config))
   const outputFilenamePath = path.join(releasePath, outputFilename)
   const coverHtmlFile = config.coverHtmlFile ? `${config.coverHtmlFile}.html` : null
   const backCoverHtmlFile = config.backCoverHtmlFile ? `${config.backCoverHtmlFile}.html` : null
