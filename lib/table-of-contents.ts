@@ -198,9 +198,11 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
   applyRenderMaxLevel(afterDrops, conf?.renderMaxLevel)
   renderToc(afterDrops, conf)
 
+  const alwaysIncludeSet = new Set(conf?.tocOverrides?.alwaysInclude ?? [])
+
   function stripInternals(items: ITocItem[]): ITocItem[] {
     return items
-      .filter((item) => !item.$skipped)
+      .filter((item) => !item.$skipped || alwaysIncludeSet.has(item.label))
       .map(({ $level: _l, $skipped: _s, items: children, ...rest }) => ({
         ...rest,
         items: children ? stripInternals(children) : children,
