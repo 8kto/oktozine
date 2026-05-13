@@ -13,7 +13,7 @@ import { getCssPath, getHtmlBuildPath, getHtmlModuleBuildPath, OKTOZINE_ROOT, PR
 import { runPhase, runPhaseSync } from './lib/phase'
 import { getBuildFileVersion } from './lib/version'
 import handleMacros from './macros/index'
-import type { IDocumentConfig, IDocumentPage } from './types'
+import type { IDocumentConfig, IDocumentPage, IModuleBuilderConfig } from './types'
 
 // FIXME hardcoded
 const markdownSourcesDir = path.join(PROJECT_ROOT, 'src/markdown')
@@ -93,7 +93,7 @@ const applyTemplate = async (page: IDocumentPage, templatePath: string): Promise
   return res
 }
 
-export const copyHtmlBuildAssets = async (config: IDocumentConfig): Promise<void> => {
+export const copyHtmlBuildAssets = async (config: IModuleBuilderConfig): Promise<void> => {
   const htmlBuildDir = getHtmlBuildPath(config)
   const cssPath = getCssPath(config)
 

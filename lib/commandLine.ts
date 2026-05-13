@@ -12,7 +12,7 @@ Usage: tsx scripts/oktozine/build-module.ts <document IDs> [options]
 -h, --help                          Show this help and exit
 -x, --html-no-skip, no-html-skip    Rebuild every HTML file, skipping the cache
 --parallel                          Build PDFs in parallel (default: serial)
---production                        Build PDFs in parallel (default: serial)
+--production                        Build PDFs in production mode (no -dev suffixes etc., default: false)
 --skip-bookmarks                    Skip adding PDF bookmarks (default: adds)
 --log-level <level>                 Set pino logger level (trace|debug|info|warn|error|fatal)
 --config <path>                     Path to build config file (e.g. ./conf/build.conf.ts)

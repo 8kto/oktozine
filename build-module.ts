@@ -50,7 +50,7 @@ export const main = async (): Promise<void> => {
     process.exit(1)
   }
 
-  await runPhase('prepareHtmlBuild() failed', () => copyHtmlBuildAssets(buildConfig as object as IDocumentConfig))
+  await runPhase('prepareHtmlBuild() failed', () => copyHtmlBuildAssets(buildConfig))
 
   // Serial HTML build (avoid clobbering overlapping files)
   for (const conf of docsToBuild) {

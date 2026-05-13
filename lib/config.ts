@@ -66,7 +66,7 @@ export const validateConfigVersion = (buildConfig: IModuleBuilderConfig) => {
     major < minMajor ||
     (major === minMajor && minor < minMinor) ||
     (major === minMajor && minor === minMinor && patch < minPatch)
-  if (tooOld || major > minMajor + 1) {
+  if (tooOld || major > minMajor) {
     throw new Error(
       `Config version "${buildConfig.version}" is out of supported range [${MIN_CONFIG_VERSION}, ${minMajor + 1}.x].`,
     )

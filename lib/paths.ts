@@ -14,7 +14,7 @@ export const OKTOZINE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta
 
 export const DEFAULT_BUILD_PATH = path.join(PROJECT_ROOT, 'build')
 
-export const getHtmlBuildPath = <T extends IDocumentConfig>(config: T) => {
+export const getHtmlBuildPath = <T extends { outputPath: string }>(config: T) => {
   return path.join(config.outputPath, 'chunks-html')
 }
 
@@ -26,7 +26,7 @@ export const getPdfBuildPath = (config: IDocumentConfig) => {
   return path.join(config.outputPath, 'pdf', `module-${config.id}`)
 }
 
-export const getCssPath = (config: IDocumentConfig) => {
+export const getCssPath = <T extends { outputPath: string }>(config: T) => {
   return path.join(config.outputPath, 'output.css')
 }
 

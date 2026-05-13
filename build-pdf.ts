@@ -762,7 +762,7 @@ const createDocumentContentPdf = async (
         const patchedHtml = dom.serialize()
 
         // 2. Render only the TOC pages
-        const tocBuffer = await renderChunk(patchedHtml, `${tocStartPage}-${tocEndPage}`, outputPath)
+        const tocBuffer = await renderChunk(patchedHtml, `${tocStartPage}-${tocEndPage}`, getCssPath(config))
         if (tocBuffer) {
           // 3. Splice new TOC pages into the merged PDF
           const mergedDoc = await PDFDocument.load(mergedBytes)
