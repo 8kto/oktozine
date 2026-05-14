@@ -345,6 +345,68 @@ const flattenTocIds = (items: ITocItem[]): string[] =>
     [item.id, ...(item.items ? flattenTocIds(item.items) : [])].filter((id): id is string => !!id),
   )
 
+// ── Cross-chunk anchor correction ───────────────────────────────────────────
+
+/**
+ * Chrome emits named destinations for every link target when rendering each
+ * chunk, even for elements whose actual page is outside that chunk's rendered
+ * range. Those out-of-range elements get mapped to an incorrect page within
+ * the chunk (often matching a nearby in-range element). Since only the chunk
+ * that contains the TOC links (chunk-0) emits destinations for section headers
+ * in later chunks, those headers end up with wrong page numbers.
+ *
+ * Detection: in document order (DFS over TOC), page numbers must be
+ * monotonically non-decreasing. An item whose page is less than the running
+ * maximum from all previously-visited items is a cross-chunk victim.
+ * Correction: replace with the first child's page (h2 and first entry are
+ * typically on the same page), falling back to the running maximum.
+ *
+ * Returns the set of anchor IDs that were corrected.
+ */
+const correctCrossChunkAnchors = (tocItems: ITocItem[], anchorPageOut: Map<string, number>): Set<string> => {
+  const corrected = new Set<string>()
+
+  const traverse = (items: ITocItem[], minPage: number): number => {
+    let prevPage = minPage
+
+    for (const item of items) {
+      if (item.$skipped) {
+        continue
+      }
+
+      const page = item.id ? anchorPageOut.get(item.id) : undefined
+
+      // Recurse into children first so their pages are corrected before we
+      // use them as the fallback for this item.
+      let childMaxPage = prevPage
+      if (item.items?.length) {
+        childMaxPage = traverse(item.items, prevPage)
+      }
+
+      if (item.id && page !== undefined) {
+        if (page < prevPage) {
+          const firstChildId = item.items?.find((c) => c.id && !c.$skipped)?.id
+          const firstChildPage = firstChildId ? anchorPageOut.get(firstChildId) : undefined
+          const fixed = firstChildPage ?? prevPage
+          anchorPageOut.set(item.id, fixed)
+          corrected.add(item.id)
+          prevPage = Math.max(prevPage, fixed)
+        } else {
+          prevPage = page
+        }
+      }
+
+      prevPage = Math.max(prevPage, childMaxPage)
+    }
+
+    return prevPage
+  }
+
+  traverse(tocItems, 0)
+
+  return corrected
+}
+
 // ── PDF outlines (bookmarks) ─────────────────────────────────────────────────
 
 /**
@@ -616,6 +678,32 @@ const applyOutlines = async (
   try {
     const tocItems: ITocItem[] = JSON.parse(await fs.readFile(tocJsonPath, 'utf8'))
     const doc = await PDFDocument.load(bytes)
+
+    const corrected = correctCrossChunkAnchors(tocItems, anchorPageOut)
+
+    if (corrected.size > 0) {
+      logger.debug(chalk.gray(`Corrected ${corrected.size} cross-chunk anchor(s): ${[...corrected].join(', ')}`))
+
+      // Patch /Catalog/Dests in the merged PDF so rendered TOC links also navigate
+      // to the right page (not just the bookmarks panel).
+      const destsEntry = doc.catalog.get(PDFName.of('Dests'))
+      const destsDict = destsEntry instanceof PDFRef ? doc.context.lookup(destsEntry) : destsEntry
+      if (destsDict instanceof PDFDict) {
+        const pages = doc.getPages()
+        for (const anchorId of corrected) {
+          const pageNum = anchorPageOut.get(anchorId)
+          if (pageNum === undefined) {
+            continue
+          }
+          const page = pages[pageNum - 1]
+          if (!page) {
+            continue
+          }
+          destsDict.set(PDFName.of(anchorId), doc.context.obj([page.ref, PDFName.of('XYZ'), null, null, null]))
+        }
+      }
+    }
+
     addPdfOutlines(doc, tocItems, anchorPageOut)
 
     return doc.save()
