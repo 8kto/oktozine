@@ -1,6 +1,6 @@
 /** @jest-environment node */
 import { buildChunkRanges, resolveChunkPlan } from '../build-pdf'
-import type { IPartProperties } from '../types'
+import type { IDocumentConfig } from '../types'
 
 // ── buildChunkRanges ─────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ describe('buildChunkRanges', () => {
 // ── resolveChunkPlan ─────────────────────────────────────────────────────────
 
 describe('resolveChunkPlan', () => {
-  const base: IPartProperties = { id: 'test' }
+  const base = { id: 'test' } as unknown as IDocumentConfig
 
   it('uses config values directly when both are provided', () => {
     const config = { ...base, buildProcessesNum: 3, buildPartSize: 60 }

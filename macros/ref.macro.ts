@@ -34,7 +34,7 @@ import chalk from 'chalk'
 import { logger } from '../lib/logger'
 import { renderReferenceBlock } from '../lib/render-reference-block'
 import { getReferenceResolver } from '../lib/resolve-reference-files'
-import type { IModuleBuilderConfig, IPartProperties } from '../types'
+import type { IDocumentConfig, IModuleBuilderConfig } from '../types'
 
 /**
  * Replace `<!-- cmd[ref] header[…] … /-->` directives with rendered
@@ -51,18 +51,16 @@ import type { IModuleBuilderConfig, IPartProperties } from '../types'
  * | `alt-header`   | Use the alternate heading style (`ref-header--alt` class). |
  * | `id[value]`    | Set `id="value"` on the wrapper `<section>` element. |
  *
- * @param markdown  - Source Markdown string.
- * @param buildConf - Part configuration; used to resolve reference file paths
- *                    and to run the macro pipeline on resolved content.
  * @returns Markdown with reference directives replaced by rendered HTML blocks.
  *          Unresolved references are logged as errors and left unchanged.
  */
-export const convertRefInserts = (markdown: string, buildConf?: IPartProperties): string => {
+export const convertRefInserts = (markdown: string, buildConf?: IDocumentConfig): string => {
   const commandPattern = /<!--\s*cmd\[ref]\s*header\[(.*?)]\s*(.*?)\/-->/gms
   if (!commandPattern.test(markdown)) {
     return markdown
   }
 
+  // FIXME types
   const resolveContent = getReferenceResolver(buildConf as unknown as IModuleBuilderConfig)
 
   return markdown.replace(commandPattern, (match, title: string, extraArgs = '') => {

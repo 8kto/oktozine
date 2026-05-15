@@ -1,5 +1,33 @@
-// FIXME config
-export type PartId = 'main' | 'osr' | 'bestiary' | 'bestiary-osr' | 'items' | 'cover' | 'test-doc' | 'map'
+/**
+ * Script args converted to the module options
+ */
+export type BuildModuleOptions = {
+  documentIds: string[]
+  isParallel: boolean
+  isProduction: boolean
+  useHelp: boolean
+  useHtmlRebuild: boolean
+  usePdfBookmarks: boolean
+  configPath?: string
+  outputPath?: string
+  logLevel?: string
+}
+
+/**
+ * A reference (dictionary) file entry.
+ */
+export interface IRefEntry {
+  fullText: string
+  shortText: string
+  buffer?: string[]
+}
+
+/** A function that transforms a markdown string given a build config. */
+export type MacroFn = (markdown: string, config: IDocumentConfig) => string
+
+//-----------------------------------------------------------------------------
+// TOC
+//-----------------------------------------------------------------------------
 
 export type ITocOverridesBase = {
   dropLabels?: string[]
@@ -8,8 +36,8 @@ export type ITocOverridesBase = {
 }
 
 export interface ITocOverrides extends ITocOverridesBase {
-  /** Per-part overrides, merged with the top-level defaults (part values take priority). */
-  parts?: Partial<Record<PartId, ITocOverridesBase>>
+  /** Per-document overrides, merged with the top-level defaults (document values take priority). */
+  documents?: Partial<Record<string, ITocOverridesBase>>
 }
 
 export interface ITocConfig {
@@ -21,6 +49,7 @@ export interface ITocConfig {
   tocOverrides?: ITocOverrides
   /** Anchor ID → 1-based page number. When provided, page numbers are rendered next to each TOC item. */
   pageNumbers?: Record<string, number>
+  hiddenToc?: boolean
 }
 
 export interface ITocItem {
@@ -37,7 +66,16 @@ export interface IBookmarksConfig {
   skipLastPages?: number
 }
 
-export interface IDocProperties {
+//-----------------------------------------------------------------------------
+// BUILD
+//-----------------------------------------------------------------------------
+
+/**
+ * Options available per document and per page.
+ */
+export interface IBaseConfig {
+  outputPath: string
+  isProduction?: boolean
   template?: string
   footer?: string
   header?: string
@@ -59,9 +97,27 @@ export interface IDocProperties {
   skipHeader?: number[]
   /** Same as skipHeaderAndFooter but skips only the footer. */
   skipFooter?: number[]
+  /** Should skip adding PDF bookmarks? [false] */
+  usePdfBookmarks?: boolean
+  /** Should rebuild HTML files before rendering to PDF */
+  useHtmlRebuild: boolean
 }
 
-export interface IPartProperties extends IDocProperties {
+/**
+ * The entire module config, consists of default options (IBaseConfig),
+ * which will be merged with each of `.documents: IDocumentConfig[]`.
+ * Document options have precedence over the default root-level options.
+ */
+export interface IModuleBuilderConfig extends IBaseConfig {
+  version: string
+  documents: IDocumentConfig[]
+  releaseDocumentIds?: string[]
+}
+
+/**
+ * A document is eventually a PDF file.
+ */
+export interface IDocumentConfig extends IBaseConfig {
   id: string
   documentTitle?: string
   documentFileName?: string
@@ -72,12 +128,7 @@ export interface IPartProperties extends IDocProperties {
   buildProcessesNum?: number
 }
 
-export interface IModuleBuilderConfig extends IDocProperties {
-  parts: IPartProperties[]
-  releasePartIds?: string[]
-}
-
-export interface IDocPageMetadata {
+export interface IDocumentPageMetadata {
   template?: string
   name?: string
   use?: string[]
@@ -85,19 +136,15 @@ export interface IDocPageMetadata {
   seqPage?: boolean
   seqPageNum?: number
   documentTitle?: string
+  // FIXME
   [key: string]: unknown
 }
 
-export interface IDocPage {
-  metadata: IPartProperties & IDocPageMetadata
+/**
+ * A markdown file converted into HTML.
+ * A page means 1 file, which is not neccessary represents 1 rendered page
+ */
+export interface IDocumentPage {
+  metadata: IDocumentConfig & IDocumentPageMetadata
   content: string
 }
-
-export interface IRefEntry {
-  fullText: string
-  shortText: string
-  buffer?: string[]
-}
-
-/** A function that transforms a markdown string given a build config. */
-export type MacroFn = (markdown: string, config: IPartProperties) => string

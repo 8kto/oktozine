@@ -31,7 +31,6 @@
  * ```
  */
 
-
 /**
  * Map of English stat abbreviations to their Russian translations.
  *

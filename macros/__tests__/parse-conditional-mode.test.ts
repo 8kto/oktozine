@@ -1,140 +1,140 @@
+import type { IDocumentConfig } from '../../types'
 import { parseConditionalMode } from '../conditionals'
+
+const p = (id: string, extra?: Partial<IDocumentConfig>): IDocumentConfig =>
+  ({ id, ...extra }) as unknown as IDocumentConfig
 
 describe('parses conditionals', () => {
   it('should parse mode [main]', () => {
-    expect(
-      parseConditionalMode(`My text: \`{{ main: Main content | osr: OSR content }}\``, { id: 'main' }).trim(),
-    ).toEqual(`My text: <span class="conditional-block conditional-block--main">Main content</span>`)
+    expect(parseConditionalMode(`My text: \`{{ main: Main content | osr: OSR content }}\``, p('main')).trim()).toEqual(
+      `My text: <span class="conditional-block conditional-block--main">Main content</span>`,
+    )
   })
 
   it('should parse mode [osr]', () => {
     expect(
-      parseConditionalMode(`My text: \`{{ main: Main content | osr: OSR content }}\`, for real`, { id: 'osr' }).trim(),
+      parseConditionalMode(`My text: \`{{ main: Main content | osr: OSR content }}\`, for real`, p('osr')).trim(),
     ).toEqual(`My text: <span class="conditional-block conditional-block--osr">OSR content</span>, for real`)
   })
 
   it('should ignore missed mode', () => {
     expect(
-      parseConditionalMode(`My text: \`{{ main: Main content | osr: OSR content }}\`, for real`, { id: '5e' }).trim(),
+      parseConditionalMode(`My text: \`{{ main: Main content | osr: OSR content }}\`, for real`, p('5e')).trim(),
     ).toEqual(`My text: , for real`)
   })
 
   it('should tolerate whitespace around separators and colon', () => {
     expect(
-      parseConditionalMode(`My text: \`{{   main :   Main content    |   osr  :   OSR content   }}\``, {
-        id: 'osr',
-      }).trim(),
+      parseConditionalMode(`My text: \`{{   main :   Main content    |   osr  :   OSR content   }}\``, p('osr')).trim(),
     ).toEqual(`My text: <span class="conditional-block conditional-block--osr">OSR content</span>`)
   })
 
   it('should work when target branch is the first one', () => {
-    expect(
-      parseConditionalMode(`My text: \`{{ osr: OSR content | main: Main content }}\``, { id: 'osr' }).trim(),
-    ).toEqual(`My text: <span class="conditional-block conditional-block--osr">OSR content</span>`)
+    expect(parseConditionalMode(`My text: \`{{ osr: OSR content | main: Main content }}\``, p('osr')).trim()).toEqual(
+      `My text: <span class="conditional-block conditional-block--osr">OSR content</span>`,
+    )
   })
 
   it('should handle multiple macros in one line', () => {
     expect(
-      parseConditionalMode(`A \`{{ main: X | osr: Y }}\` B \`{{ main: M | osr: N }}\` C`, { id: 'main' }).trim(),
+      parseConditionalMode(`A \`{{ main: X | osr: Y }}\` B \`{{ main: M | osr: N }}\` C`, p('main')).trim(),
     ).toEqual(
       `A <span class="conditional-block conditional-block--main">X</span> B <span class="conditional-block conditional-block--main">M</span> C`,
     )
   })
 
   it('should drop only the unmatched macro, keep surrounding punctuation', () => {
-    expect(parseConditionalMode(`Start (\`{{ main: X | osr: Y }}\`) end.`, { id: '5e' }).trim()).toEqual(
-      `Start () end.`,
-    )
+    expect(parseConditionalMode(`Start (\`{{ main: X | osr: Y }}\`) end.`, p('5e')).trim()).toEqual(`Start () end.`)
   })
 
   it('should not match a mode as a substring of another mode (main vs main2)', () => {
-    expect(parseConditionalMode(`My text: \`{{ main2: Wrong | main: Right }}\``, { id: 'main' }).trim()).toEqual(
+    expect(parseConditionalMode(`My text: \`{{ main2: Wrong | main: Right }}\``, p('main')).trim()).toEqual(
       `My text: <span class="conditional-block conditional-block--main">Right</span>`,
     )
   })
 
   it('should support underscores and dashes in id', () => {
-    expect(parseConditionalMode(`My text: \`{{ osr_new: OK | main: NO }}\``, { id: 'osr_new' }).trim()).toEqual(
+    expect(parseConditionalMode(`My text: \`{{ osr_new: OK | main: NO }}\``, p('osr_new')).trim()).toEqual(
       `My text: <span class="conditional-block conditional-block--osr_new">OK</span>`,
     )
   })
 
   it('should support digits in id', () => {
-    expect(parseConditionalMode(`My text: \`{{ v2: OK | main: NO }}\``, { id: 'v2' }).trim()).toEqual(
+    expect(parseConditionalMode(`My text: \`{{ v2: OK | main: NO }}\``, p('v2')).trim()).toEqual(
       `My text: <span class="conditional-block conditional-block--v2">OK</span>`,
     )
   })
 
   it('should work with multiline content inside the macro', () => {
     expect(
-      parseConditionalMode(`My text:\n\`{{ main: Line 1\nLine 2 | osr: Single }}\`\nDone`, { id: 'main' }).trim(),
+      parseConditionalMode(`My text:\n\`{{ main: Line 1\nLine 2 | osr: Single }}\`\nDone`, p('main')).trim(),
     ).toEqual(`My text:\n<span class="conditional-block conditional-block--main">Line 1\nLine 2</span>\nDone`)
   })
 
   it('should leave markdown unchanged if there are no macros', () => {
     const input = `No macros here.`
-    expect(parseConditionalMode(input, { id: 'main' })).toEqual(input)
+    expect(parseConditionalMode(input, p('main'))).toEqual(input)
   })
 
   it('should throw on invalid id (regex meta chars)', () => {
-    expect(() => parseConditionalMode(`My text: \`{{ main: X | osr: Y }}\``, { id: 'osr)' })).toThrow(/Invalid id/)
+    expect(() => parseConditionalMode(`My text: \`{{ main: X | osr: Y }}\``, p('osr)'))).toThrow(/Invalid id/)
   })
 
   it('should throw on invalid id (whitespace)', () => {
-    expect(() => parseConditionalMode(`My text: \`{{ main: X | osr: Y }}\``, { id: 'osr new' })).toThrow(/Invalid id/)
+    expect(() => parseConditionalMode(`My text: \`{{ main: X | osr: Y }}\``, p('osr new'))).toThrow(/Invalid id/)
   })
 
   it('should use alias when direct mode is not found (bestiary -> main)', () => {
     expect(
-      parseConditionalMode(`My text: \`{{ osr: OSR content | main: Main content }}\``, {
-        id: 'bestiary',
-        conditionalsAlias: { bestiary: 'main', 'bestiary-osr': 'osr' },
-      }).trim(),
+      parseConditionalMode(
+        `My text: \`{{ osr: OSR content | main: Main content }}\``,
+        p('bestiary', { conditionalsAlias: { bestiary: 'main', 'bestiary-osr': 'osr' } }),
+      ).trim(),
     ).toEqual(`My text: <span class="conditional-block conditional-block--main">Main content</span>`)
   })
 
   it('should use alias when direct mode is not found (bestiary-osr -> osr)', () => {
     expect(
-      parseConditionalMode(`My text: \`{{ osr: OSR content | main: Main content }}\``, {
-        id: 'bestiary-osr',
-        conditionalsAlias: { bestiary: 'main', 'bestiary-osr': 'osr' },
-      }).trim(),
+      parseConditionalMode(
+        `My text: \`{{ osr: OSR content | main: Main content }}\``,
+        p('bestiary-osr', { conditionalsAlias: { bestiary: 'main', 'bestiary-osr': 'osr' } }),
+      ).trim(),
     ).toEqual(`My text: <span class="conditional-block conditional-block--osr">OSR content</span>`)
   })
 
   it('should prefer direct match over alias when both could apply', () => {
     expect(
-      parseConditionalMode(`My text: \`{{ bestiary: Direct content | main: Alias content | osr: OSR }}\``, {
-        id: 'bestiary',
-        conditionalsAlias: { bestiary: 'main' },
-      }).trim(),
+      parseConditionalMode(
+        `My text: \`{{ bestiary: Direct content | main: Alias content | osr: OSR }}\``,
+        p('bestiary', { conditionalsAlias: { bestiary: 'main' } }),
+      ).trim(),
     ).toEqual(`My text: <span class="conditional-block conditional-block--bestiary">Direct content</span>`)
   })
 
   it('should remove macro if neither direct nor alias is found', () => {
     expect(
-      parseConditionalMode(`My text: \`{{ osr: OSR content | main: Main content }}\`, for real`, {
-        id: 'bestiary',
-        conditionalsAlias: { bestiary: 'missing' },
-      }).trim(),
+      parseConditionalMode(
+        `My text: \`{{ osr: OSR content | main: Main content }}\`, for real`,
+        p('bestiary', { conditionalsAlias: { bestiary: 'missing' } }),
+      ).trim(),
     ).toEqual(`My text: , for real`)
   })
 
   it('should remove macro if alias mapping is missing for id', () => {
     expect(
-      parseConditionalMode(`My text: \`{{ osr: OSR content | main: Main content }}\`, for real`, {
-        id: 'bestiary',
-        conditionalsAlias: { 'bestiary-osr': 'osr' },
-      }).trim(),
+      parseConditionalMode(
+        `My text: \`{{ osr: OSR content | main: Main content }}\`, for real`,
+        p('bestiary', { conditionalsAlias: { 'bestiary-osr': 'osr' } }),
+      ).trim(),
     ).toEqual(`My text: , for real`)
   })
 
   it('should apply alias logic to multiple macros in the same line', () => {
     expect(
-      parseConditionalMode(`A \`{{ main: X | osr: Y }}\` B \`{{ main: M | osr: N }}\` C`, {
-        id: 'bestiary-osr',
-        conditionalsAlias: { bestiary: 'main', 'bestiary-osr': 'osr' },
-      }).trim(),
+      parseConditionalMode(
+        `A \`{{ main: X | osr: Y }}\` B \`{{ main: M | osr: N }}\` C`,
+        p('bestiary-osr', { conditionalsAlias: { bestiary: 'main', 'bestiary-osr': 'osr' } }),
+      ).trim(),
     ).toEqual(
       `A <span class="conditional-block conditional-block--osr">Y</span> B <span class="conditional-block conditional-block--osr">N</span> C`,
     )
@@ -142,10 +142,10 @@ describe('parses conditionals', () => {
 
   it('should tolerate whitespace in macro and still resolve via alias', () => {
     expect(
-      parseConditionalMode(`My text: \`{{   osr  :  OSR content   |  main :  Main content  }}\``, {
-        id: 'bestiary',
-        conditionalsAlias: { bestiary: 'main' },
-      }).trim(),
+      parseConditionalMode(
+        `My text: \`{{   osr  :  OSR content   |  main :  Main content  }}\``,
+        p('bestiary', { conditionalsAlias: { bestiary: 'main' } }),
+      ).trim(),
     ).toEqual(`My text: <span class="conditional-block conditional-block--main">Main content</span>`)
   })
 })

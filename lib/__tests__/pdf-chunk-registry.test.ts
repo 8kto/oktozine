@@ -103,11 +103,11 @@ describe('loadRegistry / saveRegistry', () => {
   })
 
   const makeRegistry = (overrides: Partial<IChunkRegistry> = {}): IChunkRegistry => ({
-    partId: 'main',
+    documentId: 'main',
     builtAt: 1000,
     N: 4,
     chunkSize: 10,
-    fileHashes: { '__css__': 'abc', 'a.html': 'def' },
+    fileHashes: { __css__: 'abc', 'a.html': 'def' },
     ...overrides,
   })
 
@@ -137,7 +137,7 @@ describe('resolveIncrementalPlan', () => {
 
   const files = ['a.html', 'b.html', 'c.html', 'd.html']
   const hashes: Record<string, string> = {
-    '__css__': 'css-hash',
+    __css__: 'css-hash',
     'a.html': 'hash-a',
     'b.html': 'hash-b',
     'c.html': 'hash-c',
@@ -148,7 +148,7 @@ describe('resolveIncrementalPlan', () => {
 
   const writeRegistry = (reg: Partial<IChunkRegistry> = {}) =>
     saveRegistry(tmpDir, {
-      partId: 'main',
+      documentId: 'main',
       builtAt: Date.now(),
       N,
       chunkSize,
@@ -181,7 +181,7 @@ describe('resolveIncrementalPlan', () => {
     await writeRegistry()
     await writeChunk(0)
     await writeChunk(1)
-    const newHashes = { ...hashes, '__css__': 'new-css-hash' }
+    const newHashes = { ...hashes, __css__: 'new-css-hash' }
     const plan = await resolveIncrementalPlan(tmpDir, 'main', files, newHashes, N, chunkSize)
     expect(plan.toRebuild).toEqual(new Set([0, 1]))
     expect(plan.cached.size).toBe(0)

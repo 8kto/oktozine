@@ -2,7 +2,7 @@
 import fs from 'fs-extra'
 import path from 'path'
 
-import type { IPartProperties } from '../types'
+import type { IDocumentConfig } from '../types'
 import { logger } from './logger'
 
 // ── Internal helpers ─────────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ export const readModuleHtmlPages = async (
 
 /** Concatenates cover, sorted page fragments, and back-cover into the full HTML body string. */
 export const assembleDocumentHtml = (
-  config: IPartProperties,
+  config: IDocumentConfig,
   coverContent: string | null,
   sortedPages: Array<[string, string]>,
   backCoverContent: string | null,

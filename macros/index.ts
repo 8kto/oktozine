@@ -19,9 +19,10 @@
  */
 
 import { logger } from '../lib/logger'
-import type { IPartProperties,MacroFn } from '../types'
+import type { IDocumentConfig, MacroFn } from '../types'
 import { addAliases } from './alias'
 import { parseConditionalMode } from './conditionals'
+import { convertDumpInserts } from './dump.macro'
 import {
   glueCrystalsAlike,
   glueDamageUnits,
@@ -43,6 +44,7 @@ let _macroHandlers: MacroFn[] | null = null
 const getMacroHandlers = (): MacroFn[] => {
   if (!_macroHandlers) {
     _macroHandlers = [
+      convertDumpInserts,
       parseConditionalMode,
       addAliases,
       convertNamedSections,
@@ -68,11 +70,9 @@ const getMacroHandlers = (): MacroFn[] => {
  * If a single handler throws, the error is logged and the previous
  * accumulator value is carried forward (the pipeline does not abort).
  *
- * @param markdown - Raw Markdown source to transform.
- * @param config   - Part-level build configuration (part id, aliases, etc.).
  * @returns The fully transformed Markdown string.
  */
-const handleMacros = (markdown: string, config: IPartProperties): string =>
+const handleMacros = (markdown: string, config: IDocumentConfig): string =>
   getMacroHandlers().reduce((acc, handler) => {
     try {
       return typeof handler === 'function' ? handler(acc, config) : acc

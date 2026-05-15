@@ -111,7 +111,8 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
       targetId = 'toc-main',
       tocOverrides,
       pageNumbers,
-    }: Pick<ITocConfig, 'rootClassName' | 'targetId' | 'tocOverrides' | 'pageNumbers'> = {},
+      hiddenToc,
+    }: Pick<ITocConfig, 'rootClassName' | 'targetId' | 'tocOverrides' | 'pageNumbers' | 'hiddenToc'> = {},
   ): void {
     const alwaysInclude = new Set(tocOverrides?.alwaysInclude ?? [])
 
@@ -148,13 +149,13 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
           pageSpan.className = 'toc-page-num'
           pageSpan.textContent = String(pageNum)
           li.appendChild(pageSpan)
-        // } else {
-        //   // DEBUG
-        //   // li.removeChild(document.querySelector('.toc-page-num')!)
-        //   const pageSpan = document.createElement('span')
-        //   pageSpan.className = 'toc-page-num'
-        //   pageSpan.textContent = String('99')
-        //   li.appendChild(pageSpan)
+          // } else {
+          //   // DEBUG
+          //   // li.removeChild(document.querySelector('.toc-page-num')!)
+          //   const pageSpan = document.createElement('span')
+          //   pageSpan.className = 'toc-page-num'
+          //   pageSpan.textContent = String('99')
+          //   li.appendChild(pageSpan)
         }
 
         const hasChildren = Array.isArray(item.items) && item.items.length > 0
@@ -182,6 +183,9 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
     const tocRoot = document.getElementById(targetId)
     if (tocRoot) {
       tocRoot.appendChild(tocNav)
+      if (hiddenToc) {
+        tocRoot.classList.add('hidden')
+      }
 
       // A link pointing to the TOC root causes Chrome to emit a named destination
       // for it in /Catalog/Dests, letting us locate the TOC start page precisely.
@@ -198,9 +202,11 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
   applyRenderMaxLevel(afterDrops, conf?.renderMaxLevel)
   renderToc(afterDrops, conf)
 
+  const alwaysIncludeSet = new Set(conf?.tocOverrides?.alwaysInclude ?? [])
+
   function stripInternals(items: ITocItem[]): ITocItem[] {
     return items
-      .filter((item) => !item.$skipped)
+      .filter((item) => !item.$skipped || alwaysIncludeSet.has(item.label))
       .map(({ $level: _l, $skipped: _s, items: children, ...rest }) => ({
         ...rest,
         items: children ? stripInternals(children) : children,

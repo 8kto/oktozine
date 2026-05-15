@@ -1,6 +1,6 @@
-import type { IModuleBuilderConfig, IPartProperties } from '../scripts/oktozine/types'
+import type { IDocumentConfig, IModuleBuilderConfig } from '../scripts/oktozine/types'
 
-const mainModuleConf: Partial<IPartProperties> = {
+const mainModuleConf: Partial<IDocumentConfig> = {
   id: 'main',
   documentTitle: 'Зеница Варготара',
   documentFileName: 'Зеница Варготара ({{version}}).pdf',
@@ -25,13 +25,12 @@ const mainModuleConf: Partial<IPartProperties> = {
   skipFooter: [17, 23, 25, 36, 45, 55],
 }
 
-const mainBestiaryConf: Partial<IPartProperties> = {
+const mainBestiaryConf: Partial<IDocumentConfig> = {
   id: 'bestiary',
   documentTitle: 'Каталог Аномалий',
   documentFileName: 'Каталог Аномалий ({{version}}).pdf',
   header: 'Каталог Аномалий',
   skipped: [],
-  referenceFiles: ['src/markdown/$refs-stats.md'],
   includePattern: /front-cover-bestiary|title-bestiary|toc|notes-bestiary|bestiary|back-cover/,
   invalidateBuildOnPattern: /refs/,
   tocConfig: {
@@ -43,14 +42,15 @@ const mainBestiaryConf: Partial<IPartProperties> = {
     config: 'build/$toc-bestiary.json',
     skipFirstPages: 1,
   },
-  skipBuild: true,
   buildPartSize: 8,
   buildProcessesNum: 3,
   skipHeaderAndFooter: [2],
 }
 
+// FIXME outputPath can be omitted here, but is required everywhere in the scripts
 const config: IModuleBuilderConfig = {
-  releasePartIds: ['main', 'bestiary', 'map', 'osr', 'bestiary-osr'],
+  version: '1.11.23',
+  releaseDocumentIds: ['main', 'bestiary', 'map', 'osr', 'bestiary-osr'],
   template: 'two-columns.html',
   footer: '2025-2026, undefined Okto',
   header: 'Зеница Варготара',
@@ -65,7 +65,7 @@ const config: IModuleBuilderConfig = {
     '0005-title-map.md',
     '0005-title-bestiary.md',
     '0015-notes-bestiary.md',
-    '0800-bestiary--autogen.md',
+    '0801-bestiary.md',
     '0199-grounds-map.md',
   ],
   referenceFiles: ['src/markdown/$refs-stats.md', 'src/markdown/$refs-items.md', 'src/markdown/$refs-blocks.md'],
@@ -77,8 +77,8 @@ const config: IModuleBuilderConfig = {
     rootId: 'toc-main',
   },
   skipHeaderAndFooter: [1, -1], // skip first and last pages
-  parts: [
-    mainModuleConf as IPartProperties,
+  documents: [
+    mainModuleConf as IDocumentConfig,
     {
       ...mainModuleConf,
       id: 'osr',
@@ -88,8 +88,8 @@ const config: IModuleBuilderConfig = {
         config: 'build/$toc-osr.json',
       },
       skipped: ['0405-appendix-q1--micomant.md'],
-    } as IPartProperties,
-    mainBestiaryConf as IPartProperties,
+    } as IDocumentConfig,
+    mainBestiaryConf as IDocumentConfig,
     {
       ...mainBestiaryConf,
       id: 'bestiary-osr',
@@ -98,32 +98,7 @@ const config: IModuleBuilderConfig = {
         ...mainBestiaryConf.bookmarksConfig,
         config: 'build/$toc-bestiary-osr.json',
       },
-    } as IPartProperties,
-    {
-      id: 'items',
-      referenceFiles: ['src/markdown/$refs-items.md'],
-      skipBuild: true,
-    } as IPartProperties,
-    {
-      id: 'cover',
-      documentTitle: 'Зеница Варготара',
-      documentFileName: 'Cover::Beneath the Eye of Vargothar ({{version}}).pdf',
-      header: 'Зеница Варготара [cover]',
-      skipped: [],
-      includePattern: /front-cover-main|back-cover/,
-      invalidateBuildOnPattern: /front-cover-main/,
-      skipBuild: true,
-    } as IPartProperties,
-    {
-      id: 'test-doc',
-      documentTitle: 'Зеница Варготара',
-      documentFileName: 'Test doc ({{version}}).pdf',
-      header: 'Зеница Варготара [TEST]',
-      coverHtmlFile: '0000-front-cover-main.md',
-      backCoverHtmlFile: '9999-back-cover.md',
-      skipped: [],
-      skipBuild: true,
-    } as IPartProperties,
+    } as IDocumentConfig,
     {
       id: 'map',
       documentTitle: 'Карты Зеницы Варготара',
@@ -143,16 +118,18 @@ const config: IModuleBuilderConfig = {
       ],
       invalidateBuildOnPattern: /area-.-map/,
       tocConfig: {
-        headersSelector: 'h1:not([data-skip-toc])',
+        headersSelector: 'h1:not([data-skip-toc]), h2:not([data-skip-toc])',
         rootClassName: 'toc--map',
+        targetId: 'toc-map',
         renderMaxLevel: 2,
+        hiddenToc: true,
       },
       bookmarksConfig: {
         config: 'build/$toc-map.json',
         skipFirstPages: 1,
       },
       skipHeaderAndFooter: [2, 3, 4, 5, 6, 7, 8, 9],
-    } as IPartProperties,
+    } as IDocumentConfig,
   ],
 }
 

@@ -33,6 +33,6 @@ export const convertNamedSections: MacroFn = (markdown) => {
   }
 
   return markdown.replace(commandPattern, (match, name: string) => {
-    return !name ? match : `<a id="${name}" class="hidden"></a>`
+    return !name ? match : `<a id="${name}"></a>`
   })
 }

@@ -1,5 +1,6 @@
 /** @jest-environment jsdom */
 
+import type { IDocumentPage } from '../../types'
 import { PAGE_BREAK_DELIMITER, recalculatePages } from '../build-utils'
 import { buildToc } from '../table-of-contents'
 
@@ -191,7 +192,7 @@ describe('buildToc', () => {
     const input = Object.freeze({
       metadata: { template: 'page-x', name: 'page-x-name', id: 'test' },
       content: `Page A ${PAGE_BREAK_DELIMITER} Page B`,
-    })
+    } as unknown as IDocumentPage)
 
     it('should return flat list of pages', () => {
       const result = recalculatePages(input)

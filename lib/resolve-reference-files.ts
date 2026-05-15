@@ -3,22 +3,28 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'path'
 
 import handleMacros from '../macros/index'
-import type { IModuleBuilderConfig, IPartProperties, IRefEntry } from '../types'
+import type { IDocumentConfig, IModuleBuilderConfig, IRefEntry } from '../types'
 
 const findProjectRoot = (startDir?: string): string => {
   let dir = path.resolve(startDir || process.cwd())
   for (;;) {
     const candidate = path.join(dir, 'package.json')
-    if (existsSync(candidate)) {return dir}
+    if (existsSync(candidate)) {
+      return dir
+    }
     const parent = path.dirname(dir)
-    if (parent === dir) {break}
+    if (parent === dir) {
+      break
+    }
     dir = parent
   }
   throw new Error('package.json not found while resolving project root')
 }
 
 export const resolveReferenceFiles = (buildConf: Partial<IModuleBuilderConfig>): string[] => {
-  if (!buildConf || !Array.isArray(buildConf.referenceFiles)) {return []}
+  if (!buildConf || !Array.isArray(buildConf.referenceFiles)) {
+    return []
+  }
   const root = findProjectRoot(process.cwd())
 
   return buildConf.referenceFiles.map((f) => (path.isAbsolute(f) ? f : path.resolve(root, f)))
@@ -84,7 +90,7 @@ export const getReferenceDictionary = (filePaths: string[]): Record<string, IRef
 }
 
 export const getReferenceResolver = (
-  buildConf: IModuleBuilderConfig | IPartProperties,
+  buildConf: IModuleBuilderConfig | IDocumentConfig,
 ): ((refId: string, fullText: boolean) => string | null) => {
   const filePaths = resolveReferenceFiles(buildConf)
   const storage = getReferenceDictionary(filePaths)
@@ -92,6 +98,6 @@ export const getReferenceResolver = (
   return (refId: string, fullText: boolean): string | null => {
     const content = fullText ? storage[refId]?.fullText?.trim() : storage[refId]?.shortText?.trim()
 
-    return content ? handleMacros(content, buildConf as IPartProperties) : null
+    return content ? handleMacros(content, buildConf as IDocumentConfig) : null
   }
 }

@@ -9,7 +9,7 @@ import { logger } from './logger'
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface IChunkRegistry {
-  partId: string
+  documentId: string
   builtAt: number
   N: number
   chunkSize: number
@@ -50,24 +50,24 @@ export const assignFilesToChunks = (names: string[], N: number): Map<string, num
 
 // ── Path helpers ─────────────────────────────────────────────────────────────
 
-export const registryPath = (basePath: string, partId: string): string =>
-  path.join(basePath, `${partId}-registry.json`)
+export const registryPath = (basePath: string, documentId: string): string =>
+  path.join(basePath, `${documentId}-registry.json`)
 
-export const chunkCachePath = (basePath: string, partId: string, i: number): string =>
-  path.join(basePath, `${partId}-chunk-${i}.pdf`)
+export const chunkCachePath = (basePath: string, documentId: string, i: number): string =>
+  path.join(basePath, `${documentId}-chunk-${i}.pdf`)
 
 // ── Registry I/O ─────────────────────────────────────────────────────────────
 
-export const loadRegistry = async (basePath: string, partId: string): Promise<IChunkRegistry | null> => {
+export const loadRegistry = async (basePath: string, documentId: string): Promise<IChunkRegistry | null> => {
   try {
-    return JSON.parse(await fs.readFile(registryPath(basePath, partId), 'utf8')) as IChunkRegistry
+    return JSON.parse(await fs.readFile(registryPath(basePath, documentId), 'utf8')) as IChunkRegistry
   } catch {
     return null
   }
 }
 
 export const saveRegistry = (basePath: string, registry: IChunkRegistry): Promise<void> =>
-  fs.writeFile(registryPath(basePath, registry.partId), JSON.stringify(registry, null, 2))
+  fs.writeFile(registryPath(basePath, registry.documentId), JSON.stringify(registry, null, 2))
 
 // ── Incremental plan ─────────────────────────────────────────────────────────
 
@@ -77,7 +77,7 @@ export const saveRegistry = (basePath: string, registry: IChunkRegistry): Promis
  */
 export const resolveIncrementalPlan = async (
   basePath: string,
-  partId: string,
+  documentId: string,
   fileOrder: string[],
   allFileHashes: Record<string, string>,
   N: number,
@@ -88,14 +88,14 @@ export const resolveIncrementalPlan = async (
     toRebuild: new Set(Array.from({ length: N }, (_, i) => i)),
   })
 
-  const registry = await loadRegistry(basePath, partId)
+  const registry = await loadRegistry(basePath, documentId)
   if (!registry || registry.N !== N || registry.chunkSize !== chunkSize) {
     return rebuildAll()
   }
 
   // Any CSS change affects every page → rebuild all chunks.
   if (registry.fileHashes['__css__'] !== allFileHashes['__css__']) {
-    logger.debug(`CSS changed for "${partId}" — rebuilding all chunks`)
+    logger.debug(`CSS changed for "${documentId}" — rebuilding all chunks`)
 
     return rebuildAll()
   }
@@ -104,7 +104,7 @@ export const resolveIncrementalPlan = async (
   // shifted and we can no longer trust the chunk→file assignment.
   const prevHtmlNames = Object.keys(registry.fileHashes).filter((k) => k !== '__css__')
   if (prevHtmlNames.length !== fileOrder.length || fileOrder.some((n) => registry.fileHashes[n] === undefined)) {
-    logger.debug(`HTML file set changed for "${partId}" — rebuilding all chunks`)
+    logger.debug(`HTML file set changed for "${documentId}" — rebuilding all chunks`)
 
     return rebuildAll()
   }
@@ -127,7 +127,7 @@ export const resolveIncrementalPlan = async (
       .filter((i) => !toRebuild.has(i))
       .map(async (i) => {
         try {
-          cached.set(i, await fs.readFile(chunkCachePath(basePath, partId, i)))
+          cached.set(i, await fs.readFile(chunkCachePath(basePath, documentId, i)))
         } catch {
           toRebuild.add(i) // cache file missing or unreadable
         }
