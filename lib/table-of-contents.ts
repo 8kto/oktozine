@@ -111,7 +111,8 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
       targetId = 'toc-main',
       tocOverrides,
       pageNumbers,
-    }: Pick<ITocConfig, 'rootClassName' | 'targetId' | 'tocOverrides' | 'pageNumbers'> = {},
+      hiddenToc,
+    }: Pick<ITocConfig, 'rootClassName' | 'targetId' | 'tocOverrides' | 'pageNumbers' | 'hiddenToc'> = {},
   ): void {
     const alwaysInclude = new Set(tocOverrides?.alwaysInclude ?? [])
 
@@ -182,6 +183,9 @@ export const buildToc = (conf?: ITocConfig): ITocItem[] => {
     const tocRoot = document.getElementById(targetId)
     if (tocRoot) {
       tocRoot.appendChild(tocNav)
+      if (hiddenToc) {
+        tocRoot.classList.add('hidden')
+      }
 
       // A link pointing to the TOC root causes Chrome to emit a named destination
       // for it in /Catalog/Dests, letting us locate the TOC start page precisely.
