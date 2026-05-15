@@ -118,9 +118,11 @@ const config: IModuleBuilderConfig = {
       ],
       invalidateBuildOnPattern: /area-.-map/,
       tocConfig: {
-        headersSelector: 'h1:not([data-skip-toc])',
+        headersSelector: 'h1:not([data-skip-toc]), h2:not([data-skip-toc])',
         rootClassName: 'toc--map',
+        targetId: 'toc-map',
         renderMaxLevel: 2,
+        hiddenToc: true,
       },
       bookmarksConfig: {
         config: 'build/$toc-map.json',

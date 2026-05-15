@@ -49,6 +49,7 @@ export interface ITocConfig {
   tocOverrides?: ITocOverrides
   /** Anchor ID → 1-based page number. When provided, page numbers are rendered next to each TOC item. */
   pageNumbers?: Record<string, number>
+  hiddenToc?: boolean
 }
 
 export interface ITocItem {
