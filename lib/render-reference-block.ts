@@ -10,7 +10,6 @@ export interface IRenderReferenceBlockOptions {
 }
 
 export const handleLists = (content: string): string => {
-  // FIXME
   return content.replace(/^-\s\*\*(.+?)\*\*/gm, (_, title) => {
     return `- <em class="damage-prop">${title}</em>`
   })
