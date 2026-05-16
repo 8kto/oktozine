@@ -101,6 +101,11 @@ export interface IBaseConfig {
   usePdfBookmarks?: boolean
   /** Should rebuild HTML files before rendering to PDF */
   useHtmlRebuild: boolean
+  /**
+   * Global TOC overrides. Per-document overrides in tocOverrides.documents[id]
+   * are merged on top. Replaces the separate conf/oktozin.toc.conf.ts file.
+   */
+  tocOverrides?: ITocOverrides
   /** Absolute path to the consumer project root. Defaults to process.cwd(). */
   projectRoot?: string
   /** Directory containing Markdown source files. Defaults to <projectRoot>/src/markdown. */

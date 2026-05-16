@@ -28,6 +28,31 @@ describe('buildChunkRanges', () => {
   })
 })
 
+// ── tocOverrides from config ─────────────────────────────────────────────────
+
+describe('tocOverrides merging', () => {
+  it('reads tocOverrides from config and merges per-document overrides', () => {
+    const conf = {
+      id: 'main',
+      tocConfig: { headersSelector: 'h2' },
+      tocOverrides: { dropLabels: ['Intro'], documents: { main: { dropLabels: ['Intro', 'Cover'] } } },
+    } as any
+    const { documents = {}, ...tocDefaults } = conf.tocOverrides ?? {}
+    const merged = { ...tocDefaults, ...documents[conf.id] }
+    expect(merged.dropLabels).toEqual(['Intro', 'Cover'])
+  })
+
+  it('falls back to top-level defaults when no per-document override exists', () => {
+    const conf = {
+      id: 'other',
+      tocOverrides: { dropLabels: ['Default'] },
+    } as any
+    const { documents = {}, ...tocDefaults } = conf.tocOverrides ?? {}
+    const merged = { ...tocDefaults, ...documents[conf.id] }
+    expect(merged.dropLabels).toEqual(['Default'])
+  })
+})
+
 // ── resolveChunkPlan ─────────────────────────────────────────────────────────
 
 describe('resolveChunkPlan', () => {

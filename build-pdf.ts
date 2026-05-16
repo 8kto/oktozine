@@ -10,8 +10,10 @@ import path from 'path'
 import { PDFArray, PDFDict, PDFDocument, PDFFont, PDFHexString, PDFName, PDFRawStream, PDFRef, rgb } from 'pdf-lib'
 import puppeteer from 'puppeteer'
 
-import { tocOverrides } from '../../conf/oktozin.toc.conf'
-import packageConfig from '../../package.json' with { type: 'json' }
+import { createRequire } from 'node:module'
+
+const _require = createRequire(import.meta.url)
+const packageConfig: { version: string; name: string } = _require('./package.json')
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
 import { getCssPath, getHtmlModuleBuildPath, getPdfBuildPath, getReleasePath, resolveContentPaths } from './lib/paths'
@@ -158,8 +160,8 @@ const buildTocForPage = async (
   }
 
   try {
-    const { documents, ...tocDefaults } = tocOverrides
-    const mergedTocOverrides = { ...tocDefaults, ...documents?.[config.id] }
+    const { documents = {}, ...tocDefaults } = config.tocOverrides ?? {}
+    const mergedTocOverrides = { ...tocDefaults, ...documents[config.id] }
     const toc = await page.evaluate(buildToc, { ...config.tocConfig, tocOverrides: mergedTocOverrides })
     const rootId = tocConfig.rootId ?? 'toc-main'
     const tocHtml = await page.evaluate((id: string) => document.getElementById(id)?.innerHTML || '', rootId)
@@ -909,6 +911,7 @@ const createDocumentContentPdf = async (
 export const buildPdf = async (config: IDocumentConfig): Promise<void> => {
   logger.info(chalk.green(`Building PDF for "${config.documentTitle}" (${config.documentFileName})...`))
 
+  const { pageNumbersFontPath } = resolveContentPaths(config)
   const pdfCachePath = getPdfBuildPath(config)
   const releasePath = getReleasePath(config)
   const htmlChunksPath = getHtmlModuleBuildPath(config)
