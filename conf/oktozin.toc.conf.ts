@@ -1,4 +1,4 @@
-import type { ITocOverrides } from '../scripts/oktozine/types'
+import { ITocOverrides } from "../types"
 
 const mainTocConf: ITocOverrides = {
   dropLabels: ['Зеница Варготара', 'Содержание'],
@@ -11,6 +11,7 @@ const mainTocConf: ITocOverrides = {
   alwaysInclude: ['Верёвочная лестница', 'Кристаллы', 'Грибы', 'Заклинания Микоманта'],
 }
 
+/** @deprecated */
 export const tocOverrides: ITocOverrides = {
   dropLabels: ['Содержание'],
   documents: {
