@@ -1,4 +1,4 @@
-import { IDocumentConfig, IModuleBuilderConfig, ITocOverrides } from "../types";
+import { IDocumentConfig, IModuleBuilderConfig, ITocOverrides } from "../types"
 
 const mainTocConf: ITocOverrides = {
   dropLabels: ['Зеница Варготара', 'Содержание'],
@@ -47,7 +47,7 @@ const mainModuleConf: Partial<IDocumentConfig> = {
   buildProcessesNum: 16,
   skipHeaderAndFooter: [-1, 1, 2, 3, 11, 15, 18, 27, 37, 47, 52, 58],
   skipFooter: [17, 23, 25, 36, 45, 55],
-};
+}
 
 const mainBestiaryConf: Partial<IDocumentConfig> = {
   id: "bestiary",
@@ -70,7 +70,7 @@ const mainBestiaryConf: Partial<IDocumentConfig> = {
   buildPartSize: 8,
   buildProcessesNum: 3,
   skipHeaderAndFooter: [2],
-};
+}
 
 // FIXME outputPath can be omitted here, but is required everywhere in the scripts
 const config: IModuleBuilderConfig = {
@@ -161,6 +161,6 @@ const config: IModuleBuilderConfig = {
       skipHeaderAndFooter: [2, 3, 4, 5, 6, 7, 8, 9],
     } as IDocumentConfig,
   ],
-};
+}
 
-export default config;
+export default config

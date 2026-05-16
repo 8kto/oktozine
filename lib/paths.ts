@@ -19,6 +19,7 @@ export const resolveContentPaths = (
 ): IResolvedContentPaths => {
   const root = config.projectRoot ?? process.cwd()
   const fonts = config.fontsDir ?? path.join(root, 'src/styles/fonts')
+
   return {
     projectRoot: root,
     markdownDir: config.markdownDir ?? path.join(root, 'src/markdown'),

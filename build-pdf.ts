@@ -1,6 +1,7 @@
 #!/bin/env node
 
 import { mkdir } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 
 import fontkit from '@pdf-lib/fontkit'
 import chalk from 'chalk'
@@ -9,8 +10,6 @@ import { JSDOM } from 'jsdom'
 import path from 'path'
 import { PDFArray, PDFDict, PDFDocument, PDFFont, PDFHexString, PDFName, PDFRawStream, PDFRef, rgb } from 'pdf-lib'
 import puppeteer from 'puppeteer'
-
-import { createRequire } from 'node:module'
 
 const _require = createRequire(import.meta.url)
 // FIXME should pick name from consuming app not the lib one
