@@ -13,6 +13,7 @@ import puppeteer from 'puppeteer'
 import { createRequire } from 'node:module'
 
 const _require = createRequire(import.meta.url)
+// FIXME should pick name from consuming app not the lib one
 const packageConfig: { version: string; name: string } = _require('./package.json')
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
