@@ -75,7 +75,7 @@ const applyTemplate = async (page: IDocumentPage, templatePath: string): Promise
     if (metadata.use.includes('buildMode')) {
       res = res.replace(
         '{{buildMode}}',
-        metadata.isProduction ? '' : `<strong>Черновая версия, не для распространения</strong>`,
+        metadata.isProduction ? '' : (metadata.draftWatermarkHtml ?? ''),
       )
     }
   }

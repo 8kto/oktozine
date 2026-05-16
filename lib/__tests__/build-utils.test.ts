@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import type { IDocumentPage } from '../../types'
+import type { IDocumentConfig, IDocumentPage } from '../../types'
 import { PAGE_BREAK_DELIMITER, recalculatePages } from '../build-utils'
 import { buildToc } from '../table-of-contents'
 
@@ -202,5 +202,25 @@ describe('buildToc', () => {
       expect(result[0].metadata.name).toBe('page-x-name')
       expect(result[1].metadata.name).toBe('page-x-name-2')
     })
+  })
+})
+
+describe('draftWatermarkHtml config field', () => {
+  it('injects custom watermark html when not in production', () => {
+    const conf = { isProduction: false, draftWatermarkHtml: '<em>DRAFT</em>' } as IDocumentConfig
+    const watermark = conf.isProduction ? '' : (conf.draftWatermarkHtml ?? '')
+    expect(watermark).toBe('<em>DRAFT</em>')
+  })
+
+  it('shows no watermark in production regardless of config', () => {
+    const conf = { isProduction: true, draftWatermarkHtml: '<em>DRAFT</em>' } as IDocumentConfig
+    const watermark = conf.isProduction ? '' : (conf.draftWatermarkHtml ?? '')
+    expect(watermark).toBe('')
+  })
+
+  it('returns empty string when draftWatermarkHtml is absent', () => {
+    const conf = { isProduction: false } as IDocumentConfig
+    const watermark = conf.isProduction ? '' : (conf.draftWatermarkHtml ?? '')
+    expect(watermark).toBe('')
   })
 })

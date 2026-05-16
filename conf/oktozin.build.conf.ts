@@ -102,6 +102,7 @@ const config: IModuleBuilderConfig = {
     bestiary: "main",
     "bestiary-osr": "osr",
   },
+  draftWatermarkHtml: '<strong>Черновая версия, не для распространения</strong>',
   tocConfig: {
     rootId: "toc-main",
   },

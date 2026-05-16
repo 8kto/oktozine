@@ -118,6 +118,11 @@ export interface IBaseConfig {
   fontsDir?: string
   /** Path to the TTF font used for injected page numbers. Defaults to <fontsDir>/Philosopher/Philosopher-Regular.ttf. */
   pageNumbersFontPath?: string
+  /**
+   * HTML string injected as a visible watermark on every page in non-production builds.
+   * Defaults to empty string (no watermark). Example: '<strong>Draft</strong>'.
+   */
+  draftWatermarkHtml?: string
 }
 
 /**
