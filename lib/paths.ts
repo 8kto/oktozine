@@ -15,7 +15,10 @@ export interface IResolvedContentPaths {
 }
 
 export const resolveContentPaths = (
-  config: Pick<IBaseConfig, 'projectRoot' | 'markdownDir' | 'templatesDir' | 'imagesDir' | 'fontsDir' | 'pageNumbersFontPath'>,
+  config: Pick<
+    IBaseConfig,
+    'projectRoot' | 'markdownDir' | 'templatesDir' | 'imagesDir' | 'fontsDir' | 'pageNumbersFontPath'
+  >,
 ): IResolvedContentPaths => {
   const root = config.projectRoot ?? process.cwd()
   const fonts = config.fontsDir ?? path.join(root, 'src/styles/fonts')

@@ -15,7 +15,6 @@ import { getBuildFileVersion } from './lib/version'
 import handleMacros from './macros/index'
 import type { IDocumentConfig, IDocumentPage, IModuleBuilderConfig } from './types'
 
-
 const convertMarkdownToHtml = async (
   filePath: string,
   mdRenderer: ReturnType<typeof getMarkdownRenderer>,
@@ -73,10 +72,7 @@ const applyTemplate = async (page: IDocumentPage, templatePath: string): Promise
       res = res.replace('{{documentTitle}}', metadata.documentTitle ?? '')
     }
     if (metadata.use.includes('buildMode')) {
-      res = res.replace(
-        '{{buildMode}}',
-        metadata.isProduction ? '' : (metadata.draftWatermarkHtml ?? ''),
-      )
+      res = res.replace('{{buildMode}}', metadata.isProduction ? '' : (metadata.draftWatermarkHtml ?? ''))
     }
   }
 
@@ -169,7 +165,12 @@ const filterFiles = (config: IDocumentConfig, files: string[]): string[] => {
   })
 }
 
-const renderToHtml = async (page: IDocumentPage, buildDir: string, fileName: string, templatesDir: string): Promise<void> => {
+const renderToHtml = async (
+  page: IDocumentPage,
+  buildDir: string,
+  fileName: string,
+  templatesDir: string,
+): Promise<void> => {
   const { metadata } = page
   const { template, seqPage, seqPageNum } = metadata
 
@@ -254,7 +255,9 @@ export const buildHtml = async (config: IDocumentConfig): Promise<void> => {
       const data = await convertMarkdownToHtml(filePath, markdownRenderer, config)
       const pagesData = recalculatePages(data)
 
-      return Promise.all(pagesData.map(async (pageData) => renderToHtml(pageData, htmlBuildPath, fileName, templatesDir)))
+      return Promise.all(
+        pagesData.map(async (pageData) => renderToHtml(pageData, htmlBuildPath, fileName, templatesDir)),
+      )
     } catch (err) {
       // Add per-file context so Promise.all surfaces a helpful label.
       throw new Error(`HTML generation failed for source "${fileName}" (document "${config.id}")`, { cause: err })

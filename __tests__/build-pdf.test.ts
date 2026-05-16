@@ -36,7 +36,7 @@ describe('tocOverrides merging', () => {
       id: 'main',
       tocConfig: { headersSelector: 'h2' },
       tocOverrides: { dropLabels: ['Intro'], documents: { main: { dropLabels: ['Intro', 'Cover'] } } },
-    } as any
+    } as object as IDocumentConfig
     const { documents = {}, ...tocDefaults } = conf.tocOverrides ?? {}
     const merged = { ...tocDefaults, ...documents[conf.id] }
     expect(merged.dropLabels).toEqual(['Intro', 'Cover'])
@@ -46,7 +46,7 @@ describe('tocOverrides merging', () => {
     const conf = {
       id: 'other',
       tocOverrides: { dropLabels: ['Default'] },
-    } as any
+    } as object as IDocumentConfig
     const { documents = {}, ...tocDefaults } = conf.tocOverrides ?? {}
     const merged = { ...tocDefaults, ...documents[conf.id] }
     expect(merged.dropLabels).toEqual(['Default'])

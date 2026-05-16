@@ -31,7 +31,6 @@ import { getBuildFileVersion } from './lib/version'
 import { wrapContentSections } from './lib/wrap-sections'
 import type { IDocumentConfig, ITocItem } from './types'
 
-
 // Number of parallel Chromium instances for PDF rendering.
 // Override with PDF_PARALLEL=N environment variable.
 const PDF_PARALLEL = Math.max(1, parseInt(process.env.PDF_PARALLEL ?? '4', 10))
@@ -797,7 +796,13 @@ const createDocumentContentPdf = async (
   const endMerge = measure('Merge PDF chunks')
   const anchorPageOut = config.tocConfig ? new Map<string, number>() : undefined
   try {
-    const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '', pageNumbersFontPath, decorateOpts, anchorPageOut)
+    const mergedBytes = await mergeChunks(
+      chunkBuffers,
+      config.header ?? '',
+      pageNumbersFontPath,
+      decorateOpts,
+      anchorPageOut,
+    )
 
     // ── Phase 4: splice TOC pages with page numbers ─────────────────────────
     // Pass 1 already produced the final decorated PDF. Here we:
@@ -980,7 +985,13 @@ export const buildPdf = async (config: IDocumentConfig): Promise<void> => {
             (b): b is Buffer => b !== undefined,
           )
           const anchorPageOut = config.usePdfBookmarks && config.tocConfig ? new Map<string, number>() : undefined
-          const mergedBytes = await mergeChunks(cachedBuffers, config.header ?? '', pageNumbersFontPath, decorateOpts, anchorPageOut)
+          const mergedBytes = await mergeChunks(
+            cachedBuffers,
+            config.header ?? '',
+            pageNumbersFontPath,
+            decorateOpts,
+            anchorPageOut,
+          )
 
           let outBytes: Uint8Array
           if (config.usePdfBookmarks && anchorPageOut && anchorPageOut.size > 0) {

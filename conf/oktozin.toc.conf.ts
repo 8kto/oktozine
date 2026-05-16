@@ -1,4 +1,4 @@
-import { ITocOverrides } from "../types"
+import { ITocOverrides } from '../types'
 
 const mainTocConf: ITocOverrides = {
   dropLabels: ['Зеница Варготара', 'Содержание'],
