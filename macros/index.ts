@@ -72,8 +72,10 @@ const getMacroHandlers = (): MacroFn[] => {
  *
  * @returns The fully transformed Markdown string.
  */
-const handleMacros = (markdown: string, config: IDocumentConfig): string =>
-  getMacroHandlers().reduce((acc, handler) => {
+const handleMacros = (markdown: string, config: IDocumentConfig): string => {
+  const all = [...getMacroHandlers(), ...(config.macros ?? [])]
+
+  return all.reduce((acc, handler) => {
     try {
       return typeof handler === 'function' ? handler(acc, config) : acc
     } catch (err) {
@@ -83,5 +85,6 @@ const handleMacros = (markdown: string, config: IDocumentConfig): string =>
       return acc
     }
   }, markdown)
+}
 
 export default handleMacros

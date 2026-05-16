@@ -134,6 +134,11 @@ export interface IBaseConfig {
   chapterRefPattern?: string | null
   /** Extra find-replace pairs applied after the built-in alias expansion. Supports string or global RegExp patterns. */
   aliases?: AliasEntry[]
+  /**
+   * Additional macro functions appended after the built-in pipeline.
+   * Each macro is a pure `(markdown, config) => markdown` transform.
+   */
+  macros?: MacroFn[]
 }
 
 /**
