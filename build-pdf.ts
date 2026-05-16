@@ -14,7 +14,7 @@ import { tocOverrides } from '../../conf/oktozin.toc.conf'
 import packageConfig from '../../package.json' with { type: 'json' }
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
-import { getCssPath, getHtmlModuleBuildPath, getPdfBuildPath, getReleasePath, PROJECT_ROOT } from './lib/paths'
+import { getCssPath, getHtmlModuleBuildPath, getPdfBuildPath, getReleasePath, resolveContentPaths } from './lib/paths'
 import {
   chunkCachePath,
   hashContent,
@@ -29,8 +29,6 @@ import { getBuildFileVersion } from './lib/version'
 import { wrapContentSections } from './lib/wrap-sections'
 import type { IDocumentConfig, ITocItem } from './types'
 
-// FIXME hardcoded
-const pageNumbersFontPath = path.join(PROJECT_ROOT, 'src/styles/fonts/Philosopher/Philosopher-Regular.ttf')
 
 // Number of parallel Chromium instances for PDF rendering.
 // Override with PDF_PARALLEL=N environment variable.
@@ -608,12 +606,13 @@ const isBlankPage = (doc: PDFDocument, page: ReturnType<typeof doc.getPage>): bo
 const mergeChunks = async (
   chunkBuffers: Buffer[],
   headerText: string,
+  fontPath: string,
   decorateOpts?: IDecorateOptions,
   anchorPageOut?: Map<string, number>,
 ): Promise<Uint8Array> => {
   const mergedPdf = await PDFDocument.create()
   mergedPdf.registerFontkit(fontkit)
-  const philosopherBytes = await fs.readFile(pageNumbersFontPath)
+  const philosopherBytes = await fs.readFile(fontPath)
   const font = await mergedPdf.embedFont(philosopherBytes)
 
   const chunkMeta: Array<{ doc: PDFDocument; pageOffset: number; pageCount: number }> = []
@@ -722,6 +721,7 @@ const createDocumentContentPdf = async (
   htmlChunksPath: string,
   incremental?: IIncrementalBuildInfo,
 ): Promise<void> => {
+  const { pageNumbersFontPath } = resolveContentPaths(config)
   // ── Phase 1: DOM setup (TOC, section-wrap, page count, HTML serialisation) ─
   const endSetup = measure('Setup PDF doc: TOC, sections wrap...')
   const prepared = await preparePdfHtml(html, config, htmlChunksPath)
@@ -795,7 +795,7 @@ const createDocumentContentPdf = async (
   const endMerge = measure('Merge PDF chunks')
   const anchorPageOut = config.tocConfig ? new Map<string, number>() : undefined
   try {
-    const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '', decorateOpts, anchorPageOut)
+    const mergedBytes = await mergeChunks(chunkBuffers, config.header ?? '', pageNumbersFontPath, decorateOpts, anchorPageOut)
 
     // ── Phase 4: splice TOC pages with page numbers ─────────────────────────
     // Pass 1 already produced the final decorated PDF. Here we:
@@ -977,7 +977,7 @@ export const buildPdf = async (config: IDocumentConfig): Promise<void> => {
             (b): b is Buffer => b !== undefined,
           )
           const anchorPageOut = config.usePdfBookmarks && config.tocConfig ? new Map<string, number>() : undefined
-          const mergedBytes = await mergeChunks(cachedBuffers, config.header ?? '', decorateOpts, anchorPageOut)
+          const mergedBytes = await mergeChunks(cachedBuffers, config.header ?? '', pageNumbersFontPath, decorateOpts, anchorPageOut)
 
           let outBytes: Uint8Array
           if (config.usePdfBookmarks && anchorPageOut && anchorPageOut.size > 0) {

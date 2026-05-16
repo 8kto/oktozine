@@ -9,15 +9,12 @@ import { getBuildFilePath, isFileChangedSinceLastBuild, recalculatePages, update
 import { logger } from './lib/logger'
 import { getMarkdownRenderer } from './lib/markdown'
 import { measure } from './lib/measure'
-import { getCssPath, getHtmlBuildPath, getHtmlModuleBuildPath, OKTOZINE_ROOT, PROJECT_ROOT } from './lib/paths'
+import { getCssPath, getHtmlBuildPath, getHtmlModuleBuildPath, OKTOZINE_ROOT, resolveContentPaths } from './lib/paths'
 import { runPhase, runPhaseSync } from './lib/phase'
 import { getBuildFileVersion } from './lib/version'
 import handleMacros from './macros/index'
 import type { IDocumentConfig, IDocumentPage, IModuleBuilderConfig } from './types'
 
-// FIXME hardcoded
-const markdownSourcesDir = path.join(PROJECT_ROOT, 'src/markdown')
-const htmTemplateslDir = path.join(PROJECT_ROOT, 'src/html')
 
 const convertMarkdownToHtml = async (
   filePath: string,
@@ -106,8 +103,8 @@ export const copyHtmlBuildAssets = async (config: IModuleBuilderConfig): Promise
       // FIXME paths set outside of the oktozine codebase
       fs.copy(cssPath, path.join(htmlBuildDir, 'output.css')),
       fs.copy(path.join(OKTOZINE_ROOT, 'webviewer/index.html'), path.join(htmlBuildDir, 'server.html')),
-      fs.copy(path.join(PROJECT_ROOT, 'src/images/'), path.join(htmlBuildDir, 'images/')),
-      fs.copy(path.join(PROJECT_ROOT, 'src/styles/fonts'), path.join(htmlBuildDir, 'fonts/')),
+      fs.copy(resolveContentPaths(config).imagesDir, path.join(htmlBuildDir, 'images/')),
+      fs.copy(resolveContentPaths(config).fontsDir, path.join(htmlBuildDir, 'fonts/')),
     ])
   })
 }
@@ -172,7 +169,7 @@ const filterFiles = (config: IDocumentConfig, files: string[]): string[] => {
   })
 }
 
-const renderToHtml = async (page: IDocumentPage, buildDir: string, fileName: string): Promise<void> => {
+const renderToHtml = async (page: IDocumentPage, buildDir: string, fileName: string, templatesDir: string): Promise<void> => {
   const { metadata } = page
   const { template, seqPage, seqPageNum } = metadata
 
@@ -184,7 +181,7 @@ const renderToHtml = async (page: IDocumentPage, buildDir: string, fileName: str
     fileName = fileName.replace('.md', `-${seqPageNum}.md`)
   }
 
-  const templatePath = path.join(htmTemplateslDir, template!)
+  const templatePath = path.join(templatesDir, template!)
   const html = await applyTemplate(page, templatePath)
 
   const outPath = path.join(buildDir, `${fileName}.html`)
@@ -203,13 +200,14 @@ export const buildHtml = async (config: IDocumentConfig): Promise<void> => {
     return
   }
 
+  const { markdownDir, templatesDir } = resolveContentPaths(config)
   const htmlBuildPath = getHtmlModuleBuildPath(config)
   const markdownRenderer = getMarkdownRenderer()
 
   await runPhase(`ensureDir ${htmlBuildPath}`, () => fs.ensureDir(htmlBuildPath))
-  let markdownFiles = await runPhase(`readdir ${markdownSourcesDir}`, () => fs.readdir(markdownSourcesDir))
+  let markdownFiles = await runPhase(`readdir ${markdownDir}`, () => fs.readdir(markdownDir))
 
-  const forceRebuildAll = shouldRebuildAllFiles(markdownSourcesDir, markdownFiles, config)
+  const forceRebuildAll = shouldRebuildAllFiles(markdownDir, markdownFiles, config)
   markdownFiles = filterFiles(config, markdownFiles)
 
   if (config.useHtmlRebuild) {
@@ -233,7 +231,7 @@ export const buildHtml = async (config: IDocumentConfig): Promise<void> => {
         return null
       }
 
-      const filePath = path.join(markdownSourcesDir, fileName)
+      const filePath = path.join(markdownDir, fileName)
 
       if (!config.useHtmlRebuild) {
         let changed = true
@@ -256,7 +254,7 @@ export const buildHtml = async (config: IDocumentConfig): Promise<void> => {
       const data = await convertMarkdownToHtml(filePath, markdownRenderer, config)
       const pagesData = recalculatePages(data)
 
-      return Promise.all(pagesData.map(async (pageData) => renderToHtml(pageData, htmlBuildPath, fileName)))
+      return Promise.all(pagesData.map(async (pageData) => renderToHtml(pageData, htmlBuildPath, fileName, templatesDir)))
     } catch (err) {
       // Add per-file context so Promise.all surfaces a helpful label.
       throw new Error(`HTML generation failed for source "${fileName}" (document "${config.id}")`, { cause: err })

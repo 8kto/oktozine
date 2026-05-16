@@ -20,6 +20,7 @@
  */
 
 import { existsSync } from 'node:fs'
+import path from 'node:path'
 
 import { slugify } from 'transliteration'
 
@@ -28,22 +29,22 @@ import { renderReferenceBlock } from '../lib/render-reference-block'
 import { getReferenceDictionary, resolveReferenceFiles } from '../lib/resolve-reference-files'
 import type { IDocumentConfig } from '../types'
 
-const SRC_MD_DIR = 'src/markdown'
-
-const resolveRefFilePath = (refFile: string): string => {
+const resolveRefFilePath = (refFile: string, markdownDir: string): string => {
   const withExt = refFile.endsWith('.md') ? refFile : `${refFile}.md`
 
-  return refFile.includes('/') ? withExt : `${SRC_MD_DIR}/${withExt}`
+  return refFile.includes('/') ? withExt : path.join(markdownDir, withExt)
 }
 
-export const convertDumpInserts = (markdown: string, _buildConf?: IDocumentConfig): string => {
+export const convertDumpInserts = (markdown: string, buildConf?: IDocumentConfig): string => {
   const commandPattern = /<!--\s*cmd\[dump]\s*ref-file\[([^\]]+)]\s*\/-->/gm
   if (!commandPattern.test(markdown)) {
     return markdown
   }
 
+  const markdownDir = buildConf?.markdownDir ?? path.join(process.cwd(), 'src/markdown')
+
   return markdown.replace(commandPattern, (match, refFile: string) => {
-    const filePath = resolveRefFilePath(refFile.trim())
+    const filePath = resolveRefFilePath(refFile.trim(), markdownDir)
     const [resolvedPath] = resolveReferenceFiles({ referenceFiles: [filePath] })
 
     if (!resolvedPath || !existsSync(resolvedPath)) {

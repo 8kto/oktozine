@@ -101,6 +101,18 @@ export interface IBaseConfig {
   usePdfBookmarks?: boolean
   /** Should rebuild HTML files before rendering to PDF */
   useHtmlRebuild: boolean
+  /** Absolute path to the consumer project root. Defaults to process.cwd(). */
+  projectRoot?: string
+  /** Directory containing Markdown source files. Defaults to <projectRoot>/src/markdown. */
+  markdownDir?: string
+  /** Directory containing EJS/HTML page templates. Defaults to <projectRoot>/src/html. */
+  templatesDir?: string
+  /** Directory containing image assets to copy into the build. Defaults to <projectRoot>/src/images. */
+  imagesDir?: string
+  /** Directory containing font assets to copy into the build. Defaults to <projectRoot>/src/styles/fonts. */
+  fontsDir?: string
+  /** Path to the TTF font used for injected page numbers. Defaults to <fontsDir>/Philosopher/Philosopher-Regular.ttf. */
+  pageNumbersFontPath?: string
 }
 
 /**

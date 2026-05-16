@@ -1,18 +1,35 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { IDocumentConfig } from '../types'
-
-// Absolute path to the repository root (the directory that contains package.json,
-// src/, scripts/, etc.). Resolved once from this file's known location.
-//
-// When this pipeline is extracted as a standalone library, callers should supply
-// the project root via config rather than relying on this module-level constant.
-export const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
+import type { IBaseConfig, IDocumentConfig } from '../types'
 
 export const OKTOZINE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-export const DEFAULT_BUILD_PATH = path.join(PROJECT_ROOT, 'build')
+export interface IResolvedContentPaths {
+  projectRoot: string
+  markdownDir: string
+  templatesDir: string
+  imagesDir: string
+  fontsDir: string
+  pageNumbersFontPath: string
+}
+
+export const resolveContentPaths = (
+  config: Pick<IBaseConfig, 'projectRoot' | 'markdownDir' | 'templatesDir' | 'imagesDir' | 'fontsDir' | 'pageNumbersFontPath'>,
+): IResolvedContentPaths => {
+  const root = config.projectRoot ?? process.cwd()
+  const fonts = config.fontsDir ?? path.join(root, 'src/styles/fonts')
+  return {
+    projectRoot: root,
+    markdownDir: config.markdownDir ?? path.join(root, 'src/markdown'),
+    templatesDir: config.templatesDir ?? path.join(root, 'src/html'),
+    imagesDir: config.imagesDir ?? path.join(root, 'src/images'),
+    fontsDir: fonts,
+    pageNumbersFontPath: config.pageNumbersFontPath ?? path.join(fonts, 'Philosopher/Philosopher-Regular.ttf'),
+  }
+}
+
+export const DEFAULT_BUILD_PATH = path.join(process.cwd(), 'build')
 
 export const getHtmlBuildPath = <T extends { outputPath: string }>(config: T) => {
   return path.join(config.outputPath, 'chunks-html')
