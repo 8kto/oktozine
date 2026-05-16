@@ -44,7 +44,7 @@ yarn format:fix
 | `BUILD_DUMP_HTML`       | Dump assembled HTML to `build/chunks-html/$fullHtmlContent-{id}.html` (any value except `false`) |
 | `BUILD_TOC_PAGENUMS`    | Enable TOC page-number patching (Phase 4 of PDF build); experimental and slow                    |
 | `BUILD_MODE=production` | Enables production markers in templates                                                          |
-| `LOG_LEVEL`             | Pino log level                                                                                   |
+| `PINO_LOG_LEVEL`             | Pino log level                                                                                   |
 
 ## Architecture
 
