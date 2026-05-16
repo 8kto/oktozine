@@ -25,6 +25,9 @@ export interface IRefEntry {
 /** A function that transforms a markdown string given a build config. */
 export type MacroFn = (markdown: string, config: IDocumentConfig) => string
 
+/** A single find-replace alias: [pattern, replacement]. Pattern may be a literal string or a global RegExp. */
+export type AliasEntry = [string | RegExp, string]
+
 //-----------------------------------------------------------------------------
 // TOC
 //-----------------------------------------------------------------------------
@@ -129,6 +132,8 @@ export interface IBaseConfig {
    * Defaults to `'A-K'`.
    */
   chapterRefPattern?: string | null
+  /** Extra find-replace pairs applied after the built-in alias expansion. Supports string or global RegExp patterns. */
+  aliases?: AliasEntry[]
 }
 
 /**

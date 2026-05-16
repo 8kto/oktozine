@@ -42,6 +42,20 @@ describe('alias cmd tests', () => {
     )
   })
 
+  it('applies aliases from config when provided', () => {
+    const conf = {
+      aliases: [['((Foo))', '<!-- cmd[ref] header[Foo] /-->']],
+    } as unknown as IDocumentConfig
+    const result = addAliases('See ((Foo)) for details.', conf)
+    expect(result).toContain('cmd[ref] header[Foo]')
+  })
+
+  it('returns input unchanged when config has no aliases', () => {
+    const conf = { aliases: [] } as unknown as IDocumentConfig
+    const input = 'No aliases here.'
+    expect(addAliases(input, conf)).toBe(input)
+  })
+
   it('should handle IF blocks', () => {
     expect(
       addAliases(

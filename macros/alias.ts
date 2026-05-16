@@ -78,27 +78,17 @@ const HTML_ALIASES: Array<[string | RegExp, string]> = [
   [/<!--\s*pic\[(.*?)\]\s+id\[(.*?)\]\s*\/-->/g, `<div id="$2" class="pic-$1"></div>`],
 ]
 
-/** OSR-specific replacements: colon spacing normalisation. */
-const HTML_ALIASES_OSR: Array<[string | RegExp, string]> = [[' : ', `: `]]
-
 /**
- * Expand shorthand aliases and HTML-comment macros.
+ * Expand shorthand aliases and HTML-comment macros, then apply any extra
+ * `config.aliases` pairs. OSR-specific aliases are supplied by the OSR
+ * document config, so no project-specific detection is needed here.
  *
  * @returns Markdown with all aliases expanded.
  */
 export const addAliases: MacroFn = (markdown: string, config: IDocumentConfig) => {
   const replaced = markdown.replace(ALIASES, '<!-- cmd[ref] header[$1] detailed $2 /-->')
 
-  let res = HTML_ALIASES.reduce((acc, cur) => {
-    return acc.replaceAll(cur[0], cur[1])
-  }, replaced)
+  const res = HTML_ALIASES.reduce((acc, cur) => acc.replaceAll(cur[0], cur[1]), replaced)
 
-  // FIXME Quick optimization for OSR builds, not to scan B(S)H versions
-  if (config.id.match(/osr$/)) {
-    res = HTML_ALIASES_OSR.reduce((acc, cur) => {
-      return acc.replaceAll(cur[0], cur[1])
-    }, res)
-  }
-
-  return res
+  return (config.aliases ?? []).reduce((acc, [pattern, replacement]) => acc.replaceAll(pattern, replacement), res)
 }

@@ -110,6 +110,8 @@ const config: IModuleBuilderConfig = {
         config: 'build/$toc-osr.json',
       },
       skipped: ['0405-appendix-q1--micomant.md'],
+      // fix after conditionals
+      aliases: [[' : ', `: `]],
     } as IDocumentConfig,
     mainBestiaryConf as IDocumentConfig,
     {
