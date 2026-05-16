@@ -1,8 +1,12 @@
+import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import type { BuildModuleOptions, IModuleBuilderConfig } from '../types'
 import { DEFAULT_BUILD_PATH } from './paths'
+
+const _require = createRequire(import.meta.url)
+const _ownPkg = _require('../package.json') as { version: string }
 
 const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
   conf: T,
@@ -59,15 +63,11 @@ export const loadBuildConfig = async (
 }
 
 export const validateConfigVersion = (buildConfig: IModuleBuilderConfig) => {
-  // TODO version should be consumed from the package json when the oktozine is extracted as a lib
-  const MIN_CONFIG_VERSION = '2.0.0'
+  const MIN_CONFIG_VERSION = _ownPkg.version
 
-  const [major, minor, patch] = buildConfig.version.split('.').map(Number)
-  const [minMajor, minMinor, minPatch] = MIN_CONFIG_VERSION.split('.').map(Number)
-  const tooOld =
-    major < minMajor ||
-    (major === minMajor && minor < minMinor) ||
-    (major === minMajor && minor === minMinor && patch < minPatch)
+  const [major, minor] = buildConfig.version.split('.').map(Number)
+  const [minMajor, minMinor] = MIN_CONFIG_VERSION.split('.').map(Number)
+  const tooOld = major < minMajor || (major === minMajor && minor < minMinor)
   if (tooOld || major > minMajor) {
     throw new Error(
       `Config version "${buildConfig.version}" is out of supported range [${MIN_CONFIG_VERSION}, ${minMajor + 1}.x].`,
