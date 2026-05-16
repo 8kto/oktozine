@@ -10,8 +10,9 @@
  *    (e.g. `## A2. Throne Room`) are converted to HTML headings with a
  *    stable `id` derived from the code.
  *
- * Room codes must start with one of the accepted area prefixes (`A`, `B`,
- * `C`, `D`, `E`, `F`, `P`, `Q`, `S`) followed by one or more digits.
+ * The set of accepted area prefixes is configurable via `config.roomRefPattern`
+ * (a regex character class body, e.g. `'A-FPQS'`). Set to `null` to disable
+ * room linking entirely. Defaults to `'A-FPQS'`.
  *
  * @module macros/linkify
  *
@@ -30,6 +31,8 @@
  * ```
  */
 
+import type { MacroFn } from '../types'
+
 /**
  * Convert a room reference code to a DOM id (lowercase, prefixed with `room-`).
  *
@@ -41,14 +44,12 @@ const convertRoomRefToLink = (ref: string): string => `room-${ref.toLowerCase()}
 /**
  * Replace every parenthesised room code `(X##)` with a clickable anchor link.
  *
- * Matched codes: `A0`–`A99`, `B0`–`B99`, …, `F`, `P`, `Q`, `S` + digits.
- *
  * @param text - Source Markdown string.
+ * @param pattern - Regex character class body, e.g. `'A-FPQS'`.
  * @returns Markdown with inline room codes linked.
  */
-const linkRooms = (text: string): string => {
-  // FIXME config
-  const roomRefRegex = /\(([A-FPQS]\d+)\)/g
+const linkRooms = (text: string, pattern: string): string => {
+  const roomRefRegex = new RegExp(`\\(([${pattern}]\\d+)\\)`, 'g')
 
   return text.replace(roomRefRegex, (_match, roomRef: string) => {
     const id = convertRoomRefToLink(roomRef)
@@ -81,10 +82,14 @@ const linkHeaders = (text: string): string => {
  * Auto-link room references and room headings in the Markdown source.
  *
  * Runs {@link linkRooms} then {@link linkHeaders} sequentially.
- *
- * @param markdown - Source Markdown string.
- * @returns Markdown with room codes linked and room headings anchored.
+ * Set `config.roomRefPattern` to a regex character class body (e.g. `'A-FPQS'`)
+ * to control which codes are matched, or `null` to skip linking entirely.
  */
-export const linkify = (markdown: string): string => {
-  return [linkRooms, linkHeaders].reduce((acc, fn) => fn(acc), markdown)
+export const linkify: MacroFn = (markdown, config) => {
+  if (config.chapterRefPattern === null) {
+    return markdown
+  }
+  const pattern = config.chapterRefPattern ?? 'A-FPQS'
+
+  return linkHeaders(linkRooms(markdown, pattern))
 }

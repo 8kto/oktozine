@@ -123,6 +123,12 @@ export interface IBaseConfig {
    * Defaults to empty string (no watermark). Example: '<strong>Draft</strong>'.
    */
   draftWatermarkHtml?: string
+  /**
+   * Regex character class body for parenthesised chapter reference codes, e.g. `'A-FPQS'`
+   * matches `(A4)`, `(S12)`. Set to `null` to disable inline chapter linking entirely.
+   * Defaults to `'A-K'`.
+   */
+  chapterRefPattern?: string | null
 }
 
 /**

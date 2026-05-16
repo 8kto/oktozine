@@ -94,6 +94,7 @@ const config: IModuleBuilderConfig = {
     'bestiary-osr': 'osr',
   },
   draftWatermarkHtml: '<strong>Черновая версия, не для распространения</strong>',
+  chapterRefPattern: 'A-FPQS',
   tocConfig: {
     rootId: 'toc-main',
   },
