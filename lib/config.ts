@@ -2,7 +2,7 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import type { BuildModuleOptions, IModuleBuilderConfig } from '../types'
-import { DEFAULT_BUILD_PATH, PROJECT_ROOT } from './paths'
+import { DEFAULT_BUILD_PATH } from './paths'
 
 const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
   conf: T,
@@ -34,13 +34,15 @@ export const loadBuildConfig = async (
     return enrichConfigWithModuleOptions(conf, moduleOptions)
   }
 
+  // NB should search in the consuming app not in the lib dirs
+  const projectRoot = process.cwd()
   const candidates = [
-    resolve(PROJECT_ROOT, 'oktozin.build.conf.ts'),
-    resolve(PROJECT_ROOT, 'oktozin.build.conf.mjs'),
-    resolve(PROJECT_ROOT, 'oktozin.build.conf.js'),
-    resolve(PROJECT_ROOT, 'conf/oktozin.build.conf.ts'),
-    resolve(PROJECT_ROOT, 'conf/oktozin.build.conf.mjs'),
-    resolve(PROJECT_ROOT, 'conf/oktozin.build.conf.js'),
+    resolve(projectRoot, 'oktozin.build.conf.ts'),
+    resolve(projectRoot, 'oktozin.build.conf.mjs'),
+    resolve(projectRoot, 'oktozin.build.conf.js'),
+    resolve(projectRoot, 'conf/oktozin.build.conf.ts'),
+    resolve(projectRoot, 'conf/oktozin.build.conf.mjs'),
+    resolve(projectRoot, 'conf/oktozin.build.conf.js'),
   ]
 
   for (const p of candidates) {
@@ -58,7 +60,7 @@ export const loadBuildConfig = async (
 
 export const validateConfigVersion = (buildConfig: IModuleBuilderConfig) => {
   // TODO version should be consumed from the package json when the oktozine is extracted as a lib
-  const MIN_CONFIG_VERSION = '1.11.23'
+  const MIN_CONFIG_VERSION = '2.0.0'
 
   const [major, minor, patch] = buildConfig.version.split('.').map(Number)
   const [minMajor, minMinor, minPatch] = MIN_CONFIG_VERSION.split('.').map(Number)
