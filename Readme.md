@@ -420,7 +420,7 @@ The passage leads to (A4). → …<a href="#room-a4">(A4)</a>.
 | Variable          | Description                                                                           |
 | ----------------- | ------------------------------------------------------------------------------------- |
 | `HTML_NO_SKIP`    | Set to any truthy value to bypass the HTML timestamp cache (same as `--html-no-skip`) |
-| `LOG_LEVEL`       | Pino log level (overridden by `--log-level`)                                          |
+| `PINO_LOG_LEVEL`  | Pino log level (overridden by `--log-level`)                                          |
 | `PDF_PARALLEL`    | Max parallel Chromium instances per PDF render phase (default: `4`)                   |
 | `BUILD_MODE`      | Set to `production` to strip the draft watermark and `-dev` version suffix            |
 | `BUILD_DUMP_HTML` | Set to `false` to skip writing the `$fullHtmlContent-*.html` debug dump               |

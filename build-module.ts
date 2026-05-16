@@ -7,7 +7,7 @@ import { buildHtml, copyHtmlBuildAssets } from './build-html'
 import { buildPdf } from './build-pdf'
 import { parseScriptArgs, printUsage } from './lib/commandLine'
 import { loadBuildConfig, validateConfigVersion } from './lib/config'
-import { logger } from './lib/logger'
+import { logger, setLogLevel } from './lib/logger'
 import { measure } from './lib/measure'
 import { runPhase } from './lib/phase'
 import { IDocumentConfig } from './types'
@@ -20,10 +20,8 @@ export const main = async (): Promise<void> => {
     return printUsage()
   }
 
-  // FIXME to config
   if (logLevel) {
-    process.env.LOG_LEVEL = logLevel
-    logger.level = logLevel
+    setLogLevel(logLevel)
   }
 
   const endMeasure = measure()

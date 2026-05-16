@@ -7,3 +7,4 @@
 - номера страниц в TOC
 - handleLists(content), обрабатывает обычные списки, должен только стат-блоки (?)
 - rename: room to chapter
+- review docs
