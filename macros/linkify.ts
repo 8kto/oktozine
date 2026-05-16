@@ -39,7 +39,7 @@ import type { MacroFn } from '../types'
  * @param ref - Room code, e.g. `"A4"`, `"S12"`.
  * @returns Anchor id, e.g. `"room-a4"`, `"room-s12"`.
  */
-const convertRoomRefToLink = (ref: string): string => `room-${ref.toLowerCase()}`
+const convertChapterRefToLink = (ref: string): string => `room-${ref.toLowerCase()}`
 
 /**
  * Replace every parenthesised room code `(X##)` with a clickable anchor link.
@@ -48,11 +48,11 @@ const convertRoomRefToLink = (ref: string): string => `room-${ref.toLowerCase()}
  * @param pattern - Regex character class body, e.g. `'A-FPQS'`.
  * @returns Markdown with inline room codes linked.
  */
-const linkRooms = (text: string, pattern: string): string => {
-  const roomRefRegex = new RegExp(`\\(([${pattern}]\\d+)\\)`, 'g')
+const linkChapters = (text: string, pattern: string): string => {
+  const chapterRefRegex = new RegExp(`\\(([${pattern}]\\d+)\\)`, 'g')
 
-  return text.replace(roomRefRegex, (_match, roomRef: string) => {
-    const id = convertRoomRefToLink(roomRef)
+  return text.replace(chapterRefRegex, (_match, roomRef: string) => {
+    const id = convertChapterRefToLink(roomRef)
 
     return `<a class="linkified" target="_self" href="#${id}">(${roomRef})</a>`
   })
@@ -72,7 +72,7 @@ const linkHeaders = (text: string): string => {
 
   return text.replace(headerRegex, (_match, hashes: string, roomRef: string, headerText: string) => {
     const level = hashes.length
-    const id = convertRoomRefToLink(roomRef)
+    const id = convertChapterRefToLink(roomRef)
 
     return `<h${level} id="${id}">${roomRef}. ${headerText}</h${level}>`
   })
@@ -81,7 +81,7 @@ const linkHeaders = (text: string): string => {
 /**
  * Auto-link room references and room headings in the Markdown source.
  *
- * Runs {@link linkRooms} then {@link linkHeaders} sequentially.
+ * Runs {@link linkChapters} then {@link linkHeaders} sequentially.
  * Set `config.roomRefPattern` to a regex character class body (e.g. `'A-FPQS'`)
  * to control which codes are matched, or `null` to skip linking entirely.
  */
@@ -89,7 +89,7 @@ export const linkify: MacroFn = (markdown, config) => {
   if (config.chapterRefPattern === null) {
     return markdown
   }
-  const pattern = config.chapterRefPattern ?? 'A-FPQS'
+  const pattern = config.chapterRefPattern ?? 'A-K'
 
-  return linkHeaders(linkRooms(markdown, pattern))
+  return linkHeaders(linkChapters(markdown, pattern))
 }

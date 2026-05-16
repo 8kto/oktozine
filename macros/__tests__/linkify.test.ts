@@ -22,7 +22,7 @@ describe('linkify tests', () => {
         - Галерея с женскими бюстами <a class="linkified" target="_self" href="#room-f5">(F5)</a>
         - Галерея X1 (X1)
         - Галерея F1 <a class="linkified" target="_self" href="#room-f1">(F1)</a>
-        - Коридор Q2 <a class="linkified" target="_self" href="#room-q2">(Q2)</a>
+        - Коридор Q2 (Q2)
     `.trim(),
     )
   })
