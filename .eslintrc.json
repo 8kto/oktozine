@@ -85,19 +85,9 @@
         "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
         "@typescript-eslint/no-shadow": "error"
       }
-    },
+    },  
     {
-      "files": ["maps/**/*.js"],
-      "env": {
-        "browser": true,
-        "es2021": true
-      },
-      "rules": {
-        "no-console": "off"
-      }
-    },
-    {
-      "files": ["src/markdown/**/*.md", "README.md"],
+      "files": ["./**/*.md", "README.md"],
       "processor": "markdown/markdown",
       "rules": {
         "max-len": ["error", 120]
