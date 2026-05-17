@@ -6,12 +6,12 @@ import matter from 'gray-matter'
 import path from 'path'
 
 import { getBuildFilePath, isFileChangedSinceLastBuild, recalculatePages, updateLastBuildTime } from './lib/build-utils'
+import { getConsumingAppVersion } from './lib/config'
 import { logger } from './lib/logger'
 import { getMarkdownRenderer } from './lib/markdown'
 import { measure } from './lib/measure'
 import { getCssPath, getHtmlBuildPath, getHtmlModuleBuildPath, OKTOZINE_ROOT, resolveContentPaths } from './lib/paths'
 import { runPhase, runPhaseSync } from './lib/phase'
-import { getBuildFileVersion } from './lib/version'
 import handleMacros from './macros/index'
 import { type IDocumentConfig, type IDocumentPage, type IModuleBuilderConfig, MetadataUseKeys } from './types'
 
@@ -64,7 +64,7 @@ const applyTemplate = async (page: IDocumentPage, templatePath: string): Promise
 
   if (Array.isArray(metadata.use)) {
     if (metadata.use.includes(MetadataUseKeys.version)) {
-      res = res.replace('{{version}}', getBuildFileVersion(page.metadata))
+      res = res.replace('{{version}}', getConsumingAppVersion(page.metadata))
     }
     if (metadata.use.includes(MetadataUseKeys.documentTitle)) {
       res = res.replace('{{documentTitle}}', metadata.documentTitle ?? '')

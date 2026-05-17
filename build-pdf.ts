@@ -10,6 +10,7 @@ import path from 'path'
 import { PDFArray, PDFDict, PDFDocument, PDFFont, PDFHexString, PDFName, PDFRawStream, PDFRef, rgb } from 'pdf-lib'
 import puppeteer from 'puppeteer'
 
+import { getConsumingAppVersion } from './lib/config'
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
 import { getCssPath, getHtmlModuleBuildPath, getPdfBuildPath, getReleasePath, resolveContentPaths } from './lib/paths'
@@ -23,7 +24,6 @@ import {
 } from './lib/pdf-chunk-registry'
 import { assembleDocumentHtml, getFullPageTemplate, readModuleHtmlPages } from './lib/pdf-html-assembler'
 import { buildToc } from './lib/table-of-contents'
-import { getBuildFileVersion } from './lib/version'
 import { wrapContentSections } from './lib/wrap-sections'
 import type { IDocumentConfig, ITocItem } from './types'
 
@@ -901,7 +901,7 @@ export const buildPdf = async (config: IDocumentConfig): Promise<void> => {
   const htmlChunksPath = getHtmlModuleBuildPath(config)
   const cssPath = getCssPath(config)
 
-  const outputFilename = config.documentFileName!.replace('{{version}}', getBuildFileVersion(config))
+  const outputFilename = config.documentFileName!.replace('{{version}}', getConsumingAppVersion(config))
   const outputFilenamePath = path.join(releasePath, outputFilename)
   const coverHtmlFile = config.coverHtmlFile ? `${config.coverHtmlFile}.html` : null
   const backCoverHtmlFile = config.backCoverHtmlFile ? `${config.backCoverHtmlFile}.html` : null
