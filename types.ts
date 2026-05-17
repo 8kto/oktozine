@@ -169,7 +169,7 @@ export interface IDocumentConfig extends IBaseConfig {
 export enum MetadataUseKeys {
   version = 'version',
   documentTitle = 'documentTitle',
-  buildMode = 'buildMode'
+  buildMode = 'buildMode',
 }
 
 // TODO add docs to Readme

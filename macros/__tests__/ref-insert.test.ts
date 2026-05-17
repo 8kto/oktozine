@@ -13,7 +13,9 @@ describe('convert ref inserts', () => {
   })
 
   it('should ignore not found refs', () => {
-    expect(convertRefInserts(`<!-- cmd[ref] header[XXX YYY] /-->`, config)).toEqual(`<!-- cmd[ref] header[XXX YYY] /-->`)
+    expect(convertRefInserts(`<!-- cmd[ref] header[XXX YYY] /-->`, config)).toEqual(
+      `<!-- cmd[ref] header[XXX YYY] /-->`,
+    )
   })
 
   it('should insert n times', () => {

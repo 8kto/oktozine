@@ -13,7 +13,7 @@ import { getCssPath, getHtmlBuildPath, getHtmlModuleBuildPath, OKTOZINE_ROOT, re
 import { runPhase, runPhaseSync } from './lib/phase'
 import { getBuildFileVersion } from './lib/version'
 import handleMacros from './macros/index'
-import { MetadataUseKeys, type IDocumentConfig, type IDocumentPage, type IModuleBuilderConfig } from './types'
+import { type IDocumentConfig, type IDocumentPage, type IModuleBuilderConfig, MetadataUseKeys } from './types'
 
 const convertMarkdownToHtml = async (
   filePath: string,
