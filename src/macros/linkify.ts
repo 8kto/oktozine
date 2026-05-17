@@ -10,7 +10,7 @@
  *    (e.g. `## A2. Throne Room`) are converted to HTML headings with a
  *    stable `id` derived from the code.
  *
- * The set of accepted area prefixes is configurable via `config.roomRefPattern`
+ * The set of accepted area prefixes is configurable via `config.chapterRefPattern`
  * (a regex character class body, e.g. `'A-FPQS'`). Set to `null` to disable
  * room linking entirely. Defaults to `'A-FPQS'`.
  *
@@ -82,7 +82,7 @@ const linkHeaders = (text: string): string => {
  * Auto-link room references and room headings in the Markdown source.
  *
  * Runs {@link linkChapters} then {@link linkHeaders} sequentially.
- * Set `config.roomRefPattern` to a regex character class body (e.g. `'A-FPQS'`)
+ * Set `config.chapterRefPattern` to a regex character class body (e.g. `'A-FPQS'`)
  * to control which codes are matched, or `null` to skip linking entirely.
  */
 export const linkify: MacroFn = (markdown, config) => {

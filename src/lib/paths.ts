@@ -14,6 +14,9 @@ export interface IResolvedContentPaths {
   pageNumbersFontPath: string
 }
 
+/**
+ * TODO oktozine root?
+ */
 export const resolveContentPaths = (
   config: Pick<
     IBaseConfig,
@@ -33,6 +36,7 @@ export const resolveContentPaths = (
   }
 }
 
+// FIXME use consuming app path
 export const DEFAULT_BUILD_PATH = path.join(process.cwd(), 'build')
 
 export const getHtmlBuildPath = <T extends { outputPath: string }>(config: T) => {
