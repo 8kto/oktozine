@@ -98,8 +98,8 @@ const combinedNobrTermsRegex = new RegExp(
   'gu',
 )
 
+// TODO extract in custom macro, project-specific
 /**
- * FIXME
  * Wrap compound crystal/field terms (e.g. `Телепорт-кристалл`, `t-поле`)
  * in `<nobr>` to prevent mid-word line breaks.
  *
