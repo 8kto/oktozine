@@ -1,7 +1,6 @@
 #!/bin/env node
 
 import { mkdir } from 'node:fs/promises'
-import { createRequire } from 'node:module'
 
 import fontkit from '@pdf-lib/fontkit'
 import chalk from 'chalk'
@@ -11,9 +10,6 @@ import path from 'path'
 import { PDFArray, PDFDict, PDFDocument, PDFFont, PDFHexString, PDFName, PDFRawStream, PDFRef, rgb } from 'pdf-lib'
 import puppeteer from 'puppeteer'
 
-const _require = createRequire(import.meta.url)
-// FIXME should pick name from consuming app not the lib one
-const packageConfig: { version: string; name: string } = _require('./package.json')
 import { logger } from './lib/logger'
 import { measure } from './lib/measure'
 import { getCssPath, getHtmlModuleBuildPath, getPdfBuildPath, getReleasePath, resolveContentPaths } from './lib/paths'
@@ -124,24 +120,9 @@ const renderChunk = async (html: string, pageRange: string, cssPath: string): Pr
   }
 }
 
-const writeFullContentToFile = (id: string, content: string, htmlChunksPath: string): void => {
-  const htmlPage = `
-    <!doctype html>
-    <html lang="ru">
-    <head>
-      <meta charset="utf-8">
-      <title>${packageConfig.name}</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-    </head>
-    <body>
-      <main class="print-root">
-        ${content}
-      </main>
-    </body>
-    </html>
-  `
+const writeFullContentToFile = (id: string, html: string, htmlChunksPath: string): void => {
   const fileName = `$fullHtmlContent-${id}.html`
-  fs.writeFile(path.join(htmlChunksPath, fileName), htmlPage)
+  fs.writeFile(path.join(htmlChunksPath, fileName), html)
   logger.info(chalk.bgBlueBright(`HTML dumped into "${fileName}" file`))
 }
 
@@ -216,9 +197,7 @@ const preparePdfHtml = async (
     const finalHtml = await page.content()
 
     if (process.env.BUILD_DUMP_HTML !== 'false') {
-      // FIXME use finalHtml?
-      const body = await page.evaluate(() => document.body.innerHTML || '')
-      writeFullContentToFile(config.id, body, htmlChunksPath)
+      writeFullContentToFile(config.id, finalHtml, htmlChunksPath)
     }
 
     return { finalHtml, approxPageCount }
