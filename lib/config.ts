@@ -1,12 +1,37 @@
+import fs, { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { resolve } from 'node:path'
+import path, { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import type { BuildModuleOptions, IModuleBuilderConfig } from '../types'
+import type { BuildModuleOptions, IDocumentConfig, IModuleBuilderConfig } from '../types'
 import { DEFAULT_BUILD_PATH } from './paths'
 
 const _require = createRequire(import.meta.url)
-const _ownPkg = _require('../package.json') as { version: string }
+const oktozinePackage = _require('../package.json') as { version: string }
+
+type ConsumingAppPackageJson = {
+  name?: string
+  version?: string
+  [key: string]: unknown
+}
+
+export function getConsumingAppPackageJson(start = process.cwd()): ConsumingAppPackageJson {
+  const appRoot = findAppRoot(start)
+  const pkgPath = resolve(appRoot, 'package.json')
+
+  if (!existsSync(pkgPath)) {
+    throw new Error(`Cannot find consuming app package.json in ${appRoot}`)
+  }
+
+  return JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as ConsumingAppPackageJson
+}
+
+export const getConsumingAppVersion = (config: IDocumentConfig): string => {
+  const consumingAppConfig = getConsumingAppPackageJson()
+  const sfx = config.isProduction ? '' : '-dev'
+
+  return `v${consumingAppConfig.version}${sfx}`
+}
 
 const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
   conf: T,
@@ -21,16 +46,27 @@ const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
   }
 }
 
-export const loadBuildConfig = async (
-  moduleOptions: BuildModuleOptions,
-  cliPath?: string,
-): Promise<IModuleBuilderConfig> => {
-  const importConfig = async (absPath: string): Promise<IModuleBuilderConfig> => {
-    const mod = await import(pathToFileURL(absPath).href)
+const importConfig = async (absPath: string): Promise<IModuleBuilderConfig> => {
+  const mod = await import(pathToFileURL(absPath).href)
 
-    return Object.prototype.hasOwnProperty.call(mod, 'default') ? mod.default : mod
+  return Object.prototype.hasOwnProperty.call(mod, 'default') ? mod.default : mod
+}
+
+export const findAppRoot = (start: string): string => {
+  const current = path.resolve(start)
+  const parts = current.split(path.sep)
+  const nmIdx = parts.lastIndexOf('node_modules')
+
+  if (nmIdx === -1) {
+    return current
   }
 
+  const root = parts.slice(0, nmIdx).join(path.sep)
+
+  return root || path.parse(current).root
+}
+
+export async function loadBuildConfig(moduleOptions: BuildModuleOptions, cliPath?: string) {
   if (cliPath) {
     const absPath = resolve(process.cwd(), cliPath)
     const conf = await importConfig(absPath)
@@ -38,32 +74,32 @@ export const loadBuildConfig = async (
     return enrichConfigWithModuleOptions(conf, moduleOptions)
   }
 
-  // NB should search in the consuming app not in the lib dirs
-  const projectRoot = process.cwd()
+  const appRoot = findAppRoot(process.cwd())
+
   const candidates = [
-    resolve(projectRoot, 'oktozin.build.conf.ts'),
-    resolve(projectRoot, 'oktozin.build.conf.mjs'),
-    resolve(projectRoot, 'oktozin.build.conf.js'),
-    resolve(projectRoot, 'conf/oktozin.build.conf.ts'),
-    resolve(projectRoot, 'conf/oktozin.build.conf.mjs'),
-    resolve(projectRoot, 'conf/oktozin.build.conf.js'),
+    resolve(appRoot, 'oktozine.build.conf.ts'),
+    resolve(appRoot, 'oktozine.build.conf.mjs'),
+    resolve(appRoot, 'oktozine.build.conf.js'),
+    resolve(appRoot, 'conf/oktozine.build.conf.ts'),
+    resolve(appRoot, 'conf/oktozine.build.conf.mjs'),
+    resolve(appRoot, 'conf/oktozine.build.conf.js'),
   ]
 
   for (const p of candidates) {
-    try {
-      const conf = await importConfig(p)
-
-      return enrichConfigWithModuleOptions(conf, moduleOptions)
-    } catch {
-      // try next candidate
+    if (!existsSync(p)) {
+      continue
     }
+
+    const conf = await importConfig(p)
+
+    return enrichConfigWithModuleOptions(conf, moduleOptions)
   }
 
-  throw new Error('No build config provided or found.')
+  throw new Error(`oktozine config not found in ${appRoot}`)
 }
 
 export const validateConfigVersion = (buildConfig: IModuleBuilderConfig) => {
-  const MIN_CONFIG_VERSION = _ownPkg.version
+  const MIN_CONFIG_VERSION = oktozinePackage.version
 
   const [major, minor] = buildConfig.version.split('.').map(Number)
   const [minMajor, minMinor] = MIN_CONFIG_VERSION.split('.').map(Number)
