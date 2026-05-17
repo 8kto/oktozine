@@ -13,7 +13,7 @@ import { getCssPath, getHtmlBuildPath, getHtmlModuleBuildPath, OKTOZINE_ROOT, re
 import { runPhase, runPhaseSync } from './lib/phase'
 import { getBuildFileVersion } from './lib/version'
 import handleMacros from './macros/index'
-import type { IDocumentConfig, IDocumentPage, IModuleBuilderConfig } from './types'
+import { MetadataUseKeys, type IDocumentConfig, type IDocumentPage, type IModuleBuilderConfig } from './types'
 
 const convertMarkdownToHtml = async (
   filePath: string,
@@ -62,16 +62,14 @@ const applyTemplate = async (page: IDocumentPage, templatePath: string): Promise
     .replace('{{footer}}', metadata.footer ?? '')
     .replace('{{content}}', content)
 
-  // TODO document metadata
   if (Array.isArray(metadata.use)) {
-    // Quick workaround
-    if (metadata.use.includes('version')) {
+    if (metadata.use.includes(MetadataUseKeys.version)) {
       res = res.replace('{{version}}', getBuildFileVersion(page.metadata))
     }
-    if (metadata.use.includes('documentTitle')) {
+    if (metadata.use.includes(MetadataUseKeys.documentTitle)) {
       res = res.replace('{{documentTitle}}', metadata.documentTitle ?? '')
     }
-    if (metadata.use.includes('buildMode')) {
+    if (metadata.use.includes(MetadataUseKeys.buildMode)) {
       res = res.replace('{{buildMode}}', metadata.isProduction ? '' : (metadata.draftWatermarkHtml ?? ''))
     }
   }

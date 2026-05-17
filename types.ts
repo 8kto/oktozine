@@ -166,16 +166,25 @@ export interface IDocumentConfig extends IBaseConfig {
   buildProcessesNum?: number
 }
 
+export enum MetadataUseKeys {
+  version = 'version',
+  documentTitle = 'documentTitle',
+  buildMode = 'buildMode'
+}
+
+// TODO add docs to Readme
+/**
+ * Frontmatter props used in the builder
+ */
 export interface IDocumentPageMetadata {
   template?: string
   name?: string
-  use?: string[]
+  use?: MetadataUseKeys[]
+  // FIXME naming?
   'picture-id'?: string
   seqPage?: boolean
   seqPageNum?: number
   documentTitle?: string
-  // FIXME
-  [key: string]: unknown
 }
 
 /**
