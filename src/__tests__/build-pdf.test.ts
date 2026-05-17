@@ -1,6 +1,7 @@
 /** @jest-environment node */
+
 import { buildChunkRanges, resolveChunkPlan } from '../build-pdf'
-import type { IDocumentConfig } from '../types'
+import { IDocumentConfig } from '../types'
 
 // ── buildChunkRanges ─────────────────────────────────────────────────────────
 

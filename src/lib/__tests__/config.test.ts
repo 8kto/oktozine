@@ -4,7 +4,7 @@ import type { IModuleBuilderConfig } from '../../types'
 import { validateConfigVersion } from '../config'
 
 const _require = createRequire(import.meta.url)
-const pkg = _require('../../package.json') as { version: string }
+const pkg = _require('../../../package.json') as { version: string }
 
 const makeConf = (version: string): IModuleBuilderConfig => ({
   version,

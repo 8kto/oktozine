@@ -9,6 +9,6 @@ module.exports = {
   },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^jsdom$': '<rootDir>/__tests__/mocks/jsdom.cjs',
+    '^jsdom$': '<rootDir>/src/__tests__/mocks/jsdom.cjs',
   },
 }

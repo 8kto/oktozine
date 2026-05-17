@@ -7,7 +7,7 @@ import type { BuildModuleOptions, IDocumentConfig, IModuleBuilderConfig } from '
 import { DEFAULT_BUILD_PATH } from './paths'
 
 const _require = createRequire(import.meta.url)
-const oktozinePackage = _require('../package.json') as { version: string }
+const oktozinePackage = _require('../../package.json') as { version: string }
 
 type ConsumingAppPackageJson = {
   name?: string
