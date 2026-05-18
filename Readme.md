@@ -276,21 +276,18 @@ Output:
 Six micro-macros that prevent unwanted line breaks around numbers, units, abbreviations, and compound terms. They run as
 separate pipeline steps so they can be reordered or disabled individually.
 
-| Function                    | Pattern                       | Result                           |
-| --------------------------- | ----------------------------- | -------------------------------- |
-| `glueWords`                 | `2:6`                         | `<nobr>2:6</nobr>`               |
-| `glueUnits`                 | `10 м`, `5 фунтов`            | `10&nbsp;м`, `5&nbsp;фунтов`     |
-| `glueShorthands`            | `и т. д.`, `т. е.`            | `<nobr>и т. д.</nobr>`           |
-| `glueUnitsWithNoLineBreaks` | `10′`, `5″`                   | `<nobr>10′</nobr>`               |
-| `glueCrystalsAlike`         | `Телепорт-кристалл`, `t-поле` | `<nobr>Телепорт-кристалл</nobr>` |
-| `glueDamageUnits`           | `2d6 урона`, `3 раунда`       | `2d6&nbsp;урона`                 |
+| Function                    | Pattern                 | Result                       |
+| --------------------------- | ----------------------- | ---------------------------- |
+| `glueWords`                 | `2:6`                   | `<nobr>2:6</nobr>`           |
+| `glueUnits`                 | `10 м`, `5 фунтов`      | `10&nbsp;м`, `5&nbsp;фунтов` |
+| `glueShorthands`            | `и т. д.`, `т. е.`      | `<nobr>и т. д.</nobr>`       |
+| `glueUnitsWithNoLineBreaks` | `10′`, `5″`             | `<nobr>10′</nobr>`           |
+| `glueDamageUnits`           | `2d6 урона`, `3 раунда` | `2d6&nbsp;урона`             |
 
 **Supported units** (`glueUnits`): мм, см, зм, фунтов.
 
 **Supported abbreviations** (`glueShorthands`): и т. д., и т.д., и т. п., и т.п., в т. ч., в т.ч., и др., и пр., т. д.,
 т.д., т. п., т.п., т. е., т.е., т. к., т.к., т. н., т.н.
-
-**Crystal prefixes** (`glueCrystalsAlike`): Телепорт, Хроно, t, g, f — joined by a hyphen to `кристалл*` or `пол*`.
 
 **Damage/duration units** (`glueDamageUnits`): урон*, ход*, раунд*, раз*. Handles both dice notation (`2d6 урона`) and
 plain numbers (`3 раунда`).

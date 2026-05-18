@@ -24,7 +24,6 @@ import { addAliases } from './alias'
 import { parseConditionalMode } from './conditionals'
 import { convertDumpInserts } from './dump.macro'
 import {
-  glueCrystalsAlike,
   glueDamageUnits,
   glueShorthands,
   glueUnits,
@@ -52,7 +51,6 @@ const getMacroHandlers = (): MacroFn[] => {
       glueUnits,
       glueShorthands,
       glueUnitsWithNoLineBreaks,
-      glueCrystalsAlike,
       glueDamageUnits,
       convertListToTable,
       convertRefInserts,
