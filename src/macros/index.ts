@@ -23,13 +23,7 @@ import type { IDocumentConfig, MacroFn } from '../types'
 import { addAliases } from './alias'
 import { parseConditionalMode } from './conditionals'
 import { convertDumpInserts } from './dump.macro'
-import {
-  glueDamageUnits,
-  glueShorthands,
-  glueUnits,
-  glueUnitsWithNoLineBreaks,
-  glueWords,
-} from './glue-units'
+import { glueDamageUnits, glueShorthands, glueUnits, glueUnitsWithNoLineBreaks, glueWords } from './glue-units'
 import { linkify } from './linkify'
 import { convertListToTable } from './list-to-table.macro'
 import { convertNamedSections } from './named.macro'

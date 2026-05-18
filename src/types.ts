@@ -139,6 +139,8 @@ export interface IBaseConfig {
    * Each macro is a pure `(markdown, config) => markdown` transform.
    */
   macros?: MacroFn[]
+  /** Absolute path to the compiled CSS file to copy into the HTML build output. Defaults to `<outputPath>/output.css`. */
+  cssPath?: string
 }
 
 /**

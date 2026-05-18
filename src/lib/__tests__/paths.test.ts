@@ -1,5 +1,15 @@
 import { IBaseConfig } from '../../types'
-import { resolveContentPaths } from '../paths'
+import { getCssPath, resolveContentPaths } from '../paths'
+
+describe('getCssPath', () => {
+  it('returns default output.css path when cssPath not set', () => {
+    expect(getCssPath({ outputPath: '/build' })).toBe('/build/output.css')
+  })
+
+  it('returns explicit cssPath when provided', () => {
+    expect(getCssPath({ outputPath: '/build', cssPath: '/custom/styles.css' })).toBe('/custom/styles.css')
+  })
+})
 
 describe('resolveContentPaths', () => {
   it('uses explicit dirs from config when provided', () => {

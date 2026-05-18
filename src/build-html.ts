@@ -94,7 +94,6 @@ export const copyHtmlBuildAssets = async (config: IModuleBuilderConfig): Promise
 
   await runPhase('copy static assets into chunks-html', async () => {
     await Promise.all([
-      // FIXME paths set outside of the oktozine codebase
       fs.copy(cssPath, path.join(htmlBuildDir, 'output.css')),
       fs.copy(path.join(OKTOZINE_ROOT, 'webviewer/index.html'), path.join(htmlBuildDir, 'server.html')),
       fs.copy(resolveContentPaths(config).imagesDir, path.join(htmlBuildDir, 'images/')),

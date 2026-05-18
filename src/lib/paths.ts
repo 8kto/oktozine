@@ -51,8 +51,8 @@ export const getPdfBuildPath = (config: IDocumentConfig) => {
   return path.join(config.outputPath, 'pdf', `module-${config.id}`)
 }
 
-export const getCssPath = <T extends { outputPath: string }>(config: T) => {
-  return path.join(config.outputPath, 'output.css')
+export const getCssPath = <T extends { outputPath: string; cssPath?: string }>(config: T) => {
+  return config.cssPath ?? path.join(config.outputPath, 'output.css')
 }
 
 export const getReleasePath = (config: IDocumentConfig) => {
