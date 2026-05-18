@@ -174,7 +174,6 @@ export enum MetadataUseKeys {
   buildMode = 'buildMode',
 }
 
-// TODO add docs to Readme
 /**
  * Frontmatter props used in the builder
  */
