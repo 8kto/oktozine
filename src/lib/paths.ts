@@ -52,6 +52,7 @@ export const getPdfBuildPath = (config: IDocumentConfig) => {
   return path.join(config.outputPath, 'pdf', `module-${config.id}`)
 }
 
+// TODO integrate into resolveContentPaths
 export const getCssPath = <T extends { outputPath: string; cssPath?: string }>(config: T) => {
   return config.cssPath ?? path.join(config.outputPath, 'output.css')
 }
