@@ -5,6 +5,8 @@
     "emitDeclarationOnly": true,
     "declaration": true,
     "outDir": "dist",
-    "rootDir": "src"
-  }
+    "rootDir": "src",
+    "ignoreDeprecations": "6.0"
+  },
+  "exclude": ["node_modules", "build", "dist", "samples", "tests"]
 }

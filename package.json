@@ -4,16 +4,28 @@
   "type": "module",
   "description": "Markdown → HTML → PDF builder",
   "bin": {
-    "oktozine": "./build-module.ts"
+    "oktozine": "./dist/build-module.js"
   },
   "exports": {
-    ".": "./build-module.ts",
-    "./build-html": "./build-html.ts",
-    "./build-pdf": "./build-pdf.ts",
-    "./types": "./types.ts"
+    ".": {
+      "import": "./dist/build-module.js",
+      "types": "./dist/build-module.d.ts"
+    },
+    "./build-html": {
+      "import": "./dist/build-html.js",
+      "types": "./dist/build-html.d.ts"
+    },
+    "./build-pdf": {
+      "import": "./dist/build-pdf.js",
+      "types": "./dist/build-pdf.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    }
   },
   "files": [
-    "."
+    "dist"
   ],
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",
@@ -33,6 +45,8 @@
     "transliteration": "^2.3.5"
   },
   "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "yarn build && yarn test",
     "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
     "tsc": "tsc --noEmit",
     "lint": "eslint . --ext .js,.mjs,.cjs,.ts,.d.ts",
