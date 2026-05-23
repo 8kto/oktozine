@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 
 import type { IBaseConfig, IDocumentConfig } from '../types'
 
-export const OKTOZINE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+export const OKTOZINE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 export interface IResolvedContentPaths {
   projectRoot: string
