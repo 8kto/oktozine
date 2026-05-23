@@ -1,5 +1,3 @@
-#!/usr/bin/env tsx
-
 import chalk from 'chalk'
 import deepmerge from 'deepmerge'
 
