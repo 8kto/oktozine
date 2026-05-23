@@ -15,7 +15,7 @@
     "es2021": true,
     "jest": true
   },
-  "ignorePatterns": ["venv"],
+  "ignorePatterns": ["venv", "samples"],
   "rules": {
     "semi": ["error", "never"],
     "comma-dangle": ["error", "always-multiline"],
@@ -55,7 +55,7 @@
   },
   "overrides": [
     {
-      "files": ["**/*.js", "**/*.mjs"],
+      "files": ["src/**/*.js", "src/**/*.mjs"],
       "plugins": ["jsdoc"],
       "rules": {
         "jsdoc/require-param-description": "off",
@@ -71,7 +71,7 @@
       }
     },
     {
-      "files": ["**/*.ts", "**/*.d.ts"],
+      "files": ["src/**/*.ts", "src/**/*.d.ts"],
       "parser": "@typescript-eslint/parser",
       "plugins": ["@typescript-eslint"],
       "extends": ["plugin:@typescript-eslint/recommended"],
@@ -87,17 +87,7 @@
       }
     },
     {
-      "files": ["maps/**/*.js"],
-      "env": {
-        "browser": true,
-        "es2021": true
-      },
-      "rules": {
-        "no-console": "off"
-      }
-    },
-    {
-      "files": ["src/markdown/**/*.md", "README.md"],
+      "files": ["./**/*.md", "README.md"],
       "processor": "markdown/markdown",
       "rules": {
         "max-len": ["error", 120]

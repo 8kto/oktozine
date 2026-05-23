@@ -62,7 +62,9 @@ Usage: tsx scripts/oktozine/build-module.ts <documentIds> [options]
                  Rebuild every HTML file, ignoring the timestamp cache
 --parallel       Render PDFs for all documents in parallel (default: serial)
 --log-level      Pino log level: trace | debug | info | warn | error | fatal
---config <path>  Path to a custom build config file (default: conf/oktozin.build.conf.ts)
+--config <path>  Path to a custom build config file. Auto-discovered when omitted:
+                 oktozine.build.conf.{ts,mjs,js} at the project root, then
+                 conf/oktozine.build.conf.{ts,mjs,js}
 ```
 
 **Build phases** (always in this order):
@@ -75,42 +77,63 @@ Each document config is deep-merged over the top-level defaults before being pas
 
 ---
 
-## Build Config — `conf/oktozin.build.conf.ts`
+## Build Config — `oktozine.build.conf.ts`
 
-Exports a default `IModuleBuilderConfig` object that describes every document document.
+Exports a default `IModuleBuilderConfig` object that describes every document.
 
-### Top-level fields (defaults shared by all documents)
+### Top-level fields (`IModuleBuilderConfig` / `IBaseConfig`)
 
-| Field                      | Type                     | Description                                                                                                             |
-| -------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `documents`                | `IDocumentConfig[]`      | List of document documents to build                                                                                     |
-| `releaseDocumentIds`       | `string[]`               | Document IDs included in a production release                                                                           |
-| `template`                 | `string`                 | Default HTML template filename (relative to `src/html/`)                                                                |
-| `header`                   | `string`                 | Default running header text                                                                                             |
-| `footer`                   | `string`                 | Default running footer text                                                                                             |
-| `skipped`                  | `string[]`               | Markdown filenames excluded from all documents (global blocklist)                                                       |
-| `referenceFiles`           | `string[]`               | Paths to `$refs-*.md` files loaded into the reference dictionary                                                        |
-| `conditionalsAlias`        | `Record<string, string>` | Maps a document ID to another for `{{ }}` conditional fallback (e.g. `bestiary-osr → bestiary`)                         |
-| `tocConfig`                | `ITocConfig`             | Default TOC settings (merged per-document)                                                                              |
-| `skipHeaderAndFooter`      | `number[]`               | 1-based page numbers that skip both header and footer decoration. Negative values count from the end (`-1` = last page) |
-| `skipHeader`               | `number[]`               | Same, but header only                                                                                                   |
-| `skipFooter`               | `number[]`               | Same, but footer only                                                                                                   |
-| `invalidateBuildOnPattern` | `RegExp`                 | If any source file matching this pattern has changed, all HTML files for the document are rebuilt                       |
+Fields marked **M** belong to `IModuleBuilderConfig` only; all others belong to `IBaseConfig` and can be overridden
+per-document.
+
+| Field                      | Type                     | M   | Description                                                                                                                                        |
+| -------------------------- | ------------------------ | --- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version`                  | `string`                 | ✓   | Config format version. Must satisfy `[major.minor, major+1.x)` of the installed oktozine package.                                                  |
+| `documents`                | `IDocumentConfig[]`      | ✓   | List of documents to build                                                                                                                         |
+| `releaseDocumentIds`       | `string[]`               | ✓   | Document IDs included in a production release                                                                                                      |
+| `outputPath`               | `string`                 |     | **Required.** Root directory for all build output. Defaults to `<cwd>/build` when set via CLI.                                                     |
+| `isProduction`             | `boolean`                |     | Strips the `-dev` version suffix and disables the draft watermark. Set via `--production` or `BUILD_MODE=production`.                              |
+| `useHtmlRebuild`           | `boolean`                |     | Force rebuild all HTML files regardless of the timestamp cache. Set via `--html-no-skip`.                                                          |
+| `usePdfBookmarks`          | `boolean`                |     | Add PDF named-destination bookmarks to the output. [false]                                                                                         |
+| `template`                 | `string`                 |     | Default HTML template filename (relative to `templatesDir`)                                                                                        |
+| `header`                   | `string`                 |     | Default running header text injected into `{{header}}` in every template                                                                           |
+| `footer`                   | `string`                 |     | Default running footer text injected into `{{footer}}` in every template                                                                           |
+| `skipped`                  | `string[]`               |     | Markdown filenames excluded from the build (global blocklist)                                                                                      |
+| `include`                  | `string[]`               |     | Explicit allowlist of Markdown filenames. When set, `skipped` and `includePattern` are ignored.                                                    |
+| `includePattern`           | `RegExp`                 |     | Regex allowlist; only matching filenames are built. Ignored when `include` is set.                                                                 |
+| `invalidateBuildOnPattern` | `RegExp`                 |     | If any source file matching this pattern has changed, all HTML files for that document are rebuilt                                                 |
+| `referenceFiles`           | `string[]`               |     | Paths to `$refs-*.md` files loaded into the reference dictionary                                                                                   |
+| `conditionalsAlias`        | `Record<string, string>` |     | Maps a document ID to another for `{{  }}` conditional fallback (e.g. `bestiary-osr → bestiary`)                                                   |
+| `tocConfig`                | `ITocConfig`             |     | TOC settings (see **TOC Config** section)                                                                                                          |
+| `tocOverrides`             | `ITocOverrides`          |     | Global TOC overrides applied before per-document overrides. Replaces a separate `conf/oktozin.toc.conf.ts` file.                                   |
+| `skipHeaderAndFooter`      | `number[]`               |     | 1-based page numbers that skip both header and footer. Negative values count from the end (`-1` = last page).                                      |
+| `skipHeader`               | `number[]`               |     | Same, but header only                                                                                                                              |
+| `skipFooter`               | `number[]`               |     | Same, but footer only                                                                                                                              |
+| `bookmarksConfig`          | `IBookmarksConfig`       |     | PDF bookmark config: `{ config: string; skipFirstPages?: number; skipLastPages?: number }`                                                         |
+| `projectRoot`              | `string`                 |     | Absolute path to the consuming app root. Defaults to `process.cwd()`.                                                                              |
+| `markdownDir`              | `string`                 |     | Directory containing Markdown sources. Defaults to `<projectRoot>/src/markdown`.                                                                   |
+| `templatesDir`             | `string`                 |     | Directory containing EJS/HTML page templates. Defaults to `<projectRoot>/src/html`.                                                                |
+| `imagesDir`                | `string`                 |     | Directory containing image assets. Defaults to `<projectRoot>/src/images`.                                                                         |
+| `fontsDir`                 | `string`                 |     | Directory containing font assets. Defaults to `<projectRoot>/src/styles/fonts`.                                                                    |
+| `pageNumbersFontPath`      | `string`                 |     | TTF font used for injected page numbers. Defaults to `<fontsDir>/Philosopher/Philosopher-Regular.ttf`.                                             |
+| `cssPath`                  | `string`                 |     | Absolute path to the compiled CSS file copied into the HTML build output. Defaults to `<outputPath>/output.css`.                                   |
+| `draftWatermarkHtml`       | `string`                 |     | HTML string injected as a watermark on every page in non-production builds. Example: `'<strong>Draft</strong>'`. Default: `''`.                    |
+| `chapterRefPattern`        | `string \| null`         |     | Regex character class body for inline room-reference linking. E.g. `'A-FPQS'` matches `(A4)`, `(S12)`. Default: `'A-K'`. Set to `null` to disable. |
+| `aliases`                  | `AliasEntry[]`           |     | Extra `[pattern, replacement]` pairs appended to the alias macro. Pattern may be a string or a global `RegExp`.                                    |
+| `macros`                   | `MacroFn[]`              |     | Additional `(markdown, config) => markdown` transforms appended after the built-in macro pipeline.                                                 |
 
 ### Per-document fields (`IDocumentConfig`)
 
-All top-level defaults apply. Documents can override any field. Document-specific additions:
+All `IBaseConfig` fields apply and can be overridden per-document. Document-specific additions:
 
 | Field               | Type             | Description                                                                     |
 | ------------------- | ---------------- | ------------------------------------------------------------------------------- |
-| `id`                | `string`         | Unique document identifier used in file paths and conditionals                  |
+| `id`                | `string`         | **Required.** Unique document identifier used in file paths and conditionals.   |
 | `documentTitle`     | `string`         | Title embedded in the PDF                                                       |
-| `documentFileName`  | `string`         | Output filename template, `{{version}}` is replaced with `package.json` version |
+| `documentFileName`  | `string`         | Output filename template; `{{version}}` is replaced with `package.json` version |
 | `coverHtmlFile`     | `string \| null` | Source filename for the front cover (no page delimiter appended)                |
 | `backCoverHtmlFile` | `string \| null` | Source filename for the back cover                                              |
 | `skipBuild`         | `boolean`        | Exclude this document from default (no-args) builds                             |
-| `include`           | `string[]`       | Allowlist of Markdown filenames; overrides `skipped` and `includePattern`       |
-| `includePattern`    | `RegExp`         | Regex allowlist; only matching filenames are built                              |
 | `buildPartSize`     | `number`         | Pages per PDF chunk (overrides auto-calculation)                                |
 | `buildProcessesNum` | `number`         | Number of parallel Chromium instances for this document                         |
 
@@ -200,16 +223,18 @@ Macros are processed by `macros/index.ts` in a fixed pipeline before Markdown re
 
 ### Pipeline order
 
-| #   | Handler                | What it does                                                  |
-| --- | ---------------------- | ------------------------------------------------------------- |
-| 1   | `parseConditionalMode` | Inline conditionals                                           |
-| 2   | `addAliases`           | HTML comment macros and item/stats shortcuts                  |
-| 3   | `convertNamedSections` | `<!-- named[id] /-->` → hidden anchor elements                |
-| 4–9 | `glue*`                | Non-breaking space insertion between words, units, shorthands |
-| 10  | `convertListToTable`   | Converts special Markdown lists to HTML tables                |
-| 11  | `convertRefInserts`    | Inlines referenced content blocks from `$refs-*.md`           |
-| 12  | `convertStatsInserts`  | Inlines stat blocks                                           |
-| 13  | `linkify`              | Auto-links room references `(A4)` and room headings           |
+| #   | Handler                | What it does                                                          |
+| --- | ---------------------- | --------------------------------------------------------------------- |
+| 1   | `convertDumpInserts`   | `<!-- cmd[dump] ref-file[…] /-->` → all entries from a reference file |
+| 2   | `parseConditionalMode` | Inline conditionals                                                   |
+| 3   | `addAliases`           | HTML comment macros and item/stats shortcuts                          |
+| 4   | `convertNamedSections` | `<!-- named[id] /-->` → hidden anchor elements                        |
+| 5–9 | `glue*`                | Non-breaking space insertion between words, units, shorthands         |
+| 10  | `convertListToTable`   | Converts special Markdown lists to HTML tables                        |
+| 11  | `convertRefInserts`    | Inlines referenced content blocks from `$refs-*.md`                   |
+| 12  | `convertStatsInserts`  | Inlines stat blocks                                                   |
+| 13  | `linkify`              | Auto-links room references `(A4)` and room headings                   |
+| 14… | `config.macros`        | Additional custom macros supplied via `IBaseConfig.macros`            |
 
 Macros also run on the content of each reference block before it is inserted (step 11 calls `handleMacros` recursively
 on resolved content). The `convertRefInserts` handler itself is excluded from that recursive pass to prevent infinite
@@ -276,21 +301,18 @@ Output:
 Six micro-macros that prevent unwanted line breaks around numbers, units, abbreviations, and compound terms. They run as
 separate pipeline steps so they can be reordered or disabled individually.
 
-| Function                    | Pattern                       | Result                           |
-| --------------------------- | ----------------------------- | -------------------------------- |
-| `glueWords`                 | `2:6`                         | `<nobr>2:6</nobr>`               |
-| `glueUnits`                 | `10 м`, `5 фунтов`            | `10&nbsp;м`, `5&nbsp;фунтов`     |
-| `glueShorthands`            | `и т. д.`, `т. е.`            | `<nobr>и т. д.</nobr>`           |
-| `glueUnitsWithNoLineBreaks` | `10′`, `5″`                   | `<nobr>10′</nobr>`               |
-| `glueCrystalsAlike`         | `Телепорт-кристалл`, `t-поле` | `<nobr>Телепорт-кристалл</nobr>` |
-| `glueDamageUnits`           | `2d6 урона`, `3 раунда`       | `2d6&nbsp;урона`                 |
+| Function                    | Pattern                 | Result                       |
+| --------------------------- | ----------------------- | ---------------------------- |
+| `glueWords`                 | `2:6`                   | `<nobr>2:6</nobr>`           |
+| `glueUnits`                 | `10 м`, `5 фунтов`      | `10&nbsp;м`, `5&nbsp;фунтов` |
+| `glueShorthands`            | `и т. д.`, `т. е.`      | `<nobr>и т. д.</nobr>`       |
+| `glueUnitsWithNoLineBreaks` | `10′`, `5″`             | `<nobr>10′</nobr>`           |
+| `glueDamageUnits`           | `2d6 урона`, `3 раунда` | `2d6&nbsp;урона`             |
 
 **Supported units** (`glueUnits`): мм, см, зм, фунтов.
 
 **Supported abbreviations** (`glueShorthands`): и т. д., и т.д., и т. п., и т.п., в т. ч., в т.ч., и др., и пр., т. д.,
 т.д., т. п., т.п., т. е., т.е., т. к., т.к., т. н., т.н.
-
-**Crystal prefixes** (`glueCrystalsAlike`): Телепорт, Хроно, t, g, f — joined by a hyphen to `кристалл*` or `пол*`.
 
 **Damage/duration units** (`glueDamageUnits`): урон*, ход*, раунд*, раз*. Handles both dice notation (`2d6 урона`) and
 plain numbers (`3 раунда`).
@@ -390,27 +412,56 @@ The output is wrapped in `<div class="stats-insert no-page-break">`.
 
 Auto-links room references and room headings. Two passes run sequentially:
 
-1. **Inline refs:** `(A4)` → `<a class="linkified" href="#room-a4">(A4)</a>`
-2. **Headings:** `## A2. Throne Room` → `<h2 id="room-a2">A2. Throne Room</h2>`
-
-Room codes must start with one of the accepted area prefixes followed by one or more digits:
-
-| Prefix | Area            |
-| ------ | --------------- |
-| `A`    | Caves           |
-| `B`    | Quarters        |
-| `C`    | Upper level     |
-| `D`    | Relax zone      |
-| `E`    | Vargothar       |
-| `F`    | Misc            |
-| `P`    | Misc            |
-| `Q`    | Appendix quests |
-| `S`    | Spaceship       |
+1. **Inline refs** (`linkChapters`): `(A4)` → `<a class="linkified" target="_self" href="#room-a4">(A4)</a>`. Matched
+   prefixes come from `config.chapterRefPattern` (a regex character class body). Default: `'A-K'`. Set to `null` to skip
+   this pass entirely.
+2. **Headings** (`linkHeaders`): `## A2. Throne Room` → `<h2 id="room-a2">A2. Throne Room</h2>`. Matched prefixes are
+   hardcoded to `[A-FPQS]` and are not affected by `chapterRefPattern`.
 
 ```markdown
-The passage leads to (A4). → …<a href="#room-a4">(A4)</a>.
+The passage leads to (A4). → …<a class="linkified" target="_self" href="#room-a4">(A4)</a>.
 
 ## S1. Engine Bay → <h2 id="room-s1">S1. Engine Bay</h2>
+```
+
+---
+
+## Frontmatter Reference
+
+Each Markdown file may include a YAML frontmatter block. The following keys are recognised by the oktozine builder
+(`IDocumentPageMetadata`).
+
+| Key             | Type       | Required | Description                                                                                                |
+| --------------- | ---------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `template`      | `string`   | **yes**  | Filename (relative to `templatesDir`) of the EJS/HTML page template to render this file into.              |
+| `name`          | `string`   | no       | Sets the `id` and `data-id` attributes on the section wrapper element (`data-id-placeholder` in template). |
+| `use`           | `string[]` | no       | List of template placeholder keys to activate. See **`use` values** below.                                 |
+| `picture-id`    | `string`   | no       | Replaces the `{{pictureId}}` placeholder in the template.                                                  |
+| `seqPage`       | `boolean`  | no       | When `true`, this file generates multiple sequential HTML output files.                                    |
+| `seqPageNum`    | `number`   | no       | 1-based index for the current sequential page. Set automatically by the pipeline; do not set manually.     |
+| `documentTitle` | `string`   | no       | Overrides the document title for this individual page.                                                     |
+
+### `use` values
+
+The `use` array activates optional template placeholder substitutions:
+
+| Value             | Template placeholder | Replaced with                                                                    |
+| ----------------- | -------------------- | -------------------------------------------------------------------------------- |
+| `"version"`       | `{{version}}`        | Consuming app's `package.json` version; appends `-dev` in non-production builds. |
+| `"documentTitle"` | `{{documentTitle}}`  | The `documentTitle` frontmatter key, or the document config's `documentTitle`.   |
+| `"buildMode"`     | `{{buildMode}}`      | Empty string in production; the `draftWatermarkHtml` config value otherwise.     |
+
+### Example
+
+```yaml
+---
+template: chapter.html
+name: chapter-intro
+documentTitle: Introduction
+use:
+  - version
+  - buildMode
+---
 ```
 
 ---
@@ -420,7 +471,7 @@ The passage leads to (A4). → …<a href="#room-a4">(A4)</a>.
 | Variable          | Description                                                                           |
 | ----------------- | ------------------------------------------------------------------------------------- |
 | `HTML_NO_SKIP`    | Set to any truthy value to bypass the HTML timestamp cache (same as `--html-no-skip`) |
-| `LOG_LEVEL`       | Pino log level (overridden by `--log-level`)                                          |
+| `PINO_LOG_LEVEL`  | Pino log level (overridden by `--log-level`)                                          |
 | `PDF_PARALLEL`    | Max parallel Chromium instances per PDF render phase (default: `4`)                   |
 | `BUILD_MODE`      | Set to `production` to strip the draft watermark and `-dev` version suffix            |
 | `BUILD_DUMP_HTML` | Set to `false` to skip writing the `$fullHtmlContent-*.html` debug dump               |
