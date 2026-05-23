@@ -37,6 +37,7 @@ export const resolveContentPaths = (
 }
 
 // FIXME use consuming app path
+// TODO integrate into resolveContentPaths
 export const DEFAULT_BUILD_PATH = path.join(process.cwd(), 'build')
 
 export const getHtmlBuildPath = <T extends { outputPath: string }>(config: T) => {

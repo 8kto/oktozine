@@ -44,7 +44,6 @@ const convertMarkdownToHtml = async (
   }
 
   return {
-    // TODO figure out why the entire build config is needed here
     metadata: {
       ...config,
       ...frontMatter.data,

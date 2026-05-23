@@ -181,7 +181,6 @@ export interface IDocumentPageMetadata {
   template?: string
   name?: string
   use?: MetadataUseKeys[]
-  // FIXME naming?
   'picture-id'?: string
   seqPage?: boolean
   seqPageNum?: number
