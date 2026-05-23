@@ -20,9 +20,9 @@
  *
  * @example Item shorthand
  * ```markdown
- * <!-- item[Меч-кладенец] no-page-break /-->
+ * <!-- item[Magic sword] no-page-break /-->
  * ↓ becomes ↓
- * <!-- cmd[ref] header[Меч-кладенец] detailed  no-page-break  /-->
+ * <!-- cmd[ref] header[Magic sword] detailed  no-page-break  /-->
  * ```
  *
  * @example Conditional block

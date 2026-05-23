@@ -9,12 +9,12 @@
  *
  * @example Markdown input
  * ```markdown
- * `{{ main: Для основной версии | osr: Для OSR }}`
+ * `{{ main: Main version text | osr: OSR version text }}`
  * ```
  *
  * @example Output (when `config.id === 'main'`)
  * ```html
- * <span class="conditional-block conditional-block--main">Для основной версии</span>
+ * <span class="conditional-block conditional-block--main">Main version text</span>
  * ```
  *
  * @example Alias fallback (`config.id === 'bestiary-osr'`, `conditionalsAlias: { 'bestiary-osr': 'bestiary' }`)

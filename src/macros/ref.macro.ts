@@ -24,7 +24,7 @@
  *
  * @example Via item/stats shorthand (expanded by `addAliases` before this macro runs)
  * ```markdown
- * <!-- item[Меч-кладенец] no-page-break /-->
+ * <!-- item[Magic sword] no-page-break /-->
  * <!-- stats[Goblin] /-->
  * ```
  */

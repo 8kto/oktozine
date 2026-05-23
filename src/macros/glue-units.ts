@@ -1,4 +1,4 @@
-/**
+/** TODO split up to EN/RU versions
  * @file Typography macros that prevent unwanted line breaks around numbers,
  * units, abbreviations, and compound terms.
  *

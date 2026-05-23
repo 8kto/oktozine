@@ -1,4 +1,4 @@
-/**
+/** TODO split up EN/RU versions
  * @file Expands inline stat-block shorthand into styled HTML.
  *
  * Stat blocks are written as single-backtick fenced objects using a compact
