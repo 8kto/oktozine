@@ -10,3 +10,5 @@ tests/pdf-snapshots/current/
 tests/pdf-snapshots/diff/
 tests/pdf-snapshots/reports/
 docs/superpowers/
+dist
+.claude

@@ -15,7 +15,7 @@
     "es2021": true,
     "jest": true
   },
-  "ignorePatterns": ["venv", "samples"],
+  "ignorePatterns": ["venv", "samples", "dist", "build", "coverage", "node_modules"],
   "rules": {
     "semi": ["error", "never"],
     "comma-dangle": ["error", "always-multiline"],

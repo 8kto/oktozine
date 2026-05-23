@@ -1,13 +1,10 @@
 import fs, { existsSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import path, { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+import oktozinePackage from '../../package.json' with { type: 'json' }
 import type { BuildModuleOptions, IDocumentConfig, IModuleBuilderConfig } from '../types'
 import { DEFAULT_BUILD_PATH } from './paths'
-
-const _require = createRequire(import.meta.url)
-const oktozinePackage = _require('../../package.json') as { version: string }
 
 type ConsumingAppPackageJson = {
   name?: string
@@ -49,7 +46,9 @@ const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
 const importConfig = async (absPath: string): Promise<IModuleBuilderConfig> => {
   const mod = await import(pathToFileURL(absPath).href)
 
-  return Object.prototype.hasOwnProperty.call(mod, 'default') ? mod.default : mod
+  return Object.prototype.hasOwnProperty.call(mod, 'default')
+    ? (mod as { default: IModuleBuilderConfig }).default
+    : (mod as IModuleBuilderConfig)
 }
 
 export const findAppRoot = (start: string): string => {
@@ -77,10 +76,8 @@ export async function loadBuildConfig(moduleOptions: BuildModuleOptions, cliPath
   const appRoot = findAppRoot(process.cwd())
 
   const candidates = [
-    resolve(appRoot, 'oktozine.build.conf.ts'),
     resolve(appRoot, 'oktozine.build.conf.mjs'),
     resolve(appRoot, 'oktozine.build.conf.js'),
-    resolve(appRoot, 'conf/oktozine.build.conf.ts'),
     resolve(appRoot, 'conf/oktozine.build.conf.mjs'),
     resolve(appRoot, 'conf/oktozine.build.conf.js'),
   ]
