@@ -17,4 +17,11 @@ export default defineConfig([
     banner: { js: '#!/usr/bin/env node' },
     tsconfig: 'tsconfig.build.json',
   },
+  {
+    entry: ['src/server-daemon.ts'],
+    format: ['esm'],
+    dts: false,
+    outDir: 'dist',
+    tsconfig: 'tsconfig.build.json',
+  },
 ])
