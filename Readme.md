@@ -1,71 +1,88 @@
-# Oktozine Build System
+# Oktozine
 
-TypeScript build pipeline that converts Markdown source files into styled PDF documents via Puppeteer. Supports multiple
-document "documents" (e.g. main module, OSR variant, bestiary, maps), parallel PDF rendering, and a custom Markdown
-macro system.
+![Tests pass](https://github.com/8kto/oktozine/actions/workflows/test.yml/badge.svg)
+
+npm library that converts Markdown source files into styled PDF documents via Puppeteer. Supports multiple document
+variants (e.g. main module, OSR variant, bestiary, maps), parallel PDF rendering, and a custom Markdown macro system.
+
+---
+
+## Installation
+
+```bash
+npm install oktozine
+# or
+yarn add oktozine
+```
 
 ---
 
 ## Quick Start
 
+1. Create a config file `oktozine.build.conf.mjs` (or `.js`) at your project root or in `conf/`:
+
+```js
+/** @import { IModuleBuilderConfig, IDocumentConfig } from 'oktozine/types' */
+
+/** @type {IModuleBuilderConfig} */
+const config = {
+  version: '2',
+  releaseDocumentIds: ['main'],
+  template: 'two-columns.html',
+  header: 'My Document',
+  footer: '2025, My Name',
+  cssPath: 'build/output.css',
+  documents: [
+    /** @type {IDocumentConfig} */ ({
+      id: 'main',
+      documentTitle: 'My Document',
+      documentFileName: 'My Document ({{version}}).pdf',
+    }),
+  ],
+}
+
+export default config
+```
+
+2. Run the build:
+
 ```bash
-# --- Clean ---
-yarn clean                  # remove build/ output
-yarn clean:release          # remove build/release/
+# Build all documents
+oktozine
 
-# --- Styles ---
-yarn build:styles           # compile Tailwind CSS once
-yarn watch:styles           # watch + recompile on change
+# Build a specific document
+oktozine main
 
-# --- Dev builds ---
-yarn build                  # main (default)
-yarn build:main
-yarn build:map
-yarn build:osr
-yarn build:all              # all documents + bestiaries
+# Force rebuild all HTML files
+oktozine --html-no-skip
 
-yarn build:bestiary
-yarn build:bestiary-osr
-yarn build:bestiaries       # both bestiaries
-
-# --- Production builds (clean + no dev watermark) ---
-yarn prod                   # main (default)
-yarn prod:main
-yarn prod:map
-yarn prod:osr
-yarn prod:all               # all documents + bestiaries
-
-yarn prod:bestiary
-yarn prod:bestiary-osr
-yarn prod:bestiaries        # both bestiaries
-
-# --- Release ---
-yarn release-check          # verify release readiness
-yarn release                # run full release
-
-# --- Invoke the build script directly ---
-yarn tsx scripts/oktozine/build-module.ts <documentId> [options]
+# Production build (no draft watermark, no -dev suffix)
+oktozine --production
 ```
 
 ---
 
-## CLI — `build-module.ts`
-
-The entry point for all builds.
+## CLI
 
 ```
-Usage: tsx scripts/oktozine/build-module.ts <documentIds> [options]
+Usage: oktozine <document IDs> [options]
 
-<documentIds>        Comma-separated document IDs to build (omit to build all non-skipped documents)
--h, --help       Show help and exit
--x, --html-no-skip
-                 Rebuild every HTML file, ignoring the timestamp cache
---parallel       Render PDFs for all documents in parallel (default: serial)
---log-level      Pino log level: trace | debug | info | warn | error | fatal
---config <path>  Path to a custom build config file. Auto-discovered when omitted:
-                 oktozine.build.conf.{ts,mjs,js} at the project root, then
-                 conf/oktozine.build.conf.{ts,mjs,js}
+<document IDs>                      Comma-separated document IDs to build (omit to build all)
+-h, --help                          Show help and exit
+-x, --html-no-skip, no-html-skip    Rebuild every HTML file, skipping the cache
+--parallel                          Build PDFs in parallel (default: serial)
+--production                        Production mode: no draft watermark, no -dev version suffix
+--skip-bookmarks                    Skip adding PDF bookmarks
+--log-level <level>                 Pino log level: trace | debug | info | warn | error | fatal
+--config <path>                     Path to a custom build config file
+--output-dir <path>                 Base output directory (default: <project-root>/build)
 ```
+
+Config is auto-discovered in this order:
+- `oktozine.build.conf.mjs`
+- `oktozine.build.conf.js`
+- `conf/oktozine.build.conf.mjs`
+- `conf/oktozine.build.conf.js`
 
 **Build phases** (always in this order):
 
@@ -77,9 +94,10 @@ Each document config is deep-merged over the top-level defaults before being pas
 
 ---
 
-## Build Config — `oktozine.build.conf.ts`
+## Build Config — `oktozine.build.conf.mjs`
 
-Exports a default `IModuleBuilderConfig` object that describes every document.
+Exports a default `IModuleBuilderConfig` object that describes every document. The config file must be ESM (use
+`.mjs`, or `.js` with `"type": "module"` in your `package.json`).
 
 ### Top-level fields (`IModuleBuilderConfig` / `IBaseConfig`)
 
@@ -91,7 +109,7 @@ per-document.
 | `version`                  | `string`                 | ✓   | Config format version. Must satisfy `[major.minor, major+1.x)` of the installed oktozine package.                                                  |
 | `documents`                | `IDocumentConfig[]`      | ✓   | List of documents to build                                                                                                                         |
 | `releaseDocumentIds`       | `string[]`               | ✓   | Document IDs included in a production release                                                                                                      |
-| `outputPath`               | `string`                 |     | **Required.** Root directory for all build output. Defaults to `<cwd>/build` when set via CLI.                                                     |
+| `outputPath`               | `string`                 |     | Root directory for all build output. Defaults to `<cwd>/build`.                                                                                    |
 | `isProduction`             | `boolean`                |     | Strips the `-dev` version suffix and disables the draft watermark. Set via `--production` or `BUILD_MODE=production`.                              |
 | `useHtmlRebuild`           | `boolean`                |     | Force rebuild all HTML files regardless of the timestamp cache. Set via `--html-no-skip`.                                                          |
 | `usePdfBookmarks`          | `boolean`                |     | Add PDF named-destination bookmarks to the output. [false]                                                                                         |
@@ -105,12 +123,12 @@ per-document.
 | `referenceFiles`           | `string[]`               |     | Paths to `$refs-*.md` files loaded into the reference dictionary                                                                                   |
 | `conditionalsAlias`        | `Record<string, string>` |     | Maps a document ID to another for `{{  }}` conditional fallback (e.g. `bestiary-osr → bestiary`)                                                   |
 | `tocConfig`                | `ITocConfig`             |     | TOC settings (see **TOC Config** section)                                                                                                          |
-| `tocOverrides`             | `ITocOverrides`          |     | Global TOC overrides applied before per-document overrides. Replaces a separate `conf/oktozin.toc.conf.ts` file.                                   |
+| `tocOverrides`             | `ITocOverrides`          |     | Global TOC overrides applied before per-document overrides.                                                                                        |
 | `skipHeaderAndFooter`      | `number[]`               |     | 1-based page numbers that skip both header and footer. Negative values count from the end (`-1` = last page).                                      |
 | `skipHeader`               | `number[]`               |     | Same, but header only                                                                                                                              |
 | `skipFooter`               | `number[]`               |     | Same, but footer only                                                                                                                              |
 | `bookmarksConfig`          | `IBookmarksConfig`       |     | PDF bookmark config: `{ config: string; skipFirstPages?: number; skipLastPages?: number }`                                                         |
-| `projectRoot`              | `string`                 |     | Absolute path to the consuming app root. Defaults to `process.cwd()`.                                                                              |
+| `projectRoot`              | `string`                 |     | Absolute path to the consuming app root. Defaults to `process.cwd()`.                                                                             |
 | `markdownDir`              | `string`                 |     | Directory containing Markdown sources. Defaults to `<projectRoot>/src/markdown`.                                                                   |
 | `templatesDir`             | `string`                 |     | Directory containing EJS/HTML page templates. Defaults to `<projectRoot>/src/html`.                                                                |
 | `imagesDir`                | `string`                 |     | Directory containing image assets. Defaults to `<projectRoot>/src/images`.                                                                         |
@@ -154,14 +172,17 @@ warm (second build after a change).
 
 ### Example
 
-```typescript
-const mainModuleConf: Partial<IDocumentConfig> = {
+```js
+/** @import { IDocumentConfig, IModuleBuilderConfig } from 'oktozine/types' */
+
+/** @type {Partial<IDocumentConfig>} */
+const mainModuleConf = {
   id: 'main',
-  documentTitle: 'Зеница Варготара',
-  documentFileName: 'Зеница Варготара ({{version}}).pdf',
-  coverHtmlFile: '0000-front-cover-main.md',
+  documentTitle: 'My Document',
+  documentFileName: 'My Document ({{version}}).pdf',
+  coverHtmlFile: '0000-front-cover.md',
   backCoverHtmlFile: '9999-back-cover.md',
-  skipped: ['0405-appendix-q1--micomant--osr.md'],
+  skipped: ['0405-appendix-osr.md'],
   tocConfig: {
     headersSelector: 'h1:not([data-skip-toc]), h2:not([data-skip-toc]), h3, h4, h5',
     rootClassName: 'toc--main',
@@ -172,6 +193,19 @@ const mainModuleConf: Partial<IDocumentConfig> = {
   skipHeaderAndFooter: [-1, 1, 2, 3], // last page + first 3 pages
   skipFooter: [17, 23],
 }
+
+/** @type {IModuleBuilderConfig} */
+const config = {
+  version: '2',
+  releaseDocumentIds: ['main'],
+  template: 'two-columns.html',
+  header: 'My Document',
+  footer: '2025, My Name',
+  cssPath: 'build/output.css',
+  documents: [/** @type {IDocumentConfig} */ (mainModuleConf)],
+}
+
+export default config
 ```
 
 ---
@@ -200,8 +234,6 @@ serialized and evaluated as a browser function.
 | `dropItemsFromLabels` | `string[]`                                       | Headings whose _children_ are removed, but the heading itself stays |
 | `alwaysInclude`       | `string[]`                                       | Headings that are shown even if `renderMaxLevel` would hide them    |
 | `documents`           | `Partial<Record<DocumentId, ITocOverridesBase>>` | Per-document overrides merged on top of the top-level overrides     |
-
-Overrides are defined in `conf/oktozin.toc.conf.ts` and passed into `buildToc` at PDF build time.
 
 ### TOC build pipeline
 
@@ -496,8 +528,19 @@ build/
 
 ## Adding a new Document
 
-1. Add a `Partial<IDocumentConfig>` object in `conf/oktozin.build.conf.ts`.
+1. Add a `Partial<IDocumentConfig>` object in `oktozine.build.conf.mjs`.
 2. Include it in the `documents` array.
-3. If needed, add per-document TOC overrides in `conf/oktozin.toc.conf.ts` under `tocOverrides.documents.<id>`.
+3. If needed, add per-document TOC overrides via `tocOverrides.documents.<id>` in the top-level config.
 4. Add it to `releaseDocumentIds` if it should be included in production releases.
-5. Run `tsx scripts/oktozine/build-module.ts <id> --html-no-skip` to verify.
+5. Run `oktozine <id> --html-no-skip` to verify.
+
+---
+
+## Programmatic API
+
+```js
+import { buildHtml } from 'oktozine/build-html'
+import { buildPdf } from 'oktozine/build-pdf'
+```
+
+Both functions accept a fully-merged `IDocumentConfig` (top-level defaults deep-merged with the document config).

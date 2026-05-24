@@ -6,7 +6,7 @@ import { BuildModuleOptions } from '../types'
 import { logger } from './logger'
 
 const USAGE = `
-Usage: tsx scripts/oktozine/build-module.ts <document IDs> [options]
+Usage: oktozine <document IDs> [options]
 
 <document IDs>                      Comma-separated list of document IDs to build (positional)
 -h, --help                          Show this help and exit
@@ -15,7 +15,7 @@ Usage: tsx scripts/oktozine/build-module.ts <document IDs> [options]
 --production                        Build PDFs in production mode (no -dev suffixes etc., default: false)
 --skip-bookmarks                    Skip adding PDF bookmarks (default: adds)
 --log-level <level>                 Set pino logger level (trace|debug|info|warn|error|fatal)
---config <path>                     Path to build config file (e.g. ./conf/build.conf.ts)
+--config <path>                     Path to build config file (e.g. ./conf/oktozine.build.conf.mjs)
 --output-dir <path>                 Base output directory (default: <project-root>/build); final PDFs go into <path>/release/
 `.trim()
 

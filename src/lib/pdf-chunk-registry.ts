@@ -1,4 +1,3 @@
-// scripts/oktozine/lib/pdf-chunk-registry.ts
 import { createHash } from 'node:crypto'
 
 import fs from 'fs-extra'
