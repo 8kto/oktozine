@@ -36,8 +36,7 @@ const isPortFree = (port: number): Promise<boolean> =>
     probe.listen(port, '127.0.0.1')
   })
 
-export const getServerPidFile = (port: number): string =>
-  path.join(os.tmpdir(), `oktozine-server-${port}.pid`)
+export const getServerPidFile = (port: number): string => path.join(os.tmpdir(), `oktozine-server-${port}.pid`)
 
 /**
  * Starts a static file server serving `serveDir` on the given port.
