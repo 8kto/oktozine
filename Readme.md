@@ -1,5 +1,7 @@
 # Oktozine
 
+![Tests pass](https://github.com/8kto/oktozine/actions/workflows/test.yml/badge.svg)
+
 npm library that converts Markdown source files into styled PDF documents via Puppeteer. Supports multiple document
 variants (e.g. main module, OSR variant, bestiary, maps), parallel PDF rendering, and a custom Markdown macro system.
 
