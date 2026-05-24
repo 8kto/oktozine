@@ -1,5 +1,5 @@
+- ! web server
 - server: собирать файлы в отдельную директорию
 - номера страниц в TOC
 - handleLists(content), обрабатывает обычные списки, должен только стат-блоки (?)
 - rename: room to chapter
-- upd docs
