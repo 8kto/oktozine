@@ -1,4 +1,3 @@
-// scripts/oktozine/lib/pdf-html-assembler.ts
 import fs from 'fs-extra'
 import path from 'path'
 
