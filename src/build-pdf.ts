@@ -730,15 +730,23 @@ const createDocumentContentPdf = async (
 
   let chunkResults: Array<{ i: number; buf: Buffer | null }>
   try {
-    chunkResults = await Promise.all(
-      ranges.map(async (range, i) => {
+    // Worker-pool: at most PDF_PARALLEL chunks render at a time.
+    // Starting all N chunks simultaneously saturates the HTTP server when N is large.
+    const cssPath = getCssPath(config)
+    const ordered: Array<{ i: number; buf: Buffer | null }> = new Array(ranges.length)
+    let next = 0
+    const worker = async (): Promise<void> => {
+      while (next < ranges.length) {
+        const i = next++
         if (incrPlan.cached.has(i)) {
-          return { i, buf: incrPlan.cached.get(i)! }
+          ordered[i] = { i, buf: incrPlan.cached.get(i)! }
+        } else {
+          ordered[i] = { i, buf: await renderChunk(finalHtml, ranges[i], cssPath) }
         }
-
-        return { i, buf: await renderChunk(finalHtml, range, getCssPath(config)) }
-      }),
-    )
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(PDF_PARALLEL, ranges.length) }, worker))
+    chunkResults = ordered
   } catch (err) {
     logger.error(err)
 
