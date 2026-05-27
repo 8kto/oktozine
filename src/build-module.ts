@@ -9,7 +9,7 @@ import { logger, setLogLevel } from './lib/logger'
 import { measure } from './lib/measure'
 import { getHtmlBuildPath } from './lib/paths'
 import { runPhase } from './lib/phase'
-import { spawnServerDaemon, startStaticServer, stopServerDaemon, stopStaticServer } from './lib/web-server'
+import { type ServerHandle, spawnServerDaemon, startStaticServer, stopServerDaemon, stopStaticServer } from './lib/web-server'
 import { IDocumentConfig } from './types'
 
 export const main = async (): Promise<void> => {
@@ -74,7 +74,7 @@ export const main = async (): Promise<void> => {
   }
 
   // Start static file server for image serving (if configured)
-  let webServer: import('node:http').Server | null = null
+  let webServer: ServerHandle | null = null
   if (buildConfig.webServerPort) {
     const serveDir = getHtmlBuildPath(buildConfig as { outputPath: string })
     if (buildConfig.keepWebServer) {
@@ -91,14 +91,24 @@ export const main = async (): Promise<void> => {
       if (isParallel) {
         await Promise.all(
           docsToBuild.map(async (conf: IDocumentConfig) => {
+            const endBuildDocMeasure = measure()
+
             const merged = deepmerge(defaults, conf)
             await runPhase(`buildPdf() failed for document "${conf.id}"`, () => buildPdf(merged))
+
+            const measuredBuildTime = endBuildDocMeasure()
+            logger.info(chalk.yellow(`[${conf.id}] build ended in ${measuredBuildTime}`))
           }),
         )
       } else {
         for (const conf of docsToBuild) {
+          const endBuildDocMeasure = measure()
+
           const merged = deepmerge(defaults, conf)
           await runPhase(`buildPdf() failed for document "${conf.id}"`, () => buildPdf(merged))
+        
+          const measuredBuildTime = endBuildDocMeasure()
+          logger.info(chalk.yellow(`[${conf.id}] build ended in ${measuredBuildTime}`))
         }
       }
     })
