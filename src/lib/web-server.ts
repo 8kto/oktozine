@@ -1,29 +1,16 @@
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
-import http from 'node:http'
 import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import httpServerLib from 'http-server'
+
 import { logger } from './logger'
 
-const MIME: Record<string, string> = {
-  '.avif': 'image/avif',
-  '.css': 'text/css',
-  '.gif': 'image/gif',
-  '.html': 'text/html',
-  '.jpeg': 'image/jpeg',
-  '.jpg': 'image/jpeg',
-  '.js': 'application/javascript',
-  '.otf': 'font/otf',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-  '.ttf': 'font/ttf',
-  '.webp': 'image/webp',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-}
+/** Minimal handle returned by startStaticServer — just needs to be closeable. */
+export type ServerHandle = { close: () => void }
 
 const isPortFree = (port: number): Promise<boolean> =>
   new Promise((resolve) => {
@@ -36,54 +23,53 @@ const isPortFree = (port: number): Promise<boolean> =>
     probe.listen(port, '127.0.0.1')
   })
 
-export const getServerPidFile = (port: number): string => path.join(os.tmpdir(), `oktozine-server-${port}.pid`)
+/** Resolves when something starts listening on `port`, or rejects after `timeoutMs`. */
+const waitForPort = (port: number, timeoutMs = 5000): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const deadline = Date.now() + timeoutMs
+    const check = () => {
+      isPortFree(port).then((free) => {
+        if (!free) {
+          resolve()
+
+          return
+        }
+        if (Date.now() > deadline) {
+          reject(new Error(`Server did not become available on port ${port} within ${timeoutMs} ms`))
+
+          return
+        }
+        setTimeout(check, 50)
+      })
+    }
+    setTimeout(check, 50)
+  })
+
+export const getServerPidFile = (port: number): string =>
+  path.join(os.tmpdir(), `oktozine-server-${port}.pid`)
 
 /**
- * Starts a static file server serving `serveDir` on the given port.
+ * Starts an http-server instance serving `serveDir` on the given port.
  * If the port is already occupied, assumes an existing process is serving and
  * returns `null` (the caller should not attempt to close it).
  */
-export const startStaticServer = async (serveDir: string, port: number): Promise<http.Server | null> => {
+export const startStaticServer = async (serveDir: string, port: number): Promise<ServerHandle | null> => {
   if (!(await isPortFree(port))) {
     logger.info(`Web server: port ${port} already in use — reusing existing process`)
 
     return null
   }
 
-  const server = http.createServer((req, res) => {
-    const urlPath = decodeURIComponent((req.url ?? '/').split('?')[0])
-    const filePath = path.join(serveDir, urlPath)
-
-    res.setHeader('Access-Control-Allow-Origin', '*')
-
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204)
-      res.end()
-
-      return
-    }
-
-    fs.stat(filePath, (statErr, stats) => {
-      if (statErr || !stats.isFile()) {
-        res.writeHead(404)
-        res.end()
-
-        return
-      }
-
-      const ext = path.extname(filePath).toLowerCase()
-      res.writeHead(200, { 'Content-Type': MIME[ext] ?? 'application/octet-stream' })
-      fs.createReadStream(filePath).pipe(res)
-    })
-  })
-
-  await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve))
+  const server = httpServerLib.createServer({ root: serveDir, cors: true, cache: -1 })
+  // http-server delegates listen() to node's http.Server, so hostname arg is accepted
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await new Promise<void>((resolve) => (server as any).listen(port, '127.0.0.1', resolve))
   logger.info(`Web server: serving ${serveDir} on http://localhost:${port}`)
 
   return server
 }
 
-export const stopStaticServer = (server: http.Server | null): void => {
+export const stopStaticServer = (server: ServerHandle | null): void => {
   if (server) {
     server.close()
     logger.info('Web server: stopped')
@@ -103,35 +89,19 @@ export const spawnServerDaemon = async (serveDir: string, port: number): Promise
   }
 
   const pidFile = getServerPidFile(port)
-  // Resolve daemon script relative to this compiled file (dist/lib/ → dist/)
-  const daemonScript = path.resolve(fileURLToPath(import.meta.url), '../../server-daemon.js')
+  const daemonScript = path.join(path.dirname(fileURLToPath(import.meta.url)), 'server-daemon.js')
 
   const child = spawn(process.execPath, [daemonScript, serveDir, String(port), pidFile], {
     detached: true,
     stdio: 'ignore',
   })
+  // Write PID before unreffing so stopServerDaemon can find the process later
+  fs.writeFileSync(pidFile, String(child.pid), 'utf8')
   child.unref()
 
-  // Wait until the daemon writes its PID file (signals it's listening)
-  await new Promise<void>((resolve, reject) => {
-    const deadline = Date.now() + 5000
-    const check = () => {
-      if (fs.existsSync(pidFile)) {
-        resolve()
-
-        return
-      }
-      if (Date.now() > deadline) {
-        reject(new Error(`Web server daemon did not start within 5 s (port ${port})`))
-
-        return
-      }
-      setTimeout(check, 100)
-    }
-    check()
-  })
-
-  logger.info(`Web server: daemon started on http://localhost:${port} (pid file: ${pidFile})`)
+  // Wait until the daemon is actually accepting connections
+  await waitForPort(port)
+  logger.info(`Web server: daemon started on http://localhost:${port} (pid: ${child.pid})`)
 }
 
 /**
