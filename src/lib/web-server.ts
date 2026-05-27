@@ -45,8 +45,7 @@ const waitForPort = (port: number, timeoutMs = 5000): Promise<void> =>
     setTimeout(check, 50)
   })
 
-export const getServerPidFile = (port: number): string =>
-  path.join(os.tmpdir(), `oktozine-server-${port}.pid`)
+export const getServerPidFile = (port: number): string => path.join(os.tmpdir(), `oktozine-server-${port}.pid`)
 
 /**
  * Starts an http-server instance serving `serveDir` on the given port.

@@ -7,8 +7,6 @@
  * argv: <serveDir> <port> <pidFile>
  */
 
-import fs from 'node:fs'
-
 import httpServerLib from 'http-server'
 
 const [, , serveDir, portStr, pidFile] = process.argv
