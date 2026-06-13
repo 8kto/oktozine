@@ -29,6 +29,6 @@ const combinedNobrTermsRegex = new RegExp(
  * @param markdown - Source Markdown string.
  * @returns Markdown with compound terms wrapped.
  */
-export const glueCrystalsAlike = (markdown: string): string => {
+export const glueCrystalsAlike = (markdown) => {
   return markdown.replace(combinedNobrTermsRegex, (m) => `<nobr>${m}</nobr>`)
 }

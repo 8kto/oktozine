@@ -1,8 +1,11 @@
-import { IDocumentConfig, IModuleBuilderConfig, ITocOverrides } from 'oktozine/types'
+/** @typedef {import('oktozine/types').IDocumentConfig} IDocumentConfig */
+/** @typedef {import('oktozine/types').IModuleBuilderConfig} IModuleBuilderConfig */
+/** @typedef {import('oktozine/types').ITocOverrides} ITocOverrides */
 
-import { glueCrystalsAlike } from './custom-macros'
+import { glueCrystalsAlike } from './custom-macros.mjs'
 
-const mainTocConf: ITocOverrides = {
+/** @type {ITocOverrides} */
+const mainTocConf = {
   dropLabels: ['Зеница Варготара', 'Содержание'],
   dropItemsFromLabels: [
     'Приложение. Микомант',
@@ -13,7 +16,8 @@ const mainTocConf: ITocOverrides = {
   alwaysInclude: ['Верёвочная лестница', 'Кристаллы', 'Грибы', 'Заклинания Микоманта'],
 }
 
-const tocOverrides: ITocOverrides = {
+/** @type {ITocOverrides} */
+const tocOverrides = {
   dropLabels: ['Содержание'],
   documents: {
     main: mainTocConf,
@@ -23,7 +27,8 @@ const tocOverrides: ITocOverrides = {
 
 const osrAliases = [[' : ', `: `]]
 
-const mainModuleConf: Partial<IDocumentConfig> = {
+/** @type {Partial<IDocumentConfig>} */
+const mainModuleConf = {
   id: 'main',
   documentTitle: 'Зеница Варготара',
   documentFileName: 'Зеница Варготара ({{version}}).pdf',
@@ -50,7 +55,8 @@ const mainModuleConf: Partial<IDocumentConfig> = {
   macros: [glueCrystalsAlike],
 }
 
-const mainBestiaryConf: Partial<IDocumentConfig> = {
+/** @type {Partial<IDocumentConfig>} */
+const mainBestiaryConf = {
   id: 'bestiary',
   documentTitle: 'Каталог Аномалий',
   documentFileName: 'Каталог Аномалий ({{version}}).pdf',
@@ -73,7 +79,8 @@ const mainBestiaryConf: Partial<IDocumentConfig> = {
 }
 
 // FIXME outputPath can be omitted here, but is required everywhere in the scripts
-const config: IModuleBuilderConfig = {
+/** @type {IModuleBuilderConfig} */
+const config = {
   version: '2',
   releaseDocumentIds: ['main', 'bestiary', 'map', 'osr', 'bestiary-osr'],
   template: 'two-columns.html',
@@ -106,8 +113,8 @@ const config: IModuleBuilderConfig = {
   },
   skipHeaderAndFooter: [1, -1], // skip first and last pages
   documents: [
-    mainModuleConf as IDocumentConfig,
-    {
+    /** @type {IDocumentConfig} */ (mainModuleConf),
+    /** @type {IDocumentConfig} */ ({
       ...mainModuleConf,
       id: 'osr',
       documentFileName: 'Зеница Варготара [OSR] ({{version}}).pdf',
@@ -118,9 +125,9 @@ const config: IModuleBuilderConfig = {
       skipped: ['0405-appendix-q1--micomant.md'],
       // fix after conditionals
       aliases: osrAliases,
-    } as IDocumentConfig,
-    mainBestiaryConf as IDocumentConfig,
-    {
+    }),
+    /** @type {IDocumentConfig} */ (mainBestiaryConf),
+    /** @type {IDocumentConfig} */ ({
       ...mainBestiaryConf,
       id: 'bestiary-osr',
       documentFileName: 'Каталог Аномалий [OSR] ({{version}}).pdf',
@@ -130,8 +137,8 @@ const config: IModuleBuilderConfig = {
       },
       // fix after conditionals
       aliases: osrAliases,
-    } as IDocumentConfig,
-    {
+    }),
+    /** @type {IDocumentConfig} */ ({
       id: 'map',
       documentTitle: 'Карты Зеницы Варготара',
       documentFileName: 'Карты Зеницы Варготара ({{version}}).pdf',
@@ -161,7 +168,7 @@ const config: IModuleBuilderConfig = {
         skipFirstPages: 1,
       },
       skipHeaderAndFooter: [2, 3, 4, 5, 6, 7, 8, 9],
-    } as IDocumentConfig,
+    }),
   ],
 }
 
