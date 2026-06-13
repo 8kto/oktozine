@@ -62,6 +62,113 @@ oktozine --production
 
 ---
 
+## Project Structure
+
+The builder reads sources from your project directory and writes all output under `build/`. Directories default to the
+paths below; every path is overridable via `IBaseConfig`.
+
+```
+my-project/
+├── conf/
+│   └── oktozine.build.conf.mjs   ← build config (auto-discovered)
+├── src/
+│   ├── markdown/                 ← Markdown source files (sorted alphabetically → document order)
+│   │   ├── 0010-intro.md
+│   │   ├── 0020-chapter-one.md
+│   │   ├── $refs-items.md        ← reference dictionary files (listed in referenceFiles config)
+│   │   └── …
+│   ├── html/                     ← EJS page templates
+│   │   ├── chapter.html
+│   │   ├── cover.html
+│   │   └── …
+│   ├── images/                   ← image assets copied into the HTML build
+│   │   └── …
+│   └── styles/
+│       └── fonts/                ← font files copied into the HTML build
+│           └── Philosopher/
+│               └── Philosopher-Regular.ttf   ← required for page-number injection
+├── build/                        ← all build output (git-ignored)
+│   ├── output.css                ← compiled CSS (set via cssPath)
+│   ├── chunks-html/              ← intermediate HTML, written by buildHtml
+│   │   ├── module-<id>/          ← one file per Markdown source
+│   │   └── …
+│   ├── pdf/                      ← PDF chunk cache
+│   └── release/                  ← final merged PDFs
+└── package.json
+```
+
+### Markdown file naming
+
+Files in `src/markdown/` are sorted alphabetically, so use a numeric prefix to control document order:
+
+```
+0010-intro.md
+0020-chapter-one.md
+0100-appendix.md
+```
+
+Reference dictionary files are prefixed with `$` and are never rendered as pages (add them to `skipped`).
+
+### Page templates
+
+Templates are EJS files in `src/html/`. Oktozine passes the following placeholders:
+
+| Placeholder            | Description                                                             |
+| ---------------------- | ----------------------------------------------------------------------- |
+| `{{content}}`          | Rendered HTML content of the current Markdown file                      |
+| `{{header}}`           | Running header text from `IBaseConfig.header`                           |
+| `{{footer}}`           | Running footer text from `IBaseConfig.footer`                           |
+| `{{version}}`          | App version from `package.json` (activated by `use: [version]` in frontmatter) |
+| `{{documentTitle}}`    | Document title (activated by `use: [documentTitle]` in frontmatter)     |
+| `{{buildMode}}`        | Empty in production; `draftWatermarkHtml` otherwise (activated by `use: [buildMode]`) |
+| `{{pictureId}}`        | Value of `picture-id` frontmatter key                                   |
+| `data-id-placeholder`  | Attribute replaced with `id="<name>" data-id="<name>"` from frontmatter |
+
+Minimal template example:
+
+```html
+<div class="page" data-id-placeholder>
+  {{content}}
+  <footer>{{footer}}</footer>
+</div>
+```
+
+### Image serving
+
+During PDF rendering Puppeteer loads images via HTTP, not the filesystem. Set `webServerPort` in your config and the
+builder starts an embedded static file server automatically before launching Puppeteer:
+
+```js
+/** @type {IModuleBuilderConfig} */
+export default {
+  webServerPort: 3001,   // builder serves build/chunks-html/ on this port
+  keepWebServer: false,  // true = server keeps running after build (daemon mode)
+  // ...other fields
+}
+```
+
+In Markdown sources, use the `{{imagesSrc}}` template variable instead of hardcoding the URL:
+
+```markdown
+![Map]({{imagesSrc}}/maps/dungeon-level-1.png)
+```
+
+This resolves to `http://localhost:3001/images/maps/dungeon-level-1.png` at build time.
+
+> **Note:** `{{imagesSrc}}` is only expanded in Markdown files. CSS and HTML template files are not processed by the
+> macro pipeline, so they should reference images via the full URL or a path that works in the browser context.
+
+When `keepWebServer: true` the process exits immediately after the build and the server continues as a detached background
+process. Use the `server` sub-commands to manage it manually:
+
+```bash
+oktozine server start          # start the daemon using config webServerPort
+oktozine server stop           # stop the daemon
+oktozine server start --port 3002   # override port
+```
+
+---
+
 ## CLI
 
 ```
