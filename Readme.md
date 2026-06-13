@@ -79,6 +79,7 @@ Usage: oktozine <document IDs> [options]
 ```
 
 Config is auto-discovered in this order:
+
 - `oktozine.build.conf.mjs`
 - `oktozine.build.conf.js`
 - `conf/oktozine.build.conf.mjs`
@@ -96,8 +97,8 @@ Each document config is deep-merged over the top-level defaults before being pas
 
 ## Build Config — `oktozine.build.conf.mjs`
 
-Exports a default `IModuleBuilderConfig` object that describes every document. The config file must be ESM (use
-`.mjs`, or `.js` with `"type": "module"` in your `package.json`).
+Exports a default `IModuleBuilderConfig` object that describes every document. The config file must be ESM (use `.mjs`,
+or `.js` with `"type": "module"` in your `package.json`).
 
 ### Top-level fields (`IModuleBuilderConfig` / `IBaseConfig`)
 
@@ -128,7 +129,7 @@ per-document.
 | `skipHeader`               | `number[]`               |     | Same, but header only                                                                                                                              |
 | `skipFooter`               | `number[]`               |     | Same, but footer only                                                                                                                              |
 | `bookmarksConfig`          | `IBookmarksConfig`       |     | PDF bookmark config: `{ config: string; skipFirstPages?: number; skipLastPages?: number }`                                                         |
-| `projectRoot`              | `string`                 |     | Absolute path to the consuming app root. Defaults to `process.cwd()`.                                                                             |
+| `projectRoot`              | `string`                 |     | Absolute path to the consuming app root. Defaults to `process.cwd()`.                                                                              |
 | `markdownDir`              | `string`                 |     | Directory containing Markdown sources. Defaults to `<projectRoot>/src/markdown`.                                                                   |
 | `templatesDir`             | `string`                 |     | Directory containing EJS/HTML page templates. Defaults to `<projectRoot>/src/html`.                                                                |
 | `imagesDir`                | `string`                 |     | Directory containing image assets. Defaults to `<projectRoot>/src/images`.                                                                         |

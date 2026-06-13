@@ -11,6 +11,8 @@ export type BuildModuleOptions = {
   configPath?: string
   outputPath?: string
   logLevel?: string
+  serverCommand?: 'start' | 'stop'
+  serverPort?: number
 }
 
 /**
@@ -117,6 +119,18 @@ export interface IBaseConfig {
   templatesDir?: string
   /** Directory containing image assets to copy into the build. Defaults to <projectRoot>/src/images. */
   imagesDir?: string
+  /**
+   * Port for the static file server that serves `build/chunks-html/` during PDF rendering.
+   * When set, the builder starts (or reuses) a server on `http://localhost:<port>` before
+   * launching Puppeteer. Markdown sources reference images via `{{imagesSrc}}`, which resolves
+   * to `http://localhost:<port>/images`.
+   */
+  webServerPort?: number
+  /**
+   * When true, the static file server started by `webServerPort` is left running after the build
+   * completes. The next build will detect the occupied port and reuse the process automatically.
+   */
+  keepWebServer?: boolean
   /** Directory containing font assets to copy into the build. Defaults to <projectRoot>/src/styles/fonts. */
   fontsDir?: string
   /** Path to the TTF font used for injected page numbers. Defaults to <fontsDir>/Philosopher/Philosopher-Regular.ttf. */
