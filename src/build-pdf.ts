@@ -717,7 +717,14 @@ const createDocumentContentPdf = async (
   const rebuildAll = { cached: new Map<number, Buffer>(), toRebuild: new Set(Array.from({ length: N }, (_, i) => i)) }
   const incrPlan =
     incremental && !config.usePdfNoCache
-      ? await resolveIncrementalPlan(pdfCachePath, config.id, incremental.fileOrder, incremental.fileHashes, N, chunkSize)
+      ? await resolveIncrementalPlan(
+          pdfCachePath,
+          config.id,
+          incremental.fileOrder,
+          incremental.fileHashes,
+          N,
+          chunkSize,
+        )
       : rebuildAll
 
   // ── Phase 2: parallel chunk rendering ─────────────────────────────────────

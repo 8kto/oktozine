@@ -113,16 +113,16 @@ Reference dictionary files are prefixed with `$` and are never rendered as pages
 
 Templates are EJS files in `src/html/`. Oktozine passes the following placeholders:
 
-| Placeholder            | Description                                                             |
-| ---------------------- | ----------------------------------------------------------------------- |
-| `{{content}}`          | Rendered HTML content of the current Markdown file                      |
-| `{{header}}`           | Running header text from `IBaseConfig.header`                           |
-| `{{footer}}`           | Running footer text from `IBaseConfig.footer`                           |
-| `{{version}}`          | App version from `package.json` (activated by `use: [version]` in frontmatter) |
-| `{{documentTitle}}`    | Document title (activated by `use: [documentTitle]` in frontmatter)     |
-| `{{buildMode}}`        | Empty in production; `draftWatermarkHtml` otherwise (activated by `use: [buildMode]`) |
-| `{{pictureId}}`        | Value of `picture-id` frontmatter key                                   |
-| `data-id-placeholder`  | Attribute replaced with `id="<name>" data-id="<name>"` from frontmatter |
+| Placeholder           | Description                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| `{{content}}`         | Rendered HTML content of the current Markdown file                                    |
+| `{{header}}`          | Running header text from `IBaseConfig.header`                                         |
+| `{{footer}}`          | Running footer text from `IBaseConfig.footer`                                         |
+| `{{version}}`         | App version from `package.json` (activated by `use: [version]` in frontmatter)        |
+| `{{documentTitle}}`   | Document title (activated by `use: [documentTitle]` in frontmatter)                   |
+| `{{buildMode}}`       | Empty in production; `draftWatermarkHtml` otherwise (activated by `use: [buildMode]`) |
+| `{{pictureId}}`       | Value of `picture-id` frontmatter key                                                 |
+| `data-id-placeholder` | Attribute replaced with `id="<name>" data-id="<name>"` from frontmatter               |
 
 Minimal template example:
 
@@ -141,8 +141,8 @@ builder starts an embedded static file server automatically before launching Pup
 ```js
 /** @type {IModuleBuilderConfig} */
 export default {
-  webServerPort: 3001,   // builder serves build/chunks-html/ on this port
-  keepWebServer: false,  // true = server keeps running after build (daemon mode)
+  webServerPort: 3001, // builder serves build/chunks-html/ on this port
+  keepWebServer: false, // true = server keeps running after build (daemon mode)
   // ...other fields
 }
 ```
@@ -158,8 +158,8 @@ This resolves to `http://localhost:3001/images/maps/dungeon-level-1.png` at buil
 > **Note:** `{{imagesSrc}}` is only expanded in Markdown files. CSS and HTML template files are not processed by the
 > macro pipeline, so they should reference images via the full URL or a path that works in the browser context.
 
-When `keepWebServer: true` the process exits immediately after the build and the server continues as a detached background
-process. Use the `server` sub-commands to manage it manually:
+When `keepWebServer: true` the process exits immediately after the build and the server continues as a detached
+background process. Use the `server` sub-commands to manage it manually:
 
 ```bash
 oktozine server start          # start the daemon using config webServerPort
