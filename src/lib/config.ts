@@ -40,6 +40,7 @@ const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
     outputPath: moduleOptions.outputPath ?? DEFAULT_BUILD_PATH,
     useHtmlRebuild: !!moduleOptions.useHtmlRebuild,
     usePdfBookmarks: !!moduleOptions.usePdfBookmarks,
+    usePdfNoCache: !!moduleOptions.usePdfNoCache,
   }
 }
 

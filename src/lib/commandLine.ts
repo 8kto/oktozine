@@ -13,6 +13,7 @@ Usage: oktozine <document IDs> [options]
 <document IDs>                      Comma-separated list of document IDs to build (positional)
 -h, --help                          Show this help and exit
 -x, --html-no-skip, no-html-skip    Rebuild every HTML file, skipping the cache
+--pdf-no-cache                      Bypass the chunk registry cache; always render all PDF chunks
 --parallel                          Build PDFs in parallel (default: serial)
 --production                        Build PDFs in production mode (no -dev suffixes etc., default: false)
 --skip-bookmarks                    Skip adding PDF bookmarks (default: adds)
@@ -31,6 +32,7 @@ export const parseScriptArgs = (): BuildModuleOptions => {
     useHelp: false,
     useHtmlRebuild: false,
     usePdfBookmarks: true,
+    usePdfNoCache: false,
   }
 
   // Handle `server start` / `server stop` sub-commands before the general loop
@@ -72,6 +74,11 @@ export const parseScriptArgs = (): BuildModuleOptions => {
 
       case '--parallel':
         options.isParallel = true
+        i += 1
+        break
+
+      case '--pdf-no-cache':
+        options.usePdfNoCache = true
         i += 1
         break
 

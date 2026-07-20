@@ -714,9 +714,11 @@ const createDocumentContentPdf = async (
   const { N, chunkSize } = resolveChunkPlan(config, approxPageCount)
   logger.info(chalk.gray(`${endSetup()}, ~${approxPageCount} pages`))
 
-  const incrPlan = incremental
-    ? await resolveIncrementalPlan(pdfCachePath, config.id, incremental.fileOrder, incremental.fileHashes, N, chunkSize)
-    : { cached: new Map<number, Buffer>(), toRebuild: new Set(Array.from({ length: N }, (_, i) => i)) }
+  const rebuildAll = { cached: new Map<number, Buffer>(), toRebuild: new Set(Array.from({ length: N }, (_, i) => i)) }
+  const incrPlan =
+    incremental && !config.usePdfNoCache
+      ? await resolveIncrementalPlan(pdfCachePath, config.id, incremental.fileOrder, incremental.fileHashes, N, chunkSize)
+      : rebuildAll
 
   // ── Phase 2: parallel chunk rendering ─────────────────────────────────────
   const ranges = buildChunkRanges(N, chunkSize)
@@ -948,7 +950,7 @@ export const buildPdf = async (config: IDocumentConfig): Promise<void> => {
     // and all chunks are cached with no file changes, skip Puppeteer entirely.
     // Disabled when BUILD_TOC_PAGENUMS is set — it needs anchorPageOut from the full pipeline.
     // anchorPageOut for bookmarks is populated by mergeChunks from cached PDFs without a browser.
-    if (!process.env.BUILD_TOC_PAGENUMS) {
+    if (!process.env.BUILD_TOC_PAGENUMS && !config.usePdfNoCache) {
       const registry = await loadRegistry(pdfCachePath, config.id)
       const fastN = config.buildProcessesNum ?? registry?.N
       const fastChunkSize = config.buildPartSize ?? registry?.chunkSize

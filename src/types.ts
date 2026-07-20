@@ -8,6 +8,7 @@ export type BuildModuleOptions = {
   useHelp: boolean
   useHtmlRebuild: boolean
   usePdfBookmarks: boolean
+  usePdfNoCache?: boolean
   configPath?: string
   outputPath?: string
   logLevel?: string
@@ -106,6 +107,8 @@ export interface IBaseConfig {
   usePdfBookmarks?: boolean
   /** Should rebuild HTML files before rendering to PDF */
   useHtmlRebuild: boolean
+  /** When true, bypasses the chunk registry cache and forces a full PDF rebuild. */
+  usePdfNoCache?: boolean
   /**
    * Global TOC overrides. Per-document overrides in tocOverrides.documents[id]
    * are merged on top. Replaces the separate conf/oktozin.toc.conf.ts file.
