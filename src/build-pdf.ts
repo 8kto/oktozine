@@ -716,7 +716,7 @@ const createDocumentContentPdf = async (
 
   const rebuildAll = { cached: new Map<number, Buffer>(), toRebuild: new Set(Array.from({ length: N }, (_, i) => i)) }
   const incrPlan =
-    incremental && !config.usePdfNoCache
+    incremental && config.shouldUsePdfCache
       ? await resolveIncrementalPlan(
           pdfCachePath,
           config.id,
@@ -875,7 +875,7 @@ const createDocumentContentPdf = async (
           decoratePagesInRange(mergedDoc, config.header ?? '', patchFont, tocStartPage, tocEndPage, decorateOpts)
 
           let phase4Bytes = await mergedDoc.save()
-          if (config.usePdfBookmarks && anchorPageOut && anchorPageOut.size > 0) {
+          if (config.shouldAddPdfBookmarks && anchorPageOut && anchorPageOut.size > 0) {
             const endPdfBookmarks = measure('Adding bookmarks to PDF')
             phase4Bytes = await applyOutlines(phase4Bytes, config, anchorPageOut)
             logger.info(chalk.gray(endPdfBookmarks()))
@@ -889,7 +889,7 @@ const createDocumentContentPdf = async (
     }
 
     let outBytes
-    if (config.usePdfBookmarks && anchorPageOut && anchorPageOut.size > 0) {
+    if (config.shouldAddPdfBookmarks && anchorPageOut && anchorPageOut.size > 0) {
       const endPdfBookmarks = measure('Adding bookmarks to PDF')
       outBytes = await applyOutlines(mergedBytes, config, anchorPageOut)
       logger.info(chalk.gray(endPdfBookmarks()))
@@ -957,7 +957,7 @@ export const buildPdf = async (config: IDocumentConfig): Promise<void> => {
     // and all chunks are cached with no file changes, skip Puppeteer entirely.
     // Disabled when BUILD_TOC_PAGENUMS is set — it needs anchorPageOut from the full pipeline.
     // anchorPageOut for bookmarks is populated by mergeChunks from cached PDFs without a browser.
-    if (!process.env.BUILD_TOC_PAGENUMS && !config.usePdfNoCache) {
+    if (!process.env.BUILD_TOC_PAGENUMS && config.shouldUsePdfCache) {
       const registry = await loadRegistry(pdfCachePath, config.id)
       const fastN = config.buildProcessesNum ?? registry?.N
       const fastChunkSize = config.buildPartSize ?? registry?.chunkSize
@@ -980,7 +980,7 @@ export const buildPdf = async (config: IDocumentConfig): Promise<void> => {
           const cachedBuffers = Array.from({ length: fastN }, (_, i) => plan.cached.get(i)).filter(
             (b): b is Buffer => b !== undefined,
           )
-          const anchorPageOut = config.usePdfBookmarks && config.tocConfig ? new Map<string, number>() : undefined
+          const anchorPageOut = config.shouldAddPdfBookmarks && config.tocConfig ? new Map<string, number>() : undefined
           const mergedBytes = await mergeChunks(
             cachedBuffers,
             config.header ?? '',
@@ -990,7 +990,7 @@ export const buildPdf = async (config: IDocumentConfig): Promise<void> => {
           )
 
           let outBytes: Uint8Array
-          if (config.usePdfBookmarks && anchorPageOut && anchorPageOut.size > 0) {
+          if (config.shouldAddPdfBookmarks && anchorPageOut && anchorPageOut.size > 0) {
             const endPdfBookmarks = measure('Adding bookmarks to PDF')
             outBytes = await applyOutlines(mergedBytes, config, anchorPageOut)
             logger.info(chalk.gray(endPdfBookmarks()))
