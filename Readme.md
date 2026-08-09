@@ -230,7 +230,7 @@ per-document.
 | `isProduction`             | `boolean`                |     | Strips the `-dev` version suffix and disables the draft watermark. Set via `--production` or `BUILD_MODE=production`.                              |
 | `shouldRebuildHtml`        | `boolean`                |     | Force rebuild all HTML files regardless of the timestamp cache. Set via `--html-no-skip`.                                                          |
 | `shouldAddPdfBookmarks`    | `boolean`                |     | Add PDF named-destination bookmarks to the output. Default: `true`.                                                                                |
-| `shouldUsePdfCache`        | `boolean`                |     | Enable the chunk registry cache for incremental PDF rebuilds. Default: `false`. Set via `--pdf-cache`. Not stable, experimental feature.                                            |
+| `shouldUsePdfCache`        | `boolean`                |     | Enable the chunk registry cache for incremental PDF rebuilds. Default: `false`. Set via `--pdf-cache`. Not stable, experimental feature.           |
 | `template`                 | `string`                 |     | Default HTML template filename (relative to `templatesDir`)                                                                                        |
 | `header`                   | `string`                 |     | Default running header text injected into `{{header}}` in every template                                                                           |
 | `footer`                   | `string`                 |     | Default running footer text injected into `{{footer}}` in every template                                                                           |
