@@ -207,7 +207,7 @@ export const buildHtml = async (config: IDocumentConfig): Promise<void> => {
   const forceRebuildAll = shouldRebuildAllFiles(markdownDir, markdownFiles, config)
   markdownFiles = filterFiles(config, markdownFiles)
 
-  if (config.useHtmlRebuild) {
+  if (config.shouldRebuildHtml) {
     logger.info(chalk.cyan('>> All HTML files to rebuild'))
   }
 
@@ -230,7 +230,7 @@ export const buildHtml = async (config: IDocumentConfig): Promise<void> => {
 
       const filePath = path.join(markdownDir, fileName)
 
-      if (!config.useHtmlRebuild) {
+      if (!config.shouldRebuildHtml) {
         let changed = true
         try {
           changed = isFileChangedSinceLastBuild(buildFilePath, filePath)

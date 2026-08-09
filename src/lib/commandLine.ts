@@ -13,6 +13,7 @@ Usage: oktozine <document IDs> [options]
 <document IDs>                      Comma-separated list of document IDs to build (positional)
 -h, --help                          Show this help and exit
 -x, --html-no-skip, no-html-skip    Rebuild every HTML file, skipping the cache
+--pdf-cache                         Enable the chunk registry cache for incremental PDF rebuilds [experimental]
 --parallel                          Build PDFs in parallel (default: serial)
 --production                        Build PDFs in production mode (no -dev suffixes etc., default: false)
 --skip-bookmarks                    Skip adding PDF bookmarks (default: adds)
@@ -28,9 +29,10 @@ export const parseScriptArgs = (): BuildModuleOptions => {
     documentIds: [],
     isParallel: false,
     isProduction: false,
-    useHelp: false,
-    useHtmlRebuild: false,
-    usePdfBookmarks: true,
+    shouldPrintHelp: false,
+    shouldRebuildHtml: false,
+    shouldAddPdfBookmarks: true,
+    shouldUsePdfCache: false,
   }
 
   // Handle `server start` / `server stop` sub-commands before the general loop
@@ -47,7 +49,7 @@ export const parseScriptArgs = (): BuildModuleOptions => {
     switch (arg) {
       case '-h':
       case '--help':
-        options.useHelp = true
+        options.shouldPrintHelp = true
         i += 1
         break
 
@@ -66,12 +68,17 @@ export const parseScriptArgs = (): BuildModuleOptions => {
       case '--html-no-skip':
       case '--no-html-skip':
       case '--no-skip-html':
-        options.useHtmlRebuild = true
+        options.shouldRebuildHtml = true
         i += 1
         break
 
       case '--parallel':
         options.isParallel = true
+        i += 1
+        break
+
+      case '--pdf-cache':
+        options.shouldUsePdfCache = true
         i += 1
         break
 
@@ -81,7 +88,7 @@ export const parseScriptArgs = (): BuildModuleOptions => {
         break
 
       case '--skip-bookmarks':
-        options.usePdfBookmarks = false
+        options.shouldAddPdfBookmarks = false
         i += 1
         break
 

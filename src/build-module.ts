@@ -20,9 +20,9 @@ import { IDocumentConfig } from './types'
 
 export const main = async (): Promise<void> => {
   const moduleOptions = parseScriptArgs()
-  const { documentIds, useHelp, logLevel, isParallel, configPath, serverCommand } = moduleOptions
+  const { documentIds, shouldPrintHelp, logLevel, isParallel, configPath, serverCommand } = moduleOptions
 
-  if (useHelp) {
+  if (shouldPrintHelp) {
     return printUsage()
   }
 
