@@ -616,14 +616,14 @@ use:
 
 ## Environment Variables
 
-| Variable          | Description                                                                           |
-| ----------------- | ------------------------------------------------------------------------------------- |
-| `HTML_NO_SKIP`    | Set to any truthy value to bypass the HTML timestamp cache (same as `--html-no-skip`) |
-| `PINO_LOG_LEVEL`  | Pino log level (overridden by `--log-level`)                                          |
-| `PDF_PARALLEL`    | Max parallel Chromium instances per PDF render phase (default: `4`)                   |
-| `BUILD_MODE`      | Set to `production` to strip the draft watermark and `-dev` version suffix            |
-| `BUILD_DUMP_HTML`      | Set to any value (except `false`) to write a `$fullHtmlContent-<id>.html` debug dump to `build/chunks-html/` |
-| `BUILD_TOC_PAGENUMS`   | Set to any truthy value to enable TOC page-number patching (Phase 4 of the PDF build); experimental and slow  |
+| Variable             | Description                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `HTML_NO_SKIP`       | Set to any truthy value to bypass the HTML timestamp cache (same as `--html-no-skip`)                        |
+| `PINO_LOG_LEVEL`     | Pino log level (overridden by `--log-level`)                                                                 |
+| `PDF_PARALLEL`       | Max parallel Chromium instances per PDF render phase (default: `4`)                                          |
+| `BUILD_MODE`         | Set to `production` to strip the draft watermark and `-dev` version suffix                                   |
+| `BUILD_DUMP_HTML`    | Set to any value (except `false`) to write a `$fullHtmlContent-<id>.html` debug dump to `build/chunks-html/` |
+| `BUILD_TOC_PAGENUMS` | Set to any truthy value to enable TOC page-number patching (Phase 4 of the PDF build); experimental and slow |
 
 ---
 
