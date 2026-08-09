@@ -56,6 +56,9 @@ oktozine main
 # Force rebuild all HTML files
 oktozine --html-no-skip
 
+# Enable the PDF chunk cache for incremental rebuilds
+oktozine --pdf-cache
+
 # Production build (no draft watermark, no -dev suffix)
 oktozine --production
 ```
@@ -173,16 +176,20 @@ oktozine server start --port 3002   # override port
 
 ```
 Usage: oktozine <document IDs> [options]
+       oktozine server start [--port <port>] [--config <path>]
+       oktozine server stop  [--port <port>] [--config <path>]
 
 <document IDs>                      Comma-separated document IDs to build (omit to build all)
 -h, --help                          Show help and exit
 -x, --html-no-skip, no-html-skip    Rebuild every HTML file, skipping the cache
+--pdf-cache                         Enable the chunk registry cache for incremental PDF rebuilds
 --parallel                          Build PDFs in parallel (default: serial)
 --production                        Production mode: no draft watermark, no -dev version suffix
 --skip-bookmarks                    Skip adding PDF bookmarks
 --log-level <level>                 Pino log level: trace | debug | info | warn | error | fatal
 --config <path>                     Path to a custom build config file
---output-dir <path>                 Base output directory (default: <project-root>/build)
+--output-dir <path>                 Base output directory (default: <project-root>/build); final PDFs go into <path>/release/
+--port <port>                       Port for server sub-commands (overrides config webServerPort)
 ```
 
 Config is auto-discovered in this order:
@@ -219,8 +226,9 @@ per-document.
 | `releaseDocumentIds`       | `string[]`               | ✓   | Document IDs included in a production release                                                                                                      |
 | `outputPath`               | `string`                 |     | Root directory for all build output. Defaults to `<cwd>/build`.                                                                                    |
 | `isProduction`             | `boolean`                |     | Strips the `-dev` version suffix and disables the draft watermark. Set via `--production` or `BUILD_MODE=production`.                              |
-| `useHtmlRebuild`           | `boolean`                |     | Force rebuild all HTML files regardless of the timestamp cache. Set via `--html-no-skip`.                                                          |
-| `usePdfBookmarks`          | `boolean`                |     | Add PDF named-destination bookmarks to the output. [false]                                                                                         |
+| `shouldRebuildHtml`        | `boolean`                |     | Force rebuild all HTML files regardless of the timestamp cache. Set via `--html-no-skip`.                                                          |
+| `shouldAddPdfBookmarks`    | `boolean`                |     | Add PDF named-destination bookmarks to the output. Default: `true`.                                                                                |
+| `shouldUsePdfCache`        | `boolean`                |     | Enable the chunk registry cache for incremental PDF rebuilds. Default: `false`. Set via `--pdf-cache`.                                             |
 | `template`                 | `string`                 |     | Default HTML template filename (relative to `templatesDir`)                                                                                        |
 | `header`                   | `string`                 |     | Default running header text injected into `{{header}}` in every template                                                                           |
 | `footer`                   | `string`                 |     | Default running footer text injected into `{{footer}}` in every template                                                                           |
@@ -614,7 +622,8 @@ use:
 | `PINO_LOG_LEVEL`  | Pino log level (overridden by `--log-level`)                                          |
 | `PDF_PARALLEL`    | Max parallel Chromium instances per PDF render phase (default: `4`)                   |
 | `BUILD_MODE`      | Set to `production` to strip the draft watermark and `-dev` version suffix            |
-| `BUILD_DUMP_HTML` | Set to `false` to skip writing the `$fullHtmlContent-*.html` debug dump               |
+| `BUILD_DUMP_HTML`      | Set to any value (except `false`) to write a `$fullHtmlContent-<id>.html` debug dump to `build/chunks-html/` |
+| `BUILD_TOC_PAGENUMS`   | Set to any truthy value to enable TOC page-number patching (Phase 4 of the PDF build); experimental and slow  |
 
 ---
 
