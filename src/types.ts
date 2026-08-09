@@ -5,10 +5,10 @@ export type BuildModuleOptions = {
   documentIds: string[]
   isParallel: boolean
   isProduction: boolean
-  useHelp: boolean
-  useHtmlRebuild: boolean
-  usePdfBookmarks: boolean
-  usePdfNoCache?: boolean
+  shouldPrintHelp: boolean
+  shouldRebuildHtml: boolean
+  shouldAddPdfBookmarks: boolean
+  shouldUsePdfCache?: boolean
   configPath?: string
   outputPath?: string
   logLevel?: string
@@ -103,12 +103,12 @@ export interface IBaseConfig {
   skipHeader?: number[]
   /** Same as skipHeaderAndFooter but skips only the footer. */
   skipFooter?: number[]
-  /** Should skip adding PDF bookmarks? [false] */
-  usePdfBookmarks?: boolean
-  /** Should rebuild HTML files before rendering to PDF */
-  useHtmlRebuild: boolean
-  /** When true, bypasses the chunk registry cache and forces a full PDF rebuild. */
-  usePdfNoCache?: boolean
+  /** When true, PDF named-destination bookmarks are added to the output. */
+  shouldAddPdfBookmarks?: boolean
+  /** When true, HTML files are rebuilt regardless of the timestamp cache. */
+  shouldRebuildHtml: boolean
+  /** When true, the chunk registry cache is used for incremental PDF builds. */
+  shouldUsePdfCache?: boolean
   /**
    * Global TOC overrides. Per-document overrides in tocOverrides.documents[id]
    * are merged on top. Replaces the separate conf/oktozin.toc.conf.ts file.

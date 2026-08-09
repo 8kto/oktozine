@@ -38,9 +38,9 @@ const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
     ...conf,
     isProduction: !!moduleOptions.isProduction,
     outputPath: moduleOptions.outputPath ?? DEFAULT_BUILD_PATH,
-    useHtmlRebuild: !!moduleOptions.useHtmlRebuild,
-    usePdfBookmarks: !!moduleOptions.usePdfBookmarks,
-    usePdfNoCache: !!moduleOptions.usePdfNoCache,
+    shouldRebuildHtml: !!moduleOptions.shouldRebuildHtml,
+    shouldAddPdfBookmarks: !!moduleOptions.shouldAddPdfBookmarks,
+    shouldUsePdfCache: !!moduleOptions.shouldUsePdfCache,
   }
 }
 
