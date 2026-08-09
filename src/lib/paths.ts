@@ -39,6 +39,7 @@ export const resolveContentPaths = (
 // FIXME use consuming app path
 // TODO integrate into resolveContentPaths
 export const DEFAULT_BUILD_PATH = path.join(process.cwd(), 'build')
+export const DEFAULT_RELEASE_PATH = path.join(DEFAULT_BUILD_PATH, 'release')
 
 export const getHtmlBuildPath = <T extends { outputPath: string }>(config: T) => {
   return path.join(config.outputPath, 'chunks-html')
@@ -58,5 +59,5 @@ export const getCssPath = <T extends { outputPath: string; cssPath?: string }>(c
 }
 
 export const getReleasePath = (config: IDocumentConfig) => {
-  return path.join(config.outputPath, 'release')
+  return config.releasePath ?? path.join(config.outputPath, 'release')
 }
