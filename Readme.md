@@ -56,7 +56,7 @@ oktozine main
 # Force rebuild all HTML files
 oktozine --html-no-skip
 
-# Enable the PDF chunk cache for incremental rebuilds
+# Enable the PDF chunk cache for incremental rebuilds [experimental]
 oktozine --pdf-cache
 
 # Production build (no draft watermark, no -dev suffix)
@@ -182,13 +182,14 @@ Usage: oktozine <document IDs> [options]
 <document IDs>                      Comma-separated document IDs to build (omit to build all)
 -h, --help                          Show help and exit
 -x, --html-no-skip, no-html-skip    Rebuild every HTML file, skipping the cache
---pdf-cache                         Enable the chunk registry cache for incremental PDF rebuilds
+--pdf-cache                         Enable the chunk registry cache for incremental PDF rebuilds [experimental]
 --parallel                          Build PDFs in parallel (default: serial)
 --production                        Production mode: no draft watermark, no -dev version suffix
 --skip-bookmarks                    Skip adding PDF bookmarks
 --log-level <level>                 Pino log level: trace | debug | info | warn | error | fatal
 --config <path>                     Path to a custom build config file
 --output-dir <path>                 Base output directory (default: <project-root>/build); final PDFs go into <path>/release/
+--release-dir <path>                Directory where final merged PDFs are written (overrides <output-dir>/release)
 --port <port>                       Port for server sub-commands (overrides config webServerPort)
 ```
 
@@ -225,10 +226,11 @@ per-document.
 | `documents`                | `IDocumentConfig[]`      | ✓   | List of documents to build                                                                                                                         |
 | `releaseDocumentIds`       | `string[]`               | ✓   | Document IDs included in a production release                                                                                                      |
 | `outputPath`               | `string`                 |     | Root directory for all build output. Defaults to `<cwd>/build`.                                                                                    |
+| `releasePath`              | `string`                 |     | Directory where final merged PDFs are written. Defaults to `<outputPath>/release`. Set via `--release-dir`.                                        |
 | `isProduction`             | `boolean`                |     | Strips the `-dev` version suffix and disables the draft watermark. Set via `--production` or `BUILD_MODE=production`.                              |
 | `shouldRebuildHtml`        | `boolean`                |     | Force rebuild all HTML files regardless of the timestamp cache. Set via `--html-no-skip`.                                                          |
 | `shouldAddPdfBookmarks`    | `boolean`                |     | Add PDF named-destination bookmarks to the output. Default: `true`.                                                                                |
-| `shouldUsePdfCache`        | `boolean`                |     | Enable the chunk registry cache for incremental PDF rebuilds. Default: `false`. Set via `--pdf-cache`.                                             |
+| `shouldUsePdfCache`        | `boolean`                |     | Enable the chunk registry cache for incremental PDF rebuilds. Default: `false`. Set via `--pdf-cache`. Not stable, experimental feature.                                            |
 | `template`                 | `string`                 |     | Default HTML template filename (relative to `templatesDir`)                                                                                        |
 | `header`                   | `string`                 |     | Default running header text injected into `{{header}}` in every template                                                                           |
 | `footer`                   | `string`                 |     | Default running footer text injected into `{{footer}}` in every template                                                                           |
