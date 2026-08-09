@@ -20,6 +20,7 @@ Usage: oktozine <document IDs> [options]
 --log-level <level>                 Set pino logger level (trace|debug|info|warn|error|fatal)
 --config <path>                     Path to build config file (e.g. ./conf/oktozine.build.conf.mjs)
 --output-dir <path>                 Base output directory (default: <project-root>/build); final PDFs go into <path>/release/
+--release-dir <path>                Directory where final merged PDFs are written (overrides <output-dir>/release)
 --port <port>                       Port for server sub-commands (overrides config webServerPort)
 `.trim()
 
@@ -110,6 +111,17 @@ export const parseScriptArgs = (): BuildModuleOptions => {
           process.exit(1)
         }
         options.outputPath = path.resolve(val)
+        i += 2
+        break
+      }
+
+      case '--release-dir': {
+        const val = args[i + 1]
+        if (!val || val.startsWith('-')) {
+          logger.error(chalk.red('Error: --release-dir requires a path'))
+          process.exit(1)
+        }
+        options.releasePath = path.resolve(val)
         i += 2
         break
       }

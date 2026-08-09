@@ -11,6 +11,7 @@ export type BuildModuleOptions = {
   shouldUsePdfCache?: boolean
   configPath?: string
   outputPath?: string
+  releasePath?: string
   logLevel?: string
   serverCommand?: 'start' | 'stop'
   serverPort?: number
@@ -81,6 +82,8 @@ export interface IBookmarksConfig {
  */
 export interface IBaseConfig {
   outputPath: string
+  /** Absolute path where final merged PDFs are written. Defaults to `<outputPath>/release`. */
+  releasePath?: string
   isProduction?: boolean
   template?: string
   footer?: string

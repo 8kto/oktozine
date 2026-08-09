@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 
 import oktozinePackage from '../../package.json' with { type: 'json' }
 import type { BuildModuleOptions, IDocumentConfig, IModuleBuilderConfig } from '../types'
-import { DEFAULT_BUILD_PATH } from './paths'
+import { DEFAULT_BUILD_PATH, DEFAULT_RELEASE_PATH } from './paths'
 
 type ConsumingAppPackageJson = {
   name?: string
@@ -38,6 +38,7 @@ const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
     ...conf,
     isProduction: !!moduleOptions.isProduction,
     outputPath: moduleOptions.outputPath ?? DEFAULT_BUILD_PATH,
+    releasePath: moduleOptions.releasePath ?? DEFAULT_RELEASE_PATH,
     shouldRebuildHtml: !!moduleOptions.shouldRebuildHtml,
     shouldAddPdfBookmarks: !!moduleOptions.shouldAddPdfBookmarks,
     shouldUsePdfCache: !!moduleOptions.shouldUsePdfCache,
