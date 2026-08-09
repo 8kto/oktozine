@@ -9,7 +9,7 @@ const pkg = _require('../../../package.json') as { version: string }
 const makeConf = (version: string): IModuleBuilderConfig => ({
   version,
   outputPath: '/tmp',
-  useHtmlRebuild: false,
+  shouldRebuildHtml: false,
   documents: [],
 })
 

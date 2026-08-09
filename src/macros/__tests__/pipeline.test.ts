@@ -4,7 +4,7 @@ import handleMacros from '../index'
 const baseConf: IDocumentConfig = {
   id: 'main',
   outputPath: '/tmp',
-  useHtmlRebuild: false,
+  shouldRebuildHtml: false,
 }
 
 it('runs custom macros from config after the built-in pipeline', () => {
