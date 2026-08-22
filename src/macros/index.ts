@@ -67,11 +67,17 @@ const getMacroHandlers = (): MacroFn[] => {
  * @returns The fully transformed Markdown string.
  */
 const handleMacros = (markdown: string, config: IDocumentConfig): string => {
-  const all = [...getMacroHandlers(), ...(config.macros ?? [])]
+  const all = [...(config.macros ?? []), ...getMacroHandlers()]
 
   return all.reduce((acc, handler) => {
     try {
-      return typeof handler === 'function' ? handler(acc, config) : acc
+      if (typeof handler === 'function') {
+        return handler(acc, config)
+      }
+
+      logger.warn(`Macro handler is not a function: ${handler}`)
+
+      return acc
     } catch (err) {
       logger.error(`Error in <${handler?.name}> handler`)
       logger.error(err)
