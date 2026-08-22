@@ -17,6 +17,8 @@ import {
   stopStaticServer,
 } from './lib/web-server'
 import { IDocumentConfig } from './types'
+import oktozinePackage from '../package.json' with { type: 'json' }
+
 
 export const main = async (): Promise<void> => {
   const moduleOptions = parseScriptArgs()
@@ -123,7 +125,8 @@ export const main = async (): Promise<void> => {
   }
 
   const measuredBuildTime = endMeasure()
-  logger.info(chalk.yellow(`Build ended in ${measuredBuildTime}`))
+  const version = oktozinePackage.version
+  logger.info(chalk.yellow(`Build ended in ${measuredBuildTime}. oktozine v${version}`))
 }
 
 void main()
