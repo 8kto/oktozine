@@ -190,6 +190,7 @@ Usage: oktozine <document IDs> [options]
 --config <path>                     Path to a custom build config file
 --output-dir <path>                 Base output directory (default: <project-root>/build); final PDFs go into <path>/release/
 --release-dir <path>                Directory where final merged PDFs are written (overrides <output-dir>/release)
+--markdown-dir <path>               Directory containing Markdown source files (overrides config markdownPath)
 --port <port>                       Port for server sub-commands (overrides config webServerPort)
 ```
 
@@ -247,7 +248,7 @@ per-document.
 | `skipFooter`               | `number[]`               |     | Same, but footer only                                                                                                                              |
 | `bookmarksConfig`          | `IBookmarksConfig`       |     | PDF bookmark config: `{ config: string; skipFirstPages?: number; skipLastPages?: number }`                                                         |
 | `projectRoot`              | `string`                 |     | Absolute path to the consuming app root. Defaults to `process.cwd()`.                                                                              |
-| `markdownDir`              | `string`                 |     | Directory containing Markdown sources. Defaults to `<projectRoot>/src/markdown`.                                                                   |
+| `markdownPath`             | `string`                 |     | Directory containing Markdown sources. Defaults to `<projectRoot>/src/markdown`. Set via `--markdown-dir`.                                         |
 | `templatesDir`             | `string`                 |     | Directory containing EJS/HTML page templates. Defaults to `<projectRoot>/src/html`.                                                                |
 | `imagesDir`                | `string`                 |     | Directory containing image assets. Defaults to `<projectRoot>/src/images`.                                                                         |
 | `fontsDir`                 | `string`                 |     | Directory containing font assets. Defaults to `<projectRoot>/src/styles/fonts`.                                                                    |

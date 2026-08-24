@@ -12,6 +12,7 @@ export type BuildModuleOptions = {
   configPath?: string
   outputPath?: string
   releasePath?: string
+  markdownPath?: string
   logLevel?: string
   serverCommand?: 'start' | 'stop'
   serverPort?: number
@@ -120,7 +121,7 @@ export interface IBaseConfig {
   /** Absolute path to the consumer project root. Defaults to process.cwd(). */
   projectRoot?: string
   /** Directory containing Markdown source files. Defaults to <projectRoot>/src/markdown. */
-  markdownDir?: string
+  markdownPath?: string
   /** Directory containing EJS/HTML page templates. Defaults to <projectRoot>/src/html. */
   templatesDir?: string
   /** Directory containing image assets to copy into the build. Defaults to <projectRoot>/src/images. */

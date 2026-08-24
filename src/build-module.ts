@@ -1,6 +1,7 @@
 import chalk from 'chalk'
 import deepmerge from 'deepmerge'
 
+import oktozinePackage from '../package.json' with { type: 'json' }
 import { buildHtml, copyHtmlBuildAssets } from './build-html'
 import { buildPdf } from './build-pdf'
 import { parseScriptArgs, printUsage } from './lib/commandLine'
@@ -17,8 +18,6 @@ import {
   stopStaticServer,
 } from './lib/web-server'
 import { IDocumentConfig } from './types'
-import oktozinePackage from '../package.json' with { type: 'json' }
-
 
 export const main = async (): Promise<void> => {
   const moduleOptions = parseScriptArgs()

@@ -5,9 +5,10 @@ import type { IBaseConfig, IDocumentConfig } from '../types'
 
 export const OKTOZINE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
+// FIXME consistent names
 export interface IResolvedContentPaths {
   projectRoot: string
-  markdownDir: string
+  markdownPath: string
   templatesDir: string
   imagesDir: string
   fontsDir: string
@@ -20,7 +21,7 @@ export interface IResolvedContentPaths {
 export const resolveContentPaths = (
   config: Pick<
     IBaseConfig,
-    'projectRoot' | 'markdownDir' | 'templatesDir' | 'imagesDir' | 'fontsDir' | 'pageNumbersFontPath'
+    'projectRoot' | 'markdownPath' | 'templatesDir' | 'imagesDir' | 'fontsDir' | 'pageNumbersFontPath'
   >,
 ): IResolvedContentPaths => {
   const root = config.projectRoot ?? process.cwd()
@@ -28,7 +29,7 @@ export const resolveContentPaths = (
 
   return {
     projectRoot: root,
-    markdownDir: config.markdownDir ?? path.join(root, 'src/markdown'),
+    markdownPath: config.markdownPath ?? path.join(root, 'src/markdown'),
     templatesDir: config.templatesDir ?? path.join(root, 'src/html'),
     imagesDir: config.imagesDir ?? path.join(root, 'src/images'),
     fontsDir: fonts,

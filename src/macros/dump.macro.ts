@@ -29,10 +29,10 @@ import { renderReferenceBlock } from '../lib/render-reference-block'
 import { getReferenceDictionary, resolveReferenceFiles } from '../lib/resolve-reference-files'
 import type { IDocumentConfig } from '../types'
 
-const resolveRefFilePath = (refFile: string, markdownDir: string): string => {
+const resolveRefFilePath = (refFile: string, markdownPath: string): string => {
   const withExt = refFile.endsWith('.md') ? refFile : `${refFile}.md`
 
-  return refFile.includes('/') ? withExt : path.join(markdownDir, withExt)
+  return refFile.includes('/') ? withExt : path.join(markdownPath, withExt)
 }
 
 export const convertDumpInserts = (markdown: string, buildConf?: IDocumentConfig): string => {
@@ -41,10 +41,10 @@ export const convertDumpInserts = (markdown: string, buildConf?: IDocumentConfig
     return markdown
   }
 
-  const markdownDir = buildConf?.markdownDir ?? path.join(process.cwd(), 'src/markdown')
+  const markdownPath = buildConf?.markdownPath ?? path.join(process.cwd(), 'src/markdown')
 
   return markdown.replace(commandPattern, (match, refFile: string) => {
-    const filePath = resolveRefFilePath(refFile.trim(), markdownDir)
+    const filePath = resolveRefFilePath(refFile.trim(), markdownPath)
     const [resolvedPath] = resolveReferenceFiles({ referenceFiles: [filePath] })
 
     if (!resolvedPath || !existsSync(resolvedPath)) {

@@ -42,6 +42,7 @@ const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
     shouldRebuildHtml: !!moduleOptions.shouldRebuildHtml,
     shouldAddPdfBookmarks: !!moduleOptions.shouldAddPdfBookmarks,
     shouldUsePdfCache: !!moduleOptions.shouldUsePdfCache,
+    ...(moduleOptions.markdownPath !== undefined && { markdownPath: moduleOptions.markdownPath }),
   }
 }
 
@@ -67,9 +68,9 @@ export const findAppRoot = (start: string): string => {
   return root || path.parse(current).root
 }
 
-export async function loadBuildConfig(moduleOptions: BuildModuleOptions, cliPath?: string) {
-  if (cliPath) {
-    const absPath = resolve(process.cwd(), cliPath)
+export async function loadBuildConfig(moduleOptions: BuildModuleOptions, configPath?: string) {
+  if (configPath) {
+    const absPath = resolve(process.cwd(), configPath)
     const conf = await importConfig(absPath)
 
     return enrichConfigWithModuleOptions(conf, moduleOptions)

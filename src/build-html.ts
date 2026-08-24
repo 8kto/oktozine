@@ -197,14 +197,14 @@ export const buildHtml = async (config: IDocumentConfig): Promise<void> => {
     return
   }
 
-  const { markdownDir, templatesDir } = resolveContentPaths(config)
+  const { markdownPath, templatesDir } = resolveContentPaths(config)
   const htmlBuildPath = getHtmlModuleBuildPath(config)
   const markdownRenderer = getMarkdownRenderer()
 
   await runPhase(`ensureDir ${htmlBuildPath}`, () => fs.ensureDir(htmlBuildPath))
-  let markdownFiles = await runPhase(`readdir ${markdownDir}`, () => fs.readdir(markdownDir))
+  let markdownFiles = await runPhase(`readdir ${markdownPath}`, () => fs.readdir(markdownPath))
 
-  const forceRebuildAll = shouldRebuildAllFiles(markdownDir, markdownFiles, config)
+  const forceRebuildAll = shouldRebuildAllFiles(markdownPath, markdownFiles, config)
   markdownFiles = filterFiles(config, markdownFiles)
 
   if (config.shouldRebuildHtml) {
@@ -228,7 +228,7 @@ export const buildHtml = async (config: IDocumentConfig): Promise<void> => {
         return null
       }
 
-      const filePath = path.join(markdownDir, fileName)
+      const filePath = path.join(markdownPath, fileName)
 
       if (!config.shouldRebuildHtml) {
         let changed = true
