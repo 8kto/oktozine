@@ -7,8 +7,9 @@
  * `dump-bestiary` script produces, but driven inline from Markdown.
  *
  * The `ref-file` argument is a filename stem (with or without `.md`) resolved
- * from `src/markdown/`. A bare path separator in the name is treated as a
- * project-root-relative path instead.
+ * from `markdownPath` (defaults to `<cwd>/src/markdown`). Subdirectory paths
+ * such as `ru/$refs-stats.md` are resolved relative to `markdownPath` as well.
+ * Only absolute paths are used verbatim.
  *
  * @module macros/dump
  *
@@ -32,7 +33,7 @@ import type { IDocumentConfig } from '../types'
 const resolveRefFilePath = (refFile: string, markdownPath: string): string => {
   const withExt = refFile.endsWith('.md') ? refFile : `${refFile}.md`
 
-  return refFile.includes('/') ? withExt : path.join(markdownPath, withExt)
+  return path.isAbsolute(withExt) ? withExt : path.join(markdownPath, withExt)
 }
 
 export const convertDumpInserts = (markdown: string, buildConf?: IDocumentConfig): string => {
