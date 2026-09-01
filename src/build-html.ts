@@ -52,7 +52,7 @@ const convertMarkdownToHtml = async (
   }
 }
 
-const applyTemplate = async (page: IDocumentPage, templatePath: string): Promise<string> => {
+export const applyTemplate = async (page: IDocumentPage, templatePath: string): Promise<string> => {
   const { content, metadata } = page
   const template = await runPhase(`read template`, () => fs.readFile(templatePath, 'utf8'))
 
@@ -79,6 +79,23 @@ const applyTemplate = async (page: IDocumentPage, templatePath: string): Promise
   if (metadata['picture-id']) {
     res = res.replace('{{pictureId}}', metadata['picture-id'] as string)
   }
+
+  res = res.replace(/\{\{\s*((?:[a-zA-Z-]+\s*=\s*"[^"]*"\s*)+)\}\}/g, (_, values: string) => {
+    const translations = Object.fromEntries(
+      [...values.matchAll(/([a-zA-Z-]+)\s*=\s*"([^"]*)"/g)].map(([, locale, value]) => [locale, value]),
+    )
+
+    const lang = process.env.OB_LANG
+    if (!lang) {
+      throw new Error('Language is not set')
+    }
+
+    if (!(lang in translations)) {
+      throw new Error(`Missing translation for locale "${lang}"`)
+    }
+
+    return translations[lang]
+  })
 
   return res
 }

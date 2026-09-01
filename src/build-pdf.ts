@@ -39,7 +39,7 @@ const BROWSER_ARGS = [
   '--no-sandbox',
   '--disable-setuid-sandbox',
   '--start-fullscreen',
-  '--lang=ru-RU,ru',
+  '--lang=ru-RU,ru', // FIXME
   '--disable-translate',
   // Prevents Chrome from using /dev/shm (often limited) for shared memory,
   // which causes PDF rendering failures when many instances run in parallel.
