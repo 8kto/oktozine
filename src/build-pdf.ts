@@ -146,6 +146,12 @@ const buildTocForPage = async (
     const rootId = tocConfig.rootId ?? 'toc-main'
     const tocHtml = await page.evaluate((id: string) => document.getElementById(id)?.innerHTML || '', rootId)
 
+    // FIXME
+    const lang = process.env.OB_LANG
+    if (lang) {
+      await page.evaluate((language: string) => document.body.classList.add(`lang-${language}`), lang)
+    }
+
     fs.writeFile(path.join(htmlChunksPath, `$toc-${config.id}.html`), tocHtml)
     fs.writeFile(path.join(outputPath, `$toc-${config.id}.json`), JSON.stringify(toc, null, 2))
   } catch (err) {
