@@ -374,22 +374,44 @@ Macros are processed by `macros/index.ts` in a fixed pipeline before Markdown re
 
 ### Pipeline order
 
-| #   | Handler                | What it does                                                          |
-| --- | ---------------------- | --------------------------------------------------------------------- |
-| 1   | `convertDumpInserts`   | `<!-- cmd[dump] ref-file[…] /-->` → all entries from a reference file |
-| 2   | `parseConditionalMode` | Inline conditionals                                                   |
-| 3   | `addAliases`           | HTML comment macros and item/stats shortcuts                          |
-| 4   | `convertNamedSections` | `<!-- named[id] /-->` → hidden anchor elements                        |
-| 5–9 | `glue*`                | Non-breaking space insertion between words, units, shorthands         |
-| 10  | `convertListToTable`   | Converts special Markdown lists to HTML tables                        |
-| 11  | `convertRefInserts`    | Inlines referenced content blocks from `$refs-*.md`                   |
-| 12  | `convertStatsInserts`  | Inlines stat blocks                                                   |
-| 13  | `linkify`              | Auto-links room references `(A4)` and room headings                   |
-| 14… | `config.macros`        | Additional custom macros supplied via `IBaseConfig.macros`            |
+| #   | Handler                | What it does                                                                             |
+| --- | ---------------------- | ---------------------------------------------------------------------------------------- |
+| 1   | `convertDumpInserts`   | `<!-- cmd[dump] ref-file[…] /-->` → all entries from a reference file, optionally sorted |
+| 2   | `parseConditionalMode` | Inline conditionals                                                                      |
+| 3   | `addAliases`           | HTML comment macros and item/stats shortcuts                                             |
+| 4   | `convertNamedSections` | `<!-- named[id] /-->` → hidden anchor elements                                           |
+| 5–9 | `glue*`                | Non-breaking space insertion between words, units, shorthands                            |
+| 10  | `convertListToTable`   | Converts special Markdown lists to HTML tables                                           |
+| 11  | `convertRefInserts`    | Inlines referenced content blocks from `$refs-*.md`                                      |
+| 12  | `convertStatsInserts`  | Inlines stat blocks                                                                      |
+| 13  | `linkify`              | Auto-links room references `(A4)` and room headings                                      |
+| 14… | `config.macros`        | Additional custom macros supplied via `IBaseConfig.macros`                               |
 
 Macros also run on the content of each reference block before it is inserted (step 11 calls `handleMacros` recursively
 on resolved content). The `convertRefInserts` handler itself is excluded from that recursive pass to prevent infinite
 loops.
+
+---
+
+### `convertDumpInserts` — reference file dump
+
+Replaces the command with every entry from a reference file, rendered the same way `convertRefInserts` would with
+`detailed alt` — equivalent to what the `dump-bestiary` script produces, but driven inline from Markdown.
+
+```markdown
+<!-- cmd[dump] ref-file[$refs-items] /-->
+<!-- cmd[dump] ref-file[$refs-items] sorted /-->
+<!-- cmd[dump] ref-file[$refs-items] sorted[desc] /-->
+```
+
+| Modifier       | Effect                                                       |
+| -------------- | ------------------------------------------------------------ |
+| `sorted`       | Sorts entries by title before dumping (ascending by default) |
+| `sorted[asc]`  | Sorts entries by title, ascending                            |
+| `sorted[desc]` | Sorts entries by title, descending                           |
+
+`ref-file` is a filename stem (with or without `.md`) resolved from `markdownPath`; absolute paths are used verbatim.
+Without `sorted`, entries are dumped in the order they appear in the reference file.
 
 ---
 
