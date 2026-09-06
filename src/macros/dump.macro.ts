@@ -11,12 +11,18 @@
  * such as `ru/$refs-stats.md` are resolved relative to `markdownPath` as well.
  * Only absolute paths are used verbatim.
  *
+ * An optional `sorted` argument sorts entries by title before dumping: bare
+ * `sorted` or `sorted[asc]` sorts ascending, `sorted[desc]` descending.
+ *
  * @module macros/dump
  *
  * @example
  * ```markdown
  * <!-- cmd[dump] ref-file[$refs-items] /-->
  * <!-- cmd[dump] ref-file[$refs-stats.md] /-->
+ * <!-- cmd[dump] ref-file[$refs-items] sorted /-->
+ * <!-- cmd[dump] ref-file[$refs-items] sorted[desc] /-->
+ * <!-- cmd[dump] ref-file[$refs-items] sorted[asc] /-->
  * ```
  */
 
@@ -37,14 +43,14 @@ const resolveRefFilePath = (refFile: string, markdownPath: string): string => {
 }
 
 export const convertDumpInserts = (markdown: string, buildConf?: IDocumentConfig): string => {
-  const commandPattern = /<!--\s*cmd\[dump]\s*ref-file\[([^\]]+)]\s*\/-->/gm
+  const commandPattern = /<!--\s*cmd\[dump]\s*ref-file\[([^\]]+)]\s*(sorted(?:\[(asc|desc)])?)?\s*\/-->/gm
   if (!commandPattern.test(markdown)) {
     return markdown
   }
 
   const markdownPath = buildConf?.markdownPath ?? path.join(process.cwd(), 'src/markdown')
 
-  return markdown.replace(commandPattern, (match, refFile: string) => {
+  return markdown.replace(commandPattern, (match, refFile: string, sorted?: string, sortDirection?: string) => {
     const filePath = resolveRefFilePath(refFile.trim(), markdownPath)
     const [resolvedPath] = resolveReferenceFiles({ referenceFiles: [filePath] })
 
@@ -55,8 +61,18 @@ export const convertDumpInserts = (markdown: string, buildConf?: IDocumentConfig
     }
 
     const storage = getReferenceDictionary([resolvedPath])
+    let entries = Object.entries(storage)
 
-    return Object.entries(storage)
+    if (sorted) {
+      const direction = sortDirection ?? 'asc'
+      entries = entries.slice().sort(([titleA], [titleB]) => {
+        const comparison = titleA.localeCompare(titleB)
+
+        return direction === 'desc' ? -comparison : comparison
+      })
+    }
+
+    return entries
       .map(([title, ref]) =>
         renderReferenceBlock({
           title,

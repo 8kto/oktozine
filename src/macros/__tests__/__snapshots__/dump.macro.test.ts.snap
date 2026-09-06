@@ -1,0 +1,31 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`convert dump inserts should dump all entries in file order when sorted is not passed 1`] = `
+"<section id="zebra" class="ref-insert alternative">
+<h3 class="ref-header ">Zebra</h3>
+<main>
+
+
+Zebra text.
+
+</main>
+</section>
+<section id="apple" class="ref-insert alternative">
+<h3 class="ref-header ">Apple</h3>
+<main>
+
+
+Apple text.
+
+</main>
+</section>
+<section id="mango" class="ref-insert alternative">
+<h3 class="ref-header ">Mango</h3>
+<main>
+
+
+Mango text.
+
+</main>
+</section>"
+`;
