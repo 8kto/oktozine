@@ -120,7 +120,7 @@ End`
 
   it('should render the Atk stat with English labels by default', () => {
     const out = convertStatsInserts(`\`{ Atk: 2; AC: 14 }\``).trim()
-    expect(out).toContain(`<span class="stat-name">Atk</span>`)
+    expect(out).toContain(`<span class="stat-name">Attacks</span>`)
     expect(out).toContain('title="Multiattack, see the note at the beginning of the module"')
   })
 

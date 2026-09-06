@@ -61,7 +61,7 @@ const DEFAULT_STATS_LANG: StatsLang = 'en'
  */
 const statsTranslations: Record<StatsLang, Map<string, string>> = {
   en: new Map([
-    ['Atk', 'Atacks'],
+    ['Atk', 'Attacks'],
     ['LVL', 'LVL'],
     ['AC', 'AC'],
     ['HD', 'HD'],
