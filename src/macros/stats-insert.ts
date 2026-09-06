@@ -1,13 +1,17 @@
-/** TODO split up EN/RU versions
+/**
  * @file Expands inline stat-block shorthand into styled HTML.
  *
  * Stat blocks are written as single-backtick fenced objects using a compact
  * `key: value` syntax separated by semicolons. The macro parses the block,
- * translates English stat abbreviations to Russian, resolves special values
- * (alignment codes, multiattack links), and emits semantic HTML.
+ * translates the English stat abbreviations used as keys into the target
+ * language, resolves special values (alignment codes, multiattack links),
+ * and emits semantic HTML.
  *
  * The pattern `` `{ … }` `` is used (single braces) to distinguish stat
  * blocks from the conditional syntax `` `{{ … }}` `` (double braces).
+ *
+ * The output language is controlled by `config.statsLang` (`'en'` by
+ * default, `'ru'` also supported).
  *
  * @module macros/stats-insert
  *
@@ -21,7 +25,7 @@
  * `{ AC: 16; HD: 4; HP: 18; Atk: 2; DMG: 1d6/1d6; MV: 30; ML: 9; A: C; XP: 125; S: F4; CL: 4 }`
  * ```
  *
- * @example Rendered HTML (simplified)
+ * @example Rendered HTML (simplified, `statsLang: 'ru'`)
  * ```html
  * <div class="stats-insert no-page-break">
  *   <span class="stat-record"><span class="stat-name">КБ</span>:&nbsp;<span class="stat-value">14</span></span>
@@ -31,68 +35,105 @@
  * ```
  */
 
-/**
- * Map of English stat abbreviations to their Russian translations.
- *
- * | Key   | Russian          | Meaning                |
- * |-------|------------------|------------------------|
- * | `Atk` | Атаки            | Attacks (multiattack)  |
- * | `LVL` | Уровень          | Level                  |
- * | `AC`  | КБ               | Armour Class           |
- * | `HD`  | ХД               | Hit Dice               |
- * | `HP`  | ХП               | Hit Points             |
- * | `DMG` | Урон             | Damage                 |
- * | `MV`  | Скорость         | Movement Speed         |
- * | `ML`  | Мораль           | Morale                 |
- * | `A`   | МВ               | Alignment (Мировоззр.) |
- * | `XP`  | Опыт             | Experience Points      |
- * | `CL`  | Сложность        | Challenge Level        |
- * | `S`   | Спасброски       | Saving Throws          |
- * | `MR`  | Устойчивость к магии | Magic Resistance   |
- */
-const statsTranslations = new Map([
-  ['Atk', 'Атаки'],
-  ['LVL', 'Уровень'],
-  ['AC', 'КБ'],
-  ['HD', 'ХД'],
-  ['HP', 'ХП'],
-  ['DMG', 'Урон'],
-  ['MV', 'Скорость'],
-  ['ML', 'Мораль'],
-  ['A', 'МВ'],
-  ['XP', 'Опыт'],
-  ['CL', 'Сложность'],
-  ['S', 'Спасброски'],
-  ['MR', 'Устойчивость к магии'],
-])
+import type { IDocumentConfig, StatsLang } from '../types'
+
+const DEFAULT_STATS_LANG: StatsLang = 'en'
 
 /**
- * Resolve special stat values to their Russian equivalents.
+ * Per-language display labels for stat abbreviations, keyed by the English
+ * abbreviation used as the stat-block key.
  *
- * - Alignment (`A`): `C` → Хаос, `L` → Законное, `N` → Нейтральное.
- * - Dash (`-`): rendered as "Нет" (none).
+ * | Key   | EN    | RU                    | Meaning                |
+ * |-------|-------|-----------------------|------------------------|
+ * | `Atk` | Atk   | Атаки                 | Attacks (multiattack)  |
+ * | `LVL` | LVL   | Уровень               | Level                  |
+ * | `AC`  | AC    | КБ                    | Armour Class           |
+ * | `HD`  | HD    | ХД                    | Hit Dice               |
+ * | `HP`  | HP    | ХП                    | Hit Points             |
+ * | `DMG` | DMG   | Урон                  | Damage                 |
+ * | `MV`  | MV    | Скорость              | Movement Speed         |
+ * | `ML`  | ML    | Мораль                | Morale                 |
+ * | `A`   | A     | МВ                    | Alignment (Мировоззр.) |
+ * | `XP`  | XP    | Опыт                  | Experience Points      |
+ * | `CL`  | CL    | Сложность             | Challenge Level        |
+ * | `S`   | S     | Спасброски            | Saving Throws          |
+ * | `MR`  | MR    | Устойчивость к магии  | Magic Resistance       |
+ */
+const statsTranslations: Record<StatsLang, Map<string, string>> = {
+  en: new Map([
+    ['Atk', 'Atacks'],
+    ['LVL', 'LVL'],
+    ['AC', 'AC'],
+    ['HD', 'HD'],
+    ['HP', 'HP'],
+    ['DMG', 'Damage'],
+    ['MV', 'MV'],
+    ['ML', 'ML'],
+    ['A', 'A'],
+    ['XP', 'XP'],
+    ['CL', 'CL'],
+    ['S', 'S'],
+    ['MR', 'MR'],
+  ]),
+  ru: new Map([
+    ['Atk', 'Атаки'],
+    ['LVL', 'Уровень'],
+    ['AC', 'КБ'],
+    ['HD', 'ХД'],
+    ['HP', 'ХП'],
+    ['DMG', 'Урон'],
+    ['MV', 'Скорость'],
+    ['ML', 'Мораль'],
+    ['A', 'МВ'],
+    ['XP', 'Опыт'],
+    ['CL', 'Сложность'],
+    ['S', 'Спасброски'],
+    ['MR', 'Устойчивость к магии'],
+  ]),
+}
+
+/** Per-language labels for alignment codes (the `A` stat). */
+const alignmentLabels: Record<StatsLang, Record<'C' | 'L' | 'N', string>> = {
+  en: { C: 'Chaotic', L: 'Lawful', N: 'Neutral' },
+  ru: { C: 'Хаос', L: 'Законное', N: 'Нейтральное' },
+}
+
+/** Per-language label for a dash (`-`) value, meaning "none". */
+const noneLabels: Record<StatsLang, string> = {
+  en: 'None',
+  ru: 'Нет',
+}
+
+/** Per-language multiattack anchor title and badge-variant suffix. */
+const attackLabels: Record<StatsLang, { title: string; badgeSuffix: string }> = {
+  en: { title: 'Multiattack, see the note at the beginning of the module', badgeSuffix: 'attacks' },
+  ru: { title: 'Мультиатака, смотри примечание в начале модуля', badgeSuffix: 'атаки' },
+}
+
+/**
+ * Resolve special stat values to their display form in the given language.
+ *
+ * - Alignment (`A`): `C` / `L` / `N` → the language's alignment label.
+ * - Dash (`-`): rendered as the language's "none" label.
  * - All other values are returned as-is.
  *
  * @param statName - The stat key (e.g. `"A"`, `"HD"`).
  * @param value    - The raw value string from the stat block.
+ * @param lang     - The target language.
  * @returns The resolved display value.
  * @throws If `statName` is `"A"` and the value is not `C`, `L`, or `N`.
  */
-const resolveValueFor = (statName: string, value: string): string => {
+const resolveValueFor = (statName: string, value: string, lang: StatsLang): string => {
   if (statName === 'A') {
-    switch (value) {
-      case 'C':
-        return 'Хаос'
-      case 'L':
-        return 'Законное'
-      case 'N':
-        return 'Нейтральное'
-      default:
-        throw new Error(`Unknown alignment: ${value}`)
+    const label = alignmentLabels[lang][value as 'C' | 'L' | 'N']
+    if (!label) {
+      throw new Error(`Unknown alignment: ${value}`)
     }
+
+    return label
   }
   if (value === '-') {
-    return 'Нет'
+    return noneLabels[lang]
   }
 
   return value
@@ -103,21 +144,25 @@ const resolveValueFor = (statName: string, value: string): string => {
  * multiattack rules explanation.
  *
  * @param value  - The attack description (e.g. `"2"`, `"1d6/1d6"`).
+ * @param lang   - The target language.
  * @param option - Render variant: `1` (default, inline) or `2` (badge style).
  * @returns HTML string for the attack stat.
  */
-const handleAttack = (value: string, option = 1): string => {
+const handleAttack = (value: string, lang: StatsLang, option = 1): string => {
+  const attackName = statsTranslations[lang].get('Atk')
+  const { title, badgeSuffix } = attackLabels[lang]
+
   return option === 1
     ? [
         `<span class="stat-record">`,
-        `<a title="Мультиатака, смотри примечание в начале модуля" href="#anchor-multiattack">`,
-        `<span class="stat-name">Атаки</span>:&nbsp;`,
+        `<a title="${title}" href="#anchor-multiattack">`,
+        `<span class="stat-name">${attackName}</span>:&nbsp;`,
         `<span class="stat-value">${value}</span>`,
         `</a>`,
         `</span>\n`,
       ].join('')
     : `<span class="stat-record stat-record--attack">
-        <a title="Мультиатака, смотри примечание в начале модуля" href="#anchor-multiattack">[${value} атаки]</a>
+        <a title="${title}" href="#anchor-multiattack">[${value} ${badgeSuffix}]</a>
       </span>\n`
 }
 
@@ -127,12 +172,13 @@ const handleAttack = (value: string, option = 1): string => {
  *
  * @param markdown - The content between `{ }` braces (semicolon-separated
  *                   `key: value` pairs).
+ * @param lang     - The target language.
  * @returns Concatenated HTML for all stat records, or the original string
  *          if nothing was rendered.
  * @throws If a stat key is not found in {@link statsTranslations} or a value
  *         is empty.
  */
-const renderStatsBlock = (markdown: string): string => {
+const renderStatsBlock = (markdown: string, lang: StatsLang): string => {
   const chunks = markdown.replace(/^{|}$/g, '').split(';')
   let htmlFormatted = ''
 
@@ -142,7 +188,7 @@ const renderStatsBlock = (markdown: string): string => {
       .filter(Boolean)
       .map((i) => i.trim())
 
-    const statName = statsTranslations.get(key)
+    const statName = statsTranslations[lang].get(key)
     if (!statName) {
       throw new Error(`Unknown stat name: "${key}"`)
     }
@@ -151,12 +197,12 @@ const renderStatsBlock = (markdown: string): string => {
     }
 
     if (key === 'Atk') {
-      htmlFormatted += handleAttack(value)
+      htmlFormatted += handleAttack(value, lang)
     } else {
       htmlFormatted += [
         `<span class="stat-record">`,
         `<span class="stat-name">${statName}</span>:&nbsp;`,
-        `<span class="stat-value">${resolveValueFor(key, value)}</span>`,
+        `<span class="stat-value">${resolveValueFor(key, value, lang)}</span>`,
         `</span>\n`,
       ].join('')
     }
@@ -173,9 +219,12 @@ const renderStatsBlock = (markdown: string): string => {
  * excludes the double-brace conditional syntax `` `{{ … }}` ``).
  *
  * @param markdown - Source Markdown string.
+ * @param config   - Build config; `config.statsLang` selects the output
+ *                   language (defaults to `'en'`).
  * @returns Markdown with stat blocks replaced by styled HTML.
  */
-export const convertStatsInserts = (markdown: string): string => {
+export const convertStatsInserts = (markdown: string, config?: IDocumentConfig): string => {
+  const lang = config?.statsLang ?? DEFAULT_STATS_LANG
   const commandPattern = /`{(?!{)([\s\S]+?)}`/g
 
   if (!commandPattern.exec(markdown)) {
@@ -186,6 +235,6 @@ export const convertStatsInserts = (markdown: string): string => {
   return markdown.replace(commandPattern, (match, content: string) => {
     return !content
       ? match
-      : [`<div class="stats-insert no-page-break">`, renderStatsBlock(content.trim()), `</div>`].join('\n')
+      : [`<div class="stats-insert no-page-break">`, renderStatsBlock(content.trim(), lang), `</div>`].join('\n')
   })
 }

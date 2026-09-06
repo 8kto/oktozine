@@ -256,6 +256,7 @@ per-document.
 | `cssPath`                  | `string`                 |     | Absolute path to the compiled CSS file copied into the HTML build output. Defaults to `<outputPath>/output.css`.                                   |
 | `draftWatermarkHtml`       | `string`                 |     | HTML string injected as a watermark on every page in non-production builds. Example: `'<strong>Draft</strong>'`. Default: `''`.                    |
 | `chapterRefPattern`        | `string \| null`         |     | Regex character class body for inline room-reference linking. E.g. `'A-FPQS'` matches `(A4)`, `(S12)`. Default: `'A-K'`. Set to `null` to disable. |
+| `statsLang`                | `'en' \| 'ru'`           |     | Output language for the `convertStatsInserts` macro's stat names and values. Default: `'en'`.                                                      |
 | `aliases`                  | `AliasEntry[]`           |     | Extra `[pattern, replacement]` pairs appended to the alias macro. Pattern may be a string or a global `RegExp`.                                    |
 | `macros`                   | `MacroFn[]`              |     | Additional `(markdown, config) => markdown` transforms appended after the built-in macro pipeline.                                                 |
 
@@ -544,34 +545,42 @@ headings is that block's content.
 ### `convertStatsInserts` — inline stat blocks
 
 Expands compact stat-block shorthand (single-brace `` `{ … }` ``) into styled HTML. Stat keys are English abbreviations
-that are translated to Russian in the output.
+that are translated to the output language — English by default, or Russian when `config.statsLang` is set to `'ru'`.
 
 ```markdown
 `{ AC: 14; HD: 2; HP: 9; Atk: 1; DMG: 1d6; MV: 40; ML: 8; A: N; XP: 20; S: F2; CL: 2 }`
 ```
 
+```js
+/** @type {IDocumentConfig} */
+;({
+  id: 'main',
+  statsLang: 'ru', // defaults to 'en'
+})
+```
+
 **Supported stat keys:**
 
-| Key   | Russian              | Meaning                    |
-| ----- | -------------------- | -------------------------- |
-| `AC`  | КБ                   | Armour Class               |
-| `HD`  | ХД                   | Hit Dice                   |
-| `HP`  | ХП                   | Hit Points                 |
-| `Atk` | Атаки                | Attacks (multiattack link) |
-| `DMG` | Урон                 | Damage                     |
-| `MV`  | Скорость             | Movement Speed             |
-| `ML`  | Мораль               | Morale                     |
-| `A`   | МВ (Мировоззрение)   | Alignment                  |
-| `XP`  | Опыт                 | Experience Points          |
-| `S`   | Спасброски           | Saving Throws              |
-| `CL`  | Сложность            | Challenge Level            |
-| `LVL` | Уровень              | Level                      |
-| `MR`  | Устойчивость к магии | Magic Resistance           |
+| Key   | English | Russian              | Meaning                    |
+| ----- | ------- | -------------------- | -------------------------- |
+| `AC`  | AC      | КБ                   | Armour Class               |
+| `HD`  | HD      | ХД                   | Hit Dice                   |
+| `HP`  | HP      | ХП                   | Hit Points                 |
+| `Atk` | Atk     | Атаки                | Attacks (multiattack link) |
+| `DMG` | DMG     | Урон                 | Damage                     |
+| `MV`  | MV      | Скорость             | Movement Speed             |
+| `ML`  | ML      | Мораль               | Morale                     |
+| `A`   | A       | МВ (Мировоззрение)   | Alignment                  |
+| `XP`  | XP      | Опыт                 | Experience Points          |
+| `S`   | S       | Спасброски           | Saving Throws              |
+| `CL`  | CL      | Сложность            | Challenge Level            |
+| `LVL` | LVL     | Уровень              | Level                      |
+| `MR`  | MR      | Устойчивость к магии | Magic Resistance           |
 
 **Special value handling:**
 
-- **Alignment (`A`):** `C` → Хаос, `L` → Законное, `N` → Нейтральное.
-- **Dash (`-`):** rendered as "Нет".
+- **Alignment (`A`):** `C` → Chaotic/Хаос, `L` → Lawful/Законное, `N` → Neutral/Нейтральное.
+- **Dash (`-`):** rendered as "None" (or "Нет" in Russian).
 - **`Atk`:** rendered as a clickable link to the multiattack rules anchor (`#anchor-multiattack`).
 
 The output is wrapped in `<div class="stats-insert no-page-break">`.

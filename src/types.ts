@@ -33,6 +33,9 @@ export type MacroFn = (markdown: string, config: IDocumentConfig) => string
 /** A single find-replace alias: [pattern, replacement]. Pattern may be a literal string or a global RegExp. */
 export type AliasEntry = [string | RegExp, string]
 
+/** Supported languages for the `convertStatsInserts` macro's stat-name and value translations. */
+export type StatsLang = 'en' | 'ru'
+
 //-----------------------------------------------------------------------------
 // TOC
 //-----------------------------------------------------------------------------
@@ -153,6 +156,8 @@ export interface IBaseConfig {
    * Defaults to `'A-K'`.
    */
   chapterRefPattern?: string | null
+  /** Language used by the `convertStatsInserts` macro for stat names and values. Defaults to `'en'`. */
+  statsLang?: StatsLang
   /** Extra find-replace pairs applied after the built-in alias expansion. Supports string or global RegExp patterns. */
   aliases?: AliasEntry[]
   /**
