@@ -1,91 +1,45 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This file provides guidance to AI coding agents (Claude Code, Codex, etc.) when working with code in this repository.
+Claude Code reads it via the `@AGENTS.md` import in [CLAUDE.md](CLAUDE.md); other tools read it directly.
 
 ## Context
 
-`scripts/oktozine/` is a standalone build pipeline for PDF documents. It converts Markdown → HTML → PDF. **It is being
-extracted as a separate npm library** — keep code generic and avoid module-specific hard-coding.
+This repo **is** `oktozine`, the npm package that converts Markdown → HTML → PDF (CLI entrypoint `oktozine`, published
+from `dist/`, built from `src/`). User-facing docs — CLI flags, config schema, macro syntax, environment variables,
+frontmatter keys — live in [Readme.md](Readme.md); read that first. This file covers only what's specific to developing
+the library itself and isn't already in the README.
 
 ## Commands
 
 ```bash
-# Full build (CSS + HTML + PDF for 'main' document)
-yarn build
-
-# Build specific document
-yarn build:styles && tsx scripts/oktozine/build-module.ts <documentId> [options]
-
-# Build options
---html-no-skip     # Force rebuild all HTML files (bypass cache)
---parallel         # Build PDFs for multiple documents in parallel
---log-level debug  # Set log verbosity (trace|debug|info|warn|error)
---config <path>    # Override build config file path
-
-# Run all tests
-yarn test
+yarn build          # tsup — compiles src/ to dist/ (what actually gets published)
+yarn test           # run all tests
+yarn tsc            # type-check only, no emit
+yarn lint           # eslint
+yarn format         # prettier --check
+yarn format:fix     # eslint --fix && prettier --write
 
 # Run a single test file
-NODE_OPTIONS=--experimental-vm-modules npx jest scripts/oktozine/path/to/file.test.ts
-
-# Lint
-yarn lint
-
-# Format check / fix
-yarn format
-yarn format:fix
+NODE_OPTIONS=--experimental-vm-modules npx jest src/path/to/file.test.ts
 ```
 
-## Environment Variables
-
-| Variable                | Effect                                                                                           |
-| ----------------------- | ------------------------------------------------------------------------------------------------ |
-| `PDF_PARALLEL`          | Number of parallel Puppeteer instances (default: 4)                                              |
-| `BUILD_DUMP_HTML`       | Dump assembled HTML to `build/chunks-html/$fullHtmlContent-{id}.html` (any value except `false`) |
-| `BUILD_TOC_PAGENUMS`    | Enable TOC page-number patching (Phase 4 of PDF build); experimental and slow                    |
-| `BUILD_MODE=production` | Enables production markers in templates                                                          |
-| `PINO_LOG_LEVEL`        | Pino log level                                                                                   |
+To exercise the CLI itself (`oktozine`, `oktozine server start|stop`, the build config schema), see Readme.md's Quick
+Start / CLI / Build Config sections.
 
 ## Architecture
 
-### Pipeline Overview
+Source lives in `src/`:
 
-```
-build-module.ts  (CLI orchestrator)
-  → build-html.ts       per document, serial
-  → build-pdf.ts        per document, serial by default
-```
+- `build-module.ts` — CLI entrypoint (`bin: oktozine`); deep-merges each document config over the top-level defaults
+  before building
+- `build-html.ts` / `build-pdf.ts` — the two build phases; see Readme's "Build phases" for the user-facing overview
+- `lib/` — config loading, path resolution, logger, PDF chunk cache/registry, embedded web server daemon, TOC builder
+- `macros/` — the Markdown macro pipeline; `index.ts` registers each macro in a fixed order. **Don't duplicate the
+  pipeline table or per-macro syntax here** — Readme's "Markdown Macro System" section is the single source of truth;
+  update it there when macros change.
 
-### HTML Build (`build-html.ts`)
-
-Reads Markdown from `src/markdown/`, runs the macro pipeline, applies an EJS HTML template, writes to
-`build/chunks-html/module-{id}/`.
-
-**Incremental caching:** tracks a last-build timestamp in `/tmp/HTML_BUILDER_LAST_BUILD$-{id}.txt`. Files whose `mtime`
-is older than the timestamp are skipped. Pass `--html-no-skip` (sets `HTML_NO_SKIP=true`) to force a full rebuild.
-
-**Invalidation:** if `invalidateBuildOnPattern` matches any changed file, all files for that document are rebuilt.
-
-**File filtering** per document config: `include` (explicit list), `includePattern` (regex), `skipped` (exclusion list).
-These are mutually exclusive; they combine as `include > includePattern > skipped`.
-
-### Macro Pipeline (`macros/`)
-
-`macros/index.ts` applies transforms sequentially: `(markdown, config) => markdown`. Each macro is a pure function.
-Errors in individual macros are caught and logged without aborting the pipeline.
-
-Pipeline order matters — macros run in the order registered in `index.ts`:
-
-1. `conditionals` — `{{main: ... | osr: ...}}` blocks
-2. `alias` — shorthand expansion
-3. `named` — `:::name` → `<section>` with id
-4. `glue-*` — non-breaking spaces (Russian typography)
-5. `list-to-table` — Markdown lists → `<table>`
-6. `ref` — `((ref-id))` → content from reference files
-7. `stats-insert` — inline stat blocks → HTML
-8. `linkify` — `(A4)` style room refs → `<a>` links
-
-### PDF Build (`build-pdf.ts`)
+### PDF build phases (`build-pdf.ts`) — not covered in Readme.md
 
 Four phases per document:
 
@@ -96,33 +50,26 @@ Four phases per document:
 3. **Merge** — pdf-lib merges chunks, rebuilds `/Catalog/Dests` named destinations so cross-chunk links work, draws
    header/footer
 4. **TOC patching** — (gated: `BUILD_TOC_PAGENUMS`) injects real page numbers into TOC, re-renders only TOC pages,
-   splices them into the merged PDF
+   splices them into the merged PDF; experimental and slow
 
-**Incremental chunk cache:** chunk PDFs saved to `build/pdf/{documentId}-chunk-{i}.pdf`; a registry at
-`build/pdf/{documentId}-registry.json` stores N, chunkSize, and MD5 hashes of every source file. On subsequent builds:
+### Caching internals — not covered in Readme.md
 
-- **Fast path** (all files unchanged + N/chunkSize known from config): skips Puppeteer entirely, loads cached chunks,
-  merges. Disabled when `BUILD_TOC_PAGENUMS` is set.
-- **Partial rebuild**: re-renders only the chunk(s) containing changed files (chunk assignment is by file position,
-  approximate but conservative).
-
-### Config (`types.ts` + `conf/oktozin.build.conf.ts`)
-
-`IModuleBuilderConfig` has top-level defaults plus a `documents` array of `IDocumentConfig`. `build-module.ts`
-deep-merges each document config with the defaults before passing to the build functions.
-
-Config is loaded from `oktozin.build.conf.ts` at the project root or in `conf/`, or via `--config`. The
-`releasedocumentIds` array controls which documents are included in release builds.
-
-### Two-Language Output
-
-Documents with `id: 'main'` and `id: 'osr'` share identical content but use `conditionals` macro to swap system-specific
-text. The `conditionalsAlias` config field maps document IDs for bestiary variants.
+- **HTML incremental cache:** tracks a last-build timestamp in `/tmp/HTML_BUILDER_LAST_BUILD$-{id}.txt`
+  (`src/lib/build-utils.ts`); files whose `mtime` predates it are skipped. `--html-no-skip` forces a full rebuild.
+- **PDF chunk cache:** chunk PDFs are saved to `build/pdf/{documentId}-chunk-{i}.pdf`; a registry at
+  `build/pdf/{documentId}-registry.json` (`src/lib/pdf-chunk-registry.ts`) stores `N`, `chunkSize`, and MD5 hashes of
+  every source file.
+  - Fast path (all files unchanged + N/chunkSize known from config): skips Puppeteer entirely, loads cached chunks,
+    merges. Disabled when `BUILD_TOC_PAGENUMS` is set.
+  - Partial rebuild: re-renders only the chunk(s) containing changed files (chunk assignment is by file position,
+    approximate but conservative).
+- Errors in individual macros are caught in `macros/index.ts` and logged without aborting the rest of the pipeline.
 
 ## Code Style
 
-- All functions are arrow functions (enforced by `func-style: expression`)
-- No `console.log` — use the `logger` from `lib/logger.ts`
+- Functions are written as arrow functions by convention; ESLint enforces `prefer-arrow-callback` for callbacks
+- No `console.log` — use the `logger` from `src/lib/logger.ts` (`console.warn`/`console.error` are the only allowed raw
+  console calls)
 - Imports sorted by `simple-import-sort`; node builtins first, then third-party, then local
 - `no-implicit-coercion` is enforced — use `Number(x)` not `+x`, `String(x)` not `${x}`
 - Follows the `.eslintrc.json` rules
