@@ -25,6 +25,7 @@ import { parseConditionalMode } from './conditionals'
 import { convertDumpInserts } from './dump.macro'
 import { glueDamageUnits, glueShorthands, glueUnits, glueUnitsWithNoLineBreaks, glueWords } from './glue-units'
 import { replaceImagesSrc } from './images-url.macro'
+import { parseLangBlocks } from './lang-block.macro'
 import { linkify } from './linkify'
 import { convertListToTable } from './list-to-table.macro'
 import { convertNamedSections } from './named.macro'
@@ -40,6 +41,7 @@ const getMacroHandlers = (): MacroFn[] => {
     _macroHandlers = [
       convertDumpInserts,
       parseConditionalMode,
+      parseLangBlocks,
       replaceImagesSrc,
       addAliases,
       convertNamedSections,
