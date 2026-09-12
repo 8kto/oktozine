@@ -1,7 +1,7 @@
 import type { IDocumentConfig } from '../../types'
 import { convertStatsInserts } from '../stats-insert'
 
-const ruConfig = { statsLang: 'ru' } as IDocumentConfig
+const ruConfig = { buildLang: 'ru' } as IDocumentConfig
 
 describe('convert stats inserts', () => {
   it('should convert cmd into html using English labels by default', () => {
@@ -12,7 +12,7 @@ describe('convert stats inserts', () => {
     ).toMatchSnapshot()
   })
 
-  it('should convert cmd into html using Russian labels when statsLang is "ru"', () => {
+  it('should convert cmd into html using Russian labels when buildLang is "ru"', () => {
     expect(
       convertStatsInserts(
         `\`{ AC: 14; HD: ½ (2hp); DMG: d4-1 (кинжал) или d6-1 (меч); MV: 60' (20'); ML: 6; A: C }\``,
@@ -112,7 +112,7 @@ End`
     expect(out).toContain(`<span class="stat-value">None</span>`)
   })
 
-  it('should convert "-" into "Нет" when statsLang is "ru"', () => {
+  it('should convert "-" into "Нет" when buildLang is "ru"', () => {
     const out = convertStatsInserts(`\`{ MR: -; AC: 14 }\``, ruConfig).trim()
     expect(out).toContain(`<span class="stat-name">Устойчивость к магии</span>`)
     expect(out).toContain(`<span class="stat-value">Нет</span>`)
@@ -124,7 +124,7 @@ End`
     expect(out).toContain('title="Multiattack, see the note at the beginning of the module"')
   })
 
-  it('should render the Atk stat with Russian labels when statsLang is "ru"', () => {
+  it('should render the Atk stat with Russian labels when buildLang is "ru"', () => {
     const out = convertStatsInserts(`\`{ Atk: 2; AC: 14 }\``, ruConfig).trim()
     expect(out).toContain(`<span class="stat-name">Атаки</span>`)
     expect(out).toContain('title="Мультиатака, смотри примечание в начале модуля"')
