@@ -156,8 +156,11 @@ export interface IBaseConfig {
    * Defaults to `'A-K'`.
    */
   chapterRefPattern?: string | null
-  /** Language used by the `convertStatsInserts` macro for stat names and values. Defaults to `'en'`. */
-  statsLang?: StatsLang
+  /**
+   * Resolved build language, defaulting from the `OB_LANG` env var. Used by the `convertStatsInserts` macro for stat
+   * names and values, and by the `parseLangBlocks` macro for `{% lang %}` blocks.
+   */
+  buildLang?: StatsLang
   /** Extra find-replace pairs applied after the built-in alias expansion. Supports string or global RegExp patterns. */
   aliases?: AliasEntry[]
   /**

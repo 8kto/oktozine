@@ -10,7 +10,7 @@
  * The pattern `` `{ … }` `` is used (single braces) to distinguish stat
  * blocks from the conditional syntax `` `{{ … }}` `` (double braces).
  *
- * The output language is controlled by `config.statsLang` (`'en'` by
+ * The output language is controlled by `config.buildLang` (`'en'` by
  * default, `'ru'` also supported).
  *
  * @module macros/stats-insert
@@ -25,7 +25,7 @@
  * `{ AC: 16; HD: 4; HP: 18; Atk: 2; DMG: 1d6/1d6; MV: 30; ML: 9; A: C; XP: 125; S: F4; CL: 4 }`
  * ```
  *
- * @example Rendered HTML (simplified, `statsLang: 'ru'`)
+ * @example Rendered HTML (simplified, `buildLang: 'ru'`)
  * ```html
  * <div class="stats-insert no-page-break">
  *   <span class="stat-record"><span class="stat-name">КБ</span>:&nbsp;<span class="stat-value">14</span></span>
@@ -219,12 +219,12 @@ const renderStatsBlock = (markdown: string, lang: StatsLang): string => {
  * excludes the double-brace conditional syntax `` `{{ … }}` ``).
  *
  * @param markdown - Source Markdown string.
- * @param config   - Build config; `config.statsLang` selects the output
+ * @param config   - Build config; `config.buildLang` selects the output
  *                   language (defaults to `'en'`).
  * @returns Markdown with stat blocks replaced by styled HTML.
  */
 export const convertStatsInserts = (markdown: string, config?: IDocumentConfig): string => {
-  const lang = config?.statsLang ?? DEFAULT_STATS_LANG
+  const lang = config?.buildLang ?? DEFAULT_STATS_LANG
   const commandPattern = /`{(?!{)([\s\S]+?)}`/g
 
   if (!commandPattern.exec(markdown)) {

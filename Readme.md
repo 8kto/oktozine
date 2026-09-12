@@ -256,7 +256,7 @@ per-document.
 | `cssPath`                  | `string`                 |     | Absolute path to the compiled CSS file copied into the HTML build output. Defaults to `<outputPath>/output.css`.                                   |
 | `draftWatermarkHtml`       | `string`                 |     | HTML string injected as a watermark on every page in non-production builds. Example: `'<strong>Draft</strong>'`. Default: `''`.                    |
 | `chapterRefPattern`        | `string \| null`         |     | Regex character class body for inline room-reference linking. E.g. `'A-FPQS'` matches `(A4)`, `(S12)`. Default: `'A-K'`. Set to `null` to disable. |
-| `statsLang`                | `'en' \| 'ru'`           |     | Output language for the `convertStatsInserts` macro's stat names and values. Default: `'en'`.                                                      |
+| `buildLang`                | `'en' \| 'ru'`           |     | Resolved build language, defaulting from `OB_LANG`. Used by `convertStatsInserts` and the `parseLangBlocks` macro. Default: `'en'`.                |
 | `aliases`                  | `AliasEntry[]`           |     | Extra `[pattern, replacement]` pairs appended to the alias macro. Pattern may be a string or a global `RegExp`.                                    |
 | `macros`                   | `MacroFn[]`              |     | Additional `(markdown, config) => markdown` transforms appended after the built-in macro pipeline.                                                 |
 
@@ -375,18 +375,19 @@ Macros are processed by `macros/index.ts` in a fixed pipeline before Markdown re
 
 ### Pipeline order
 
-| #   | Handler                | What it does                                                                             |
-| --- | ---------------------- | ---------------------------------------------------------------------------------------- |
-| 1   | `convertDumpInserts`   | `<!-- cmd[dump] ref-file[…] /-->` → all entries from a reference file, optionally sorted |
-| 2   | `parseConditionalMode` | Inline conditionals                                                                      |
-| 3   | `addAliases`           | HTML comment macros and item/stats shortcuts                                             |
-| 4   | `convertNamedSections` | `<!-- named[id] /-->` → hidden anchor elements                                           |
-| 5–9 | `glue*`                | Non-breaking space insertion between words, units, shorthands                            |
-| 10  | `convertListToTable`   | Converts special Markdown lists to HTML tables                                           |
-| 11  | `convertRefInserts`    | Inlines referenced content blocks from `$refs-*.md`                                      |
-| 12  | `convertStatsInserts`  | Inlines stat blocks                                                                      |
-| 13  | `linkify`              | Auto-links room references `(A4)` and room headings                                      |
-| 14… | `config.macros`        | Additional custom macros supplied via `IBaseConfig.macros`                               |
+| #    | Handler                | What it does                                                                             |
+| ---- | ---------------------- | ---------------------------------------------------------------------------------------- |
+| 1    | `convertDumpInserts`   | `<!-- cmd[dump] ref-file[…] /-->` → all entries from a reference file, optionally sorted |
+| 2    | `parseConditionalMode` | Inline conditionals                                                                      |
+| 3    | `parseLangBlocks`      | `{% lang X %} ... {% /lang %}` blocks                                                    |
+| 4    | `addAliases`           | HTML comment macros and item/stats shortcuts                                             |
+| 5    | `convertNamedSections` | `<!-- named[id] /-->` → hidden anchor elements                                           |
+| 6–10 | `glue*`                | Non-breaking space insertion between words, units, shorthands                            |
+| 11   | `convertListToTable`   | Converts special Markdown lists to HTML tables                                           |
+| 12   | `convertRefInserts`    | Inlines referenced content blocks from `$refs-*.md`                                      |
+| 13   | `convertStatsInserts`  | Inlines stat blocks                                                                      |
+| 14   | `linkify`              | Auto-links room references `(A4)` and room headings                                      |
+| 15…  | `config.macros`        | Additional custom macros supplied via `IBaseConfig.macros`                               |
 
 Macros also run on the content of each reference block before it is inserted (step 11 calls `handleMacros` recursively
 on resolved content). The `convertRefInserts` handler itself is excluded from that recursive pass to prevent infinite
@@ -426,6 +427,19 @@ branch matches directly, falls back to `conditionalsAlias`.
 ```
 
 Output is wrapped in `<span class="conditional-block conditional-block--<id>">`.
+
+---
+
+### `parseLangBlocks` — `{% lang %}` blocks
+
+Replaces `{% lang X %} ... {% /lang %}` blocks with the content of the block matching `config.buildLang` (defaults to
+`'en'`, itself defaulting from the `OB_LANG` env var). Non-matching blocks are dropped entirely. Blocks are independent
+and may span multiple lines or contain raw HTML.
+
+```markdown
+{% lang en %} <span class="cover-title--subtitle">In the Eye of</span> Vargothar {% /lang %} {% lang ru %} Зеница
+Варготара {% /lang %}
+```
 
 ---
 
@@ -545,7 +559,7 @@ headings is that block's content.
 ### `convertStatsInserts` — inline stat blocks
 
 Expands compact stat-block shorthand (single-brace `` `{ … }` ``) into styled HTML. Stat keys are English abbreviations
-that are translated to the output language — English by default, or Russian when `config.statsLang` is set to `'ru'`.
+that are translated to the output language — English by default, or Russian when `config.buildLang` is set to `'ru'`.
 
 ```markdown
 `{ AC: 14; HD: 2; HP: 9; Atk: 1; DMG: 1d6; MV: 40; ML: 8; A: N; XP: 20; S: F2; CL: 2 }`
@@ -555,7 +569,7 @@ that are translated to the output language — English by default, or Russian wh
 /** @type {IDocumentConfig} */
 ;({
   id: 'main',
-  statsLang: 'ru', // defaults to 'en'
+  buildLang: 'ru', // defaults to 'en'
 })
 ```
 

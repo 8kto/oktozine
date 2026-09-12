@@ -43,7 +43,7 @@ const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
     shouldAddPdfBookmarks: !!moduleOptions.shouldAddPdfBookmarks,
     shouldUsePdfCache: !!moduleOptions.shouldUsePdfCache,
     markdownPath: moduleOptions.markdownPath,
-    statsLang: conf.statsLang ?? process.env.OB_LANG ?? 'en',
+    buildLang: conf.buildLang ?? process.env.OB_LANG ?? 'en',
   }
 }
 
