@@ -100,7 +100,7 @@ export const spawnServerDaemon = async (serveDir: string, port: number): Promise
 
   // Wait until the daemon is actually accepting connections
   await waitForPort(port)
-  logger.info(`Web server: daemon started on http://localhost:${port} (pid: ${child.pid})`)
+  logger.info(`Web server: serving ${serveDir} on http://localhost:${port} (pid: ${child.pid})`)
 }
 
 /**

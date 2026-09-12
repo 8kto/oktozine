@@ -130,10 +130,10 @@ export interface IBaseConfig {
   /** Directory containing image assets to copy into the build. Defaults to <projectRoot>/src/images. */
   imagesDir?: string
   /**
-   * Port for the static file server that serves `build/chunks-html/` during PDF rendering.
-   * When set, the builder starts (or reuses) a server on `http://localhost:<port>` before
-   * launching Puppeteer. Markdown sources reference images via `{{imagesSrc}}`, which resolves
-   * to `http://localhost:<port>/images`.
+   * Port for the static file server that serves `<outputPath>/chunks-html/` (e.g.
+   * `build/tmp/{lang}/chunks-html/`) during PDF rendering. When set, the builder starts (or
+   * reuses) a server on `http://localhost:<port>` before launching Puppeteer. Markdown sources
+   * reference images via `{{imagesSrc}}`, which resolves to `http://localhost:<port>/images`.
    */
   webServerPort?: number
   /**

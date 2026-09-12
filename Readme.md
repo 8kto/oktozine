@@ -144,7 +144,7 @@ builder starts an embedded static file server automatically before launching Pup
 ```js
 /** @type {IModuleBuilderConfig} */
 export default {
-  webServerPort: 3001, // builder serves build/chunks-html/ on this port
+  webServerPort: 3001, // builder serves <outputPath>/chunks-html/ on this port (default: build/chunks-html/)
   keepWebServer: false, // true = server keeps running after build (daemon mode)
   // ...other fields
 }
