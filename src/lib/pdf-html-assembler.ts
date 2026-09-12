@@ -14,8 +14,9 @@ const baseName = (name: string): string => name.replace(/-\d+\.md\.html$/, '.md.
 export const getPageClassname = (config: IDocumentConfig, fileName: string): string => {
   const { id: moduleId, buildLang } = config
   const pageName = fileName.replace('.md.html', '').replace(/^\d+-/, '')
+  const baseClass = `page--wrapper page--${moduleId} page--${moduleId}-${pageName} page-name--${pageName}`
 
-  return `page--wrapper page--${moduleId} page--${moduleId}-${pageName} page-name--${pageName} page-lang--${buildLang ?? 'default'}`
+  return buildLang ? `${baseClass} page-lang--${buildLang}` : baseClass
 }
 
 export const getPageTemplate = (
