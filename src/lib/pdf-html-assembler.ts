@@ -11,19 +11,20 @@ const baseName = (name: string): string => name.replace(/-\d+\.md\.html$/, '.md.
 
 // ── Exports ──────────────────────────────────────────────────────────────────
 
-export const getPageClassname = (moduleId: string, fileName: string): string => {
+export const getPageClassname = (config: IDocumentConfig, fileName: string): string => {
+  const { id: moduleId, buildLang } = config
   const pageName = fileName.replace('.md.html', '').replace(/^\d+-/, '')
 
-  return `page--wrapper page--${moduleId} page--${moduleId}-${pageName} page-name--${pageName}`
+  return `page--wrapper page--${moduleId} page--${moduleId}-${pageName} page-name--${pageName} page-lang--${buildLang ?? 'default'}`
 }
 
 export const getPageTemplate = (
-  moduleId: string,
+  config: IDocumentConfig,
   fileName: string,
   pageContent: string,
   skipDelimiter = false,
 ): string =>
-  `<div class="${getPageClassname(moduleId, fileName)}">
+  `<div class="${getPageClassname(config, fileName)}">
     ${pageContent}
   </div>${skipDelimiter ? '' : '<div class="page-delimiter"></div>' + `<!-- ${fileName} -->`}`
 
@@ -84,16 +85,16 @@ export const assembleDocumentHtml = (
   let html = ''
 
   if (coverFile && coverContent) {
-    html += getPageTemplate(config.id, coverFile, coverContent, true)
+    html += getPageTemplate(config, coverFile, coverContent, true)
   }
 
   sortedPages.forEach(([file, txt], index, arr) => {
     logger.debug(`>> PDF includes ${file}`)
-    html += getPageTemplate(config.id, file, txt, index >= arr.length - 1)
+    html += getPageTemplate(config, file, txt, index >= arr.length - 1)
   })
 
   if (backCoverFile && backCoverContent) {
-    html += getPageTemplate(config.id, backCoverFile, backCoverContent, true)
+    html += getPageTemplate(config, backCoverFile, backCoverContent, true)
   }
 
   return html
