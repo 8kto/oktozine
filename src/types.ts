@@ -33,8 +33,8 @@ export type MacroFn = (markdown: string, config: IDocumentConfig) => string
 /** A single find-replace alias: [pattern, replacement]. Pattern may be a literal string or a global RegExp. */
 export type AliasEntry = [string | RegExp, string]
 
-/** Supported languages for the `convertStatsInserts` macro's stat-name and value translations. */
-export type StatsLang = 'en' | 'ru'
+/** A build language, passed by the configuration. */
+export type BuildLang = string
 
 //-----------------------------------------------------------------------------
 // TOC
@@ -160,7 +160,7 @@ export interface IBaseConfig {
    * Resolved build language, defaulting from the `OB_LANG` env var. Used by the `convertStatsInserts` macro for stat
    * names and values, and by the `parseLangBlocks` macro for `{% lang %}` blocks.
    */
-  buildLang?: StatsLang
+  buildLang?: BuildLang
   /** Extra find-replace pairs applied after the built-in alias expansion. Supports string or global RegExp patterns. */
   aliases?: AliasEntry[]
   /**

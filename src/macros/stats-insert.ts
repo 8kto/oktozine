@@ -35,9 +35,9 @@
  * ```
  */
 
-import type { IDocumentConfig, StatsLang } from '../types'
+import type { BuildLang, IDocumentConfig } from '../types'
 
-const DEFAULT_STATS_LANG: StatsLang = 'en'
+const DEFAULT_STATS_LANG: BuildLang = 'en'
 
 /**
  * Per-language display labels for stat abbreviations, keyed by the English
@@ -59,7 +59,7 @@ const DEFAULT_STATS_LANG: StatsLang = 'en'
  * | `S`   | S     | Спасброски            | Saving Throws          |
  * | `MR`  | MR    | Устойчивость к магии  | Magic Resistance       |
  */
-const statsTranslations: Record<StatsLang, Map<string, string>> = {
+const statsTranslations: Record<BuildLang, Map<string, string>> = {
   en: new Map([
     ['Atk', 'Attacks'],
     ['LVL', 'LVL'],
@@ -93,19 +93,19 @@ const statsTranslations: Record<StatsLang, Map<string, string>> = {
 }
 
 /** Per-language labels for alignment codes (the `A` stat). */
-const alignmentLabels: Record<StatsLang, Record<'C' | 'L' | 'N', string>> = {
+const alignmentLabels: Record<BuildLang, Record<'C' | 'L' | 'N', string>> = {
   en: { C: 'Chaotic', L: 'Lawful', N: 'Neutral' },
   ru: { C: 'Хаос', L: 'Законное', N: 'Нейтральное' },
 }
 
 /** Per-language label for a dash (`-`) value, meaning "none". */
-const noneLabels: Record<StatsLang, string> = {
+const noneLabels: Record<BuildLang, string> = {
   en: 'None',
   ru: 'Нет',
 }
 
 /** Per-language multiattack anchor title and badge-variant suffix. */
-const attackLabels: Record<StatsLang, { title: string; badgeSuffix: string }> = {
+const attackLabels: Record<BuildLang, { title: string; badgeSuffix: string }> = {
   en: { title: 'Multiattack, see the note at the beginning of the module', badgeSuffix: 'attacks' },
   ru: { title: 'Мультиатака, смотри примечание в начале модуля', badgeSuffix: 'атаки' },
 }
@@ -123,7 +123,7 @@ const attackLabels: Record<StatsLang, { title: string; badgeSuffix: string }> = 
  * @returns The resolved display value.
  * @throws If `statName` is `"A"` and the value is not `C`, `L`, or `N`.
  */
-const resolveValueFor = (statName: string, value: string, lang: StatsLang): string => {
+const resolveValueFor = (statName: string, value: string, lang: BuildLang): string => {
   if (statName === 'A') {
     const label = alignmentLabels[lang][value as 'C' | 'L' | 'N']
     if (!label) {
@@ -148,7 +148,7 @@ const resolveValueFor = (statName: string, value: string, lang: StatsLang): stri
  * @param option - Render variant: `1` (default, inline) or `2` (badge style).
  * @returns HTML string for the attack stat.
  */
-const handleAttack = (value: string, lang: StatsLang, option = 1): string => {
+const handleAttack = (value: string, lang: BuildLang, option = 1): string => {
   const attackName = statsTranslations[lang].get('Atk')
   const { title, badgeSuffix } = attackLabels[lang]
 
@@ -178,7 +178,7 @@ const handleAttack = (value: string, lang: StatsLang, option = 1): string => {
  * @throws If a stat key is not found in {@link statsTranslations} or a value
  *         is empty.
  */
-const renderStatsBlock = (markdown: string, lang: StatsLang): string => {
+const renderStatsBlock = (markdown: string, lang: BuildLang): string => {
   const chunks = markdown.replace(/^{|}$/g, '').split(';')
   let htmlFormatted = ''
 
