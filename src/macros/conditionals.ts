@@ -6,6 +6,7 @@
  * `conditionalsAlias` mapping is consulted as a fallback.
  *
  * @module macros/parse-conditional-mode
+ * @pipeline markdown
  *
  * @example Markdown input
  * ```markdown

@@ -33,6 +33,9 @@ export type MacroFn = (markdown: string, config: IDocumentConfig) => string
 /** A single find-replace alias: [pattern, replacement]. Pattern may be a literal string or a global RegExp. */
 export type AliasEntry = [string | RegExp, string]
 
+/** A build language, passed by the configuration. */
+export type BuildLang = string
+
 //-----------------------------------------------------------------------------
 // TOC
 //-----------------------------------------------------------------------------
@@ -127,10 +130,10 @@ export interface IBaseConfig {
   /** Directory containing image assets to copy into the build. Defaults to <projectRoot>/src/images. */
   imagesDir?: string
   /**
-   * Port for the static file server that serves `build/chunks-html/` during PDF rendering.
-   * When set, the builder starts (or reuses) a server on `http://localhost:<port>` before
-   * launching Puppeteer. Markdown sources reference images via `{{imagesSrc}}`, which resolves
-   * to `http://localhost:<port>/images`.
+   * Port for the static file server that serves `<outputPath>/chunks-html/` (e.g.
+   * `build/tmp/{lang}/chunks-html/`) during PDF rendering. When set, the builder starts (or
+   * reuses) a server on `http://localhost:<port>` before launching Puppeteer. Markdown sources
+   * reference images via `{{imagesSrc}}`, which resolves to `http://localhost:<port>/images`.
    */
   webServerPort?: number
   /**
@@ -153,6 +156,11 @@ export interface IBaseConfig {
    * Defaults to `'A-K'`.
    */
   chapterRefPattern?: string | null
+  /**
+   * Resolved build language, defaulting from the `OB_LANG` env var. Used by the `convertStatsInserts` macro for stat
+   * names and values, and by the `parseLangBlocks` macro for `{% lang %}` blocks.
+   */
+  buildLang?: BuildLang
   /** Extra find-replace pairs applied after the built-in alias expansion. Supports string or global RegExp patterns. */
   aliases?: AliasEntry[]
   /**

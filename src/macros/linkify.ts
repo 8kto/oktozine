@@ -15,6 +15,7 @@
  * room linking entirely. Defaults to `'A-FPQS'`.
  *
  * @module macros/linkify
+ * @pipeline markdown
  *
  * @example Inline room reference
  * ```markdown

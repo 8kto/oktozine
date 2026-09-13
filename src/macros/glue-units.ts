@@ -7,6 +7,7 @@
  * they can be reordered or disabled individually.
  *
  * @module macros/glue-units
+ * @pipeline markdown
  *
  * @example glueUnits — number + measurement unit
  * ```markdown

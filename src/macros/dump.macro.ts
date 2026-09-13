@@ -15,6 +15,7 @@
  * `sorted` or `sorted[asc]` sorts ascending, `sorted[desc]` descending.
  *
  * @module macros/dump
+ * @pipeline markdown
  *
  * @example
  * ```markdown

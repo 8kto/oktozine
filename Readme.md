@@ -144,7 +144,7 @@ builder starts an embedded static file server automatically before launching Pup
 ```js
 /** @type {IModuleBuilderConfig} */
 export default {
-  webServerPort: 3001, // builder serves build/chunks-html/ on this port
+  webServerPort: 3001, // builder serves <outputPath>/chunks-html/ on this port (default: build/chunks-html/)
   keepWebServer: false, // true = server keeps running after build (daemon mode)
   // ...other fields
 }
@@ -158,8 +158,10 @@ In Markdown sources, use the `{{imagesSrc}}` template variable instead of hardco
 
 This resolves to `http://localhost:3001/images/maps/dungeon-level-1.png` at build time.
 
-> **Note:** `{{imagesSrc}}` is only expanded in Markdown files. CSS and HTML template files are not processed by the
-> macro pipeline, so they should reference images via the full URL or a path that works in the browser context.
+> **Note:** `{{imagesSrc}}` is only expanded in Markdown files — it's resolved by the Markdown pipeline, which doesn't
+> run on CSS or HTML template files. (The separate [template pipeline](#markdown-macro-system) does run over `.html`
+> templates, but only for `{% lang %}` blocks and `{{ locale="value" }}` inline translations.) Reference images in
+> templates via the full URL or a path that works in the browser context.
 
 When `keepWebServer: true` the process exits immediately after the build and the server continues as a detached
 background process. Use the `server` sub-commands to manage it manually:
@@ -256,6 +258,7 @@ per-document.
 | `cssPath`                  | `string`                 |     | Absolute path to the compiled CSS file copied into the HTML build output. Defaults to `<outputPath>/output.css`.                                   |
 | `draftWatermarkHtml`       | `string`                 |     | HTML string injected as a watermark on every page in non-production builds. Example: `'<strong>Draft</strong>'`. Default: `''`.                    |
 | `chapterRefPattern`        | `string \| null`         |     | Regex character class body for inline room-reference linking. E.g. `'A-FPQS'` matches `(A4)`, `(S12)`. Default: `'A-K'`. Set to `null` to disable. |
+| `buildLang`                | `'en' \| 'ru'`           |     | Resolved build language, defaulting from `OB_LANG`. Used by `convertStatsInserts` and the `parseLangBlocks` macro. Default: `'en'`.                |
 | `aliases`                  | `AliasEntry[]`           |     | Extra `[pattern, replacement]` pairs appended to the alias macro. Pattern may be a string or a global `RegExp`.                                    |
 | `macros`                   | `MacroFn[]`              |     | Additional `(markdown, config) => markdown` transforms appended after the built-in macro pipeline.                                                 |
 
@@ -369,27 +372,51 @@ serialized and evaluated as a browser function.
 
 ## Markdown Macro System
 
-Macros are processed by `macros/index.ts` in a fixed pipeline before Markdown rendering. Each macro is a pure
-`(markdown, config) => markdown` function.
+Macros run in one of two pipelines:
 
-### Pipeline order
+- **Markdown pipeline** (`macros/index.ts`) — runs on the raw Markdown source before it is rendered to HTML. This is
+  where nearly all macros live. Each macro is a pure `(markdown, config) => markdown` function.
+- **Template pipeline** (`build-html.ts`'s `applyTemplate`) — runs on the fully composed HTML page, after
+  `{{header}}`/`{{footer}}`/`{{content}}` substitution. This lets a handful of macros resolve syntax written directly in
+  `.html` template files, not just in Markdown content.
 
-| #   | Handler                | What it does                                                                             |
-| --- | ---------------------- | ---------------------------------------------------------------------------------------- |
-| 1   | `convertDumpInserts`   | `<!-- cmd[dump] ref-file[…] /-->` → all entries from a reference file, optionally sorted |
-| 2   | `parseConditionalMode` | Inline conditionals                                                                      |
-| 3   | `addAliases`           | HTML comment macros and item/stats shortcuts                                             |
-| 4   | `convertNamedSections` | `<!-- named[id] /-->` → hidden anchor elements                                           |
-| 5–9 | `glue*`                | Non-breaking space insertion between words, units, shorthands                            |
-| 10  | `convertListToTable`   | Converts special Markdown lists to HTML tables                                           |
-| 11  | `convertRefInserts`    | Inlines referenced content blocks from `$refs-*.md`                                      |
-| 12  | `convertStatsInserts`  | Inlines stat blocks                                                                      |
-| 13  | `linkify`              | Auto-links room references `(A4)` and room headings                                      |
-| 14… | `config.macros`        | Additional custom macros supplied via `IBaseConfig.macros`                               |
+Each macro's source file declares which pipeline(s) it runs in with a `@pipeline` JSDoc tag: `markdown`, `template`, or
+`markdown+template` for a macro registered in both (see `parseLangBlocks` below — it must run pre-render on Markdown
+_and_ again on the composed template, for two unrelated reasons documented at its declaration in
+`macros/lang-block.macro.ts`).
+
+### Pipeline order (Markdown pipeline)
+
+| #    | Handler                | What it does                                                                             |
+| ---- | ---------------------- | ---------------------------------------------------------------------------------------- |
+| 1    | `convertDumpInserts`   | `<!-- cmd[dump] ref-file[…] /-->` → all entries from a reference file, optionally sorted |
+| 2    | `parseConditionalMode` | Inline conditionals                                                                      |
+| 3    | `parseLangBlocks`      | `{% lang X %} ... {% /lang %}` blocks (also re-run by the template pipeline, see below)  |
+| 4    | `addAliases`           | HTML comment macros and item/stats shortcuts                                             |
+| 5    | `convertNamedSections` | `<!-- named[id] /-->` → hidden anchor elements                                           |
+| 6–10 | `glue*`                | Non-breaking space insertion between words, units, shorthands                            |
+| 11   | `convertListToTable`   | Converts special Markdown lists to HTML tables                                           |
+| 12   | `convertRefInserts`    | Inlines referenced content blocks from `$refs-*.md`                                      |
+| 13   | `convertStatsInserts`  | Inlines stat blocks                                                                      |
+| 14   | `linkify`              | Auto-links room references `(A4)` and room headings                                      |
+| 15…  | `config.macros`        | Additional custom macros supplied via `IBaseConfig.macros`                               |
 
 Macros also run on the content of each reference block before it is inserted (step 11 calls `handleMacros` recursively
 on resolved content). The `convertRefInserts` handler itself is excluded from that recursive pass to prevent infinite
 loops.
+
+### Template pipeline
+
+Runs after the Markdown pipeline and page composition, directly over the final HTML string:
+
+| Handler                     | What it does                                                                                  |
+| --------------------------- | --------------------------------------------------------------------------------------------- |
+| `parseLangBlocks`           | Re-run to resolve `{% lang X %} ... {% /lang %}` blocks written directly in `.html` templates |
+| `resolveInlineTranslations` | `{{ locale="value" ... }}` → the value for the current `OB_LANG` locale                       |
+
+```html
+<h1>{{ en="Title" ru="Заголовок" }}</h1>
+```
 
 ---
 
@@ -425,6 +452,19 @@ branch matches directly, falls back to `conditionalsAlias`.
 ```
 
 Output is wrapped in `<span class="conditional-block conditional-block--<id>">`.
+
+---
+
+### `parseLangBlocks` — `{% lang %}` blocks
+
+Replaces `{% lang X %} ... {% /lang %}` blocks with the content of the block matching `config.buildLang` (defaults to
+`'en'`, itself defaulting from the `OB_LANG` env var). Non-matching blocks are dropped entirely. Blocks are independent
+and may span multiple lines or contain raw HTML.
+
+```markdown
+{% lang en %} <span class="cover-title--subtitle">In the Eye of</span> Vargothar {% /lang %} {% lang ru %} Зеница
+Варготара {% /lang %}
+```
 
 ---
 
@@ -544,34 +584,42 @@ headings is that block's content.
 ### `convertStatsInserts` — inline stat blocks
 
 Expands compact stat-block shorthand (single-brace `` `{ … }` ``) into styled HTML. Stat keys are English abbreviations
-that are translated to Russian in the output.
+that are translated to the output language — English by default, or Russian when `config.buildLang` is set to `'ru'`.
 
 ```markdown
 `{ AC: 14; HD: 2; HP: 9; Atk: 1; DMG: 1d6; MV: 40; ML: 8; A: N; XP: 20; S: F2; CL: 2 }`
 ```
 
+```js
+/** @type {IDocumentConfig} */
+;({
+  id: 'main',
+  buildLang: 'ru', // defaults to 'en'
+})
+```
+
 **Supported stat keys:**
 
-| Key   | Russian              | Meaning                    |
-| ----- | -------------------- | -------------------------- |
-| `AC`  | КБ                   | Armour Class               |
-| `HD`  | ХД                   | Hit Dice                   |
-| `HP`  | ХП                   | Hit Points                 |
-| `Atk` | Атаки                | Attacks (multiattack link) |
-| `DMG` | Урон                 | Damage                     |
-| `MV`  | Скорость             | Movement Speed             |
-| `ML`  | Мораль               | Morale                     |
-| `A`   | МВ (Мировоззрение)   | Alignment                  |
-| `XP`  | Опыт                 | Experience Points          |
-| `S`   | Спасброски           | Saving Throws              |
-| `CL`  | Сложность            | Challenge Level            |
-| `LVL` | Уровень              | Level                      |
-| `MR`  | Устойчивость к магии | Magic Resistance           |
+| Key   | English | Russian              | Meaning                    |
+| ----- | ------- | -------------------- | -------------------------- |
+| `AC`  | AC      | КБ                   | Armour Class               |
+| `HD`  | HD      | ХД                   | Hit Dice                   |
+| `HP`  | HP      | ХП                   | Hit Points                 |
+| `Atk` | Atk     | Атаки                | Attacks (multiattack link) |
+| `DMG` | DMG     | Урон                 | Damage                     |
+| `MV`  | MV      | Скорость             | Movement Speed             |
+| `ML`  | ML      | Мораль               | Morale                     |
+| `A`   | A       | МВ (Мировоззрение)   | Alignment                  |
+| `XP`  | XP      | Опыт                 | Experience Points          |
+| `S`   | S       | Спасброски           | Saving Throws              |
+| `CL`  | CL      | Сложность            | Challenge Level            |
+| `LVL` | LVL     | Уровень              | Level                      |
+| `MR`  | MR      | Устойчивость к магии | Magic Resistance           |
 
 **Special value handling:**
 
-- **Alignment (`A`):** `C` → Хаос, `L` → Законное, `N` → Нейтральное.
-- **Dash (`-`):** rendered as "Нет".
+- **Alignment (`A`):** `C` → Chaotic/Хаос, `L` → Lawful/Законное, `N` → Neutral/Нейтральное.
+- **Dash (`-`):** rendered as "None" (or "Нет" in Russian).
 - **`Atk`:** rendered as a clickable link to the multiattack rules anchor (`#anchor-multiattack`).
 
 The output is wrapped in `<div class="stats-insert no-page-break">`.

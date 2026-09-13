@@ -17,19 +17,31 @@ import {
 
 describe('getPageClassname', () => {
   it('strips .md.html suffix and numeric prefix from pageName', () => {
-    expect(getPageClassname('main', '01-intro.md.html')).toBe(
+    expect(getPageClassname({ id: 'main' } as IDocumentConfig, '01-intro.md.html')).toBe(
       'page--wrapper page--main page--main-intro page-name--intro',
     )
   })
 
   it('handles filename without numeric prefix', () => {
-    expect(getPageClassname('main', 'cover.md.html')).toBe('page--wrapper page--main page--main-cover page-name--cover')
+    expect(getPageClassname({ id: 'main' } as IDocumentConfig, 'cover.md.html')).toBe(
+      'page--wrapper page--main page--main-cover page-name--cover',
+    )
   })
 
   it('uses moduleId in all class positions', () => {
-    const result = getPageClassname('osr', 'chapter.md.html')
+    const result = getPageClassname({ id: 'osr' } as IDocumentConfig, 'chapter.md.html')
     expect(result).toContain('page--osr')
     expect(result).toContain('page--osr-chapter')
+  })
+
+  it('appends a page-lang class when config.buildLang is set', () => {
+    const result = getPageClassname({ id: 'main', buildLang: 'en' } as IDocumentConfig, 'intro.md.html')
+    expect(result).toBe('page--wrapper page--main page--main-intro page-name--intro page-lang--en')
+  })
+
+  it('omits the page-lang class when config.buildLang is unset', () => {
+    const result = getPageClassname({ id: 'main' } as IDocumentConfig, 'intro.md.html')
+    expect(result).not.toContain('page-lang--')
   })
 })
 
@@ -37,19 +49,19 @@ describe('getPageClassname', () => {
 
 describe('getPageTemplate', () => {
   it('wraps content in a div with the correct classname', () => {
-    const result = getPageTemplate('main', 'intro.md.html', '<p>hello</p>')
+    const result = getPageTemplate({ id: 'main' } as IDocumentConfig, 'intro.md.html', '<p>hello</p>')
     expect(result).toContain('class="page--wrapper page--main page--main-intro page-name--intro"')
     expect(result).toContain('<p>hello</p>')
   })
 
   it('appends page-delimiter by default', () => {
-    const result = getPageTemplate('main', 'intro.md.html', 'content')
+    const result = getPageTemplate({ id: 'main' } as IDocumentConfig, 'intro.md.html', 'content')
     expect(result).toContain('page-delimiter')
     expect(result).toContain('<!-- intro.md.html -->')
   })
 
   it('omits delimiter when skipDelimiter=true', () => {
-    const result = getPageTemplate('main', 'intro.md.html', 'content', true)
+    const result = getPageTemplate({ id: 'main' } as IDocumentConfig, 'intro.md.html', 'content', true)
     expect(result).not.toContain('page-delimiter')
     expect(result).not.toContain('<!-- intro.md.html -->')
   })
@@ -245,5 +257,15 @@ describe('assembleDocumentHtml', () => {
   it('omits back-cover when backCoverContent is null', () => {
     const html = assembleDocumentHtml(config, null, [['p.md.html', 'page']], null)
     expect(html).not.toContain(pageClass('back.html'))
+  })
+
+  it('includes the page-lang class on pages when config.buildLang is set', () => {
+    const html = assembleDocumentHtml(
+      { id: 'mod', buildLang: 'en' } as IDocumentConfig,
+      null,
+      [['p.md.html', 'page']],
+      null,
+    )
+    expect(html).toContain('page-lang--en')
   })
 })

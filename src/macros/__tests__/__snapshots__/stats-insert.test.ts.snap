@@ -1,6 +1,18 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`convert stats inserts should convert cmd into html 1`] = `
+exports[`convert stats inserts should convert cmd into html using English labels by default 1`] = `
+"<div class="stats-insert no-page-break">
+<span class="stat-record"><span class="stat-name">AC</span>:&nbsp;<span class="stat-value">14</span></span>
+<span class="stat-record"><span class="stat-name">HD</span>:&nbsp;<span class="stat-value">½ (2hp)</span></span>
+<span class="stat-record"><span class="stat-name">Damage</span>:&nbsp;<span class="stat-value">d4-1 (dagger) or d6-1 (sword)</span></span>
+<span class="stat-record"><span class="stat-name">MV</span>:&nbsp;<span class="stat-value">60' (20')</span></span>
+<span class="stat-record"><span class="stat-name">ML</span>:&nbsp;<span class="stat-value">6</span></span>
+<span class="stat-record"><span class="stat-name">A</span>:&nbsp;<span class="stat-value">Chaotic</span></span>
+
+</div>"
+`;
+
+exports[`convert stats inserts should convert cmd into html using Russian labels when buildLang is "ru" 1`] = `
 "<div class="stats-insert no-page-break">
 <span class="stat-record"><span class="stat-name">КБ</span>:&nbsp;<span class="stat-value">14</span></span>
 <span class="stat-record"><span class="stat-name">ХД</span>:&nbsp;<span class="stat-value">½ (2hp)</span></span>

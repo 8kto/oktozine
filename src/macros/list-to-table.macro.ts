@@ -6,6 +6,7 @@
  * comment carries header definitions and optional modifiers.
  *
  * @module macros/convert-list
+ * @pipeline markdown
  *
  * @example Basic random table
  * ```markdown

@@ -239,5 +239,45 @@ describe('build-html', () => {
         expect(result).toBe('<p></p><p>{{someVariable}}</p>')
       })
     })
+
+    describe('lang blocks in templates', () => {
+      it('renders the block matching metadata.buildLang', async () => {
+        mockReadFile.mockResolvedValue('<h1>{% lang en %}Title{% /lang %}{% lang ru %}Заголовок{% /lang %}</h1>')
+
+        const result = await applyTemplate(createPage('Page content', { buildLang: 'ru' }), '/template.html')
+
+        expect(result).toBe('<h1>Заголовок</h1>')
+      })
+
+      it('defaults to English when metadata.buildLang is not set', async () => {
+        mockReadFile.mockResolvedValue('<h1>{% lang en %}Title{% /lang %}{% lang ru %}Заголовок{% /lang %}</h1>')
+
+        const result = await applyTemplate(createPage(), '/template.html')
+
+        expect(result).toBe('<h1>Title</h1>')
+      })
+
+      it('drops the block entirely when no language matches', async () => {
+        mockReadFile.mockResolvedValue('<h1>{% lang en %}Title{% /lang %}{% lang ru %}Заголовок{% /lang %}</h1>')
+
+        const result = await applyTemplate(
+          createPage('Page content', { buildLang: 'de' as IDocumentPage['metadata']['buildLang'] }),
+          '/template.html',
+        )
+
+        expect(result).toBe('<h1></h1>')
+      })
+
+      it('preserves raw HTML content inside a block written directly in the template', async () => {
+        mockReadFile.mockResolvedValue(
+          '{% lang en %}<span class="cover-title--subtitle">In the Eye of</span> Vargothar{% /lang %}' +
+            '{% lang ru %}Зеница Варготара{% /lang %}',
+        )
+
+        const result = await applyTemplate(createPage('Page content', { buildLang: 'en' }), '/template.html')
+
+        expect(result).toBe('<span class="cover-title--subtitle">In the Eye of</span> Vargothar')
+      })
+    })
   })
 })

@@ -4,6 +4,8 @@ import type { IDocumentConfig } from '../types'
  * Replaces every `{{imagesSrc}}` placeholder in the Markdown source with the
  * resolved images base URL: `http://localhost:<webServerPort>/images`.
  * No-op when `webServerPort` is not configured.
+ *
+ * @pipeline markdown
  */
 export const replaceImagesSrc = (markdown: string, config: IDocumentConfig): string => {
   if (!config.webServerPort) {
