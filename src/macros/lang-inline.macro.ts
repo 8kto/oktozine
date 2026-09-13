@@ -9,6 +9,7 @@
  * written directly in template files, not just in Markdown content.
  *
  * @module macros/lang-inline
+ * @pipeline template
  *
  * @example Template input
  * ```html

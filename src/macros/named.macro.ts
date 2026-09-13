@@ -6,6 +6,7 @@
  * macro argument.
  *
  * @module macros/anchors
+ * @pipeline markdown
  *
  * @example Markdown input
  * ```markdown

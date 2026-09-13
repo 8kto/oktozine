@@ -7,6 +7,16 @@
  * are independent and may span multiple lines.
  *
  * @module macros/lang-block
+ * @pipeline markdown+template
+ *
+ * Registered in both pipelines, and both registrations are required:
+ * - `macros/index.ts` runs it on raw Markdown, before `mdRenderer.render()`.
+ *   This must happen pre-render: once a multi-paragraph block is split into
+ *   separate `<p>` tags by the renderer, replacing the (now HTML-wrapped)
+ *   block by regex leaves unbalanced `<p>`/`</p>` tags behind.
+ * - `build-html.ts`'s `applyTemplate` runs it again on the fully composed
+ *   page, to resolve `{% lang %}` blocks written directly in `.html`
+ *   template files, which never pass through the Markdown macro pipeline.
  *
  * @example Markdown input
  * ```markdown

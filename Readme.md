@@ -158,8 +158,10 @@ In Markdown sources, use the `{{imagesSrc}}` template variable instead of hardco
 
 This resolves to `http://localhost:3001/images/maps/dungeon-level-1.png` at build time.
 
-> **Note:** `{{imagesSrc}}` is only expanded in Markdown files. CSS and HTML template files are not processed by the
-> macro pipeline, so they should reference images via the full URL or a path that works in the browser context.
+> **Note:** `{{imagesSrc}}` is only expanded in Markdown files — it's resolved by the Markdown pipeline, which doesn't
+> run on CSS or HTML template files. (The separate [template pipeline](#markdown-macro-system) does run over `.html`
+> templates, but only for `{% lang %}` blocks and `{{ locale="value" }}` inline translations.) Reference images in
+> templates via the full URL or a path that works in the browser context.
 
 When `keepWebServer: true` the process exits immediately after the build and the server continues as a detached
 background process. Use the `server` sub-commands to manage it manually:
@@ -370,16 +372,26 @@ serialized and evaluated as a browser function.
 
 ## Markdown Macro System
 
-Macros are processed by `macros/index.ts` in a fixed pipeline before Markdown rendering. Each macro is a pure
-`(markdown, config) => markdown` function.
+Macros run in one of two pipelines:
 
-### Pipeline order
+- **Markdown pipeline** (`macros/index.ts`) — runs on the raw Markdown source before it is rendered to HTML. This is
+  where nearly all macros live. Each macro is a pure `(markdown, config) => markdown` function.
+- **Template pipeline** (`build-html.ts`'s `applyTemplate`) — runs on the fully composed HTML page, after
+  `{{header}}`/`{{footer}}`/`{{content}}` substitution. This lets a handful of macros resolve syntax written directly in
+  `.html` template files, not just in Markdown content.
+
+Each macro's source file declares which pipeline(s) it runs in with a `@pipeline` JSDoc tag: `markdown`, `template`, or
+`markdown+template` for a macro registered in both (see `parseLangBlocks` below — it must run pre-render on Markdown
+_and_ again on the composed template, for two unrelated reasons documented at its declaration in
+`macros/lang-block.macro.ts`).
+
+### Pipeline order (Markdown pipeline)
 
 | #    | Handler                | What it does                                                                             |
 | ---- | ---------------------- | ---------------------------------------------------------------------------------------- |
 | 1    | `convertDumpInserts`   | `<!-- cmd[dump] ref-file[…] /-->` → all entries from a reference file, optionally sorted |
 | 2    | `parseConditionalMode` | Inline conditionals                                                                      |
-| 3    | `parseLangBlocks`      | `{% lang X %} ... {% /lang %}` blocks                                                    |
+| 3    | `parseLangBlocks`      | `{% lang X %} ... {% /lang %}` blocks (also re-run by the template pipeline, see below)  |
 | 4    | `addAliases`           | HTML comment macros and item/stats shortcuts                                             |
 | 5    | `convertNamedSections` | `<!-- named[id] /-->` → hidden anchor elements                                           |
 | 6–10 | `glue*`                | Non-breaking space insertion between words, units, shorthands                            |
@@ -392,6 +404,19 @@ Macros are processed by `macros/index.ts` in a fixed pipeline before Markdown re
 Macros also run on the content of each reference block before it is inserted (step 11 calls `handleMacros` recursively
 on resolved content). The `convertRefInserts` handler itself is excluded from that recursive pass to prevent infinite
 loops.
+
+### Template pipeline
+
+Runs after the Markdown pipeline and page composition, directly over the final HTML string:
+
+| Handler                     | What it does                                                                                  |
+| --------------------------- | --------------------------------------------------------------------------------------------- |
+| `parseLangBlocks`           | Re-run to resolve `{% lang X %} ... {% /lang %}` blocks written directly in `.html` templates |
+| `resolveInlineTranslations` | `{{ locale="value" ... }}` → the value for the current `OB_LANG` locale                       |
+
+```html
+<h1>{{ en="Title" ru="Заголовок" }}</h1>
+```
 
 ---
 

@@ -17,6 +17,7 @@
  * substitution replaces ` : ` with `:\u00A0` (non-breaking colon+space).
  *
  * @module macros/alias
+ * @pipeline markdown
  *
  * @example Item shorthand
  * ```markdown

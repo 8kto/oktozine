@@ -14,6 +14,7 @@
  * default, `'ru'` also supported).
  *
  * @module macros/stats-insert
+ * @pipeline markdown
  *
  * @example Minimal stat block
  * ```markdown

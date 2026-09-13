@@ -11,6 +11,7 @@
  * `convertRefInserts` itself, to prevent infinite recursion.
  *
  * @module macros/ref-insert
+ * @pipeline markdown
  *
  * @example Short (summary) insert
  * ```markdown
