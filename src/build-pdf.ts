@@ -94,7 +94,12 @@ const injectNamePolyfill = (page: Awaited<ReturnType<typeof setupPage>>) =>
 
 // ── Chunk rendering ──────────────────────────────────────────────────────────
 
-const renderChunkOnce = async (html: string, pageRange: string, cssPath: string, baseHref?: string): Promise<Buffer> => {
+const renderChunkOnce = async (
+  html: string,
+  pageRange: string,
+  cssPath: string,
+  baseHref?: string,
+): Promise<Buffer> => {
   const browser = await launchBrowser()
 
   try {
