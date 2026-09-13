@@ -5,6 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {
+  getServerMetaFile,
   getServerPidFile,
   type ServerHandle,
   startStaticServer,
@@ -28,6 +29,13 @@ describe('getServerPidFile', () => {
   it('returns a path inside tmpdir that includes the port number', () => {
     expect(getServerPidFile(3001)).toBe(path.join(os.tmpdir(), 'oktozine-server-3001.pid'))
     expect(getServerPidFile(8080)).toBe(path.join(os.tmpdir(), 'oktozine-server-8080.pid'))
+  })
+})
+
+describe('getServerMetaFile', () => {
+  it('returns a path inside tmpdir that includes the port number', () => {
+    expect(getServerMetaFile(3001)).toBe(path.join(os.tmpdir(), 'oktozine-server-3001.json'))
+    expect(getServerMetaFile(8080)).toBe(path.join(os.tmpdir(), 'oktozine-server-8080.json'))
   })
 })
 
@@ -76,12 +84,34 @@ describe('startStaticServer / stopStaticServer', () => {
     expect(res.status).toBe(404)
   })
 
-  it('returns null when the port is already in use', async () => {
+  it('returns null when the port is already in use serving the same directory', async () => {
     server = await startStaticServer(serveDir, port)
     expect(server).not.toBeNull()
 
     const second = await startStaticServer(serveDir, port)
     expect(second).toBeNull()
+  })
+
+  it('throws when the port is already in use serving a different directory', async () => {
+    server = await startStaticServer(serveDir, port)
+    expect(server).not.toBeNull()
+
+    const otherDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oktozine-ws-other-'))
+    try {
+      await expect(startStaticServer(otherDir, port)).rejects.toThrow(/already in use, but it's serving/)
+    } finally {
+      fs.rmSync(otherDir, { recursive: true, force: true })
+    }
+  })
+
+  it('removes the meta file when stopped', async () => {
+    server = await startStaticServer(serveDir, port)
+    expect(fs.existsSync(getServerMetaFile(port))).toBe(true)
+
+    stopStaticServer(server)
+    server = null
+
+    expect(fs.existsSync(getServerMetaFile(port))).toBe(false)
   })
 
   it('stopStaticServer(null) does not throw', () => {
