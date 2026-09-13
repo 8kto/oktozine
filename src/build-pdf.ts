@@ -50,13 +50,28 @@ const BROWSER_ARGS = [
 
 const launchBrowser = () => puppeteer.launch({ headless: 'new' as const, defaultViewport: null, args: BROWSER_ARGS })
 
-const setupPage = async (browser: Awaited<ReturnType<typeof launchBrowser>>, html: string, cssPath: string) => {
+/**
+ * page.setContent() leaves the page's document URL at about:blank, so relative
+ * url()s (in the injected CSS or in the HTML itself) have no base to resolve
+ * against. Prefixing a <base href> pointing at the running static file server
+ * — the same server webServerPort serves <outputPath>/chunks-html/ from —
+ * gives them one.
+ */
+const getWebServerBaseUrl = (config: IDocumentConfig): string | undefined =>
+  config.webServerPort ? `http://localhost:${config.webServerPort}/` : undefined
+
+const setupPage = async (
+  browser: Awaited<ReturnType<typeof launchBrowser>>,
+  html: string,
+  cssPath: string,
+  baseHref?: string,
+) => {
   const page = await browser.newPage()
   await page.setExtraHTTPHeaders({ 'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7' })
   page.on('console', (msg) => logger.info(`PAGE LOG: ${msg.text()}`))
   page.on('requestfailed', (r) => logger.error(`Failed request: ${r.url()} — ${r.failure()?.errorText}`))
   await page.setViewport({ width: 1280, height: 720 })
-  await page.setContent(html, { waitUntil: 'networkidle0' })
+  await page.setContent(baseHref ? `<base href="${baseHref}">${html}` : html, { waitUntil: 'networkidle0' })
   await page.addStyleTag({ path: cssPath })
   await page.evaluateHandle('document.fonts.ready')
 
@@ -79,11 +94,11 @@ const injectNamePolyfill = (page: Awaited<ReturnType<typeof setupPage>>) =>
 
 // ── Chunk rendering ──────────────────────────────────────────────────────────
 
-const renderChunkOnce = async (html: string, pageRange: string, cssPath: string): Promise<Buffer> => {
+const renderChunkOnce = async (html: string, pageRange: string, cssPath: string, baseHref?: string): Promise<Buffer> => {
   const browser = await launchBrowser()
 
   try {
-    const page = await setupPage(browser, html, cssPath)
+    const page = await setupPage(browser, html, cssPath, baseHref)
     await page.emulateMediaType('print')
 
     // No displayHeaderFooter — we add headers/footers via pdf-lib after merge
@@ -104,11 +119,16 @@ const renderChunkOnce = async (html: string, pageRange: string, cssPath: string)
 
 // Retry once on failure — parallel Chrome instances can fail transiently
 // due to resource contention (shared memory, CPU spikes, etc.).
-const renderChunk = async (html: string, pageRange: string, cssPath: string): Promise<Buffer | null> => {
+const renderChunk = async (
+  html: string,
+  pageRange: string,
+  cssPath: string,
+  baseHref?: string,
+): Promise<Buffer | null> => {
   try {
     logger.debug(chalk.gray(`Rendering PDF chunk ${pageRange}`))
 
-    return await renderChunkOnce(html, pageRange, cssPath)
+    return await renderChunkOnce(html, pageRange, cssPath, baseHref)
   } catch (err) {
     if ((err as Error)?.message.includes('Page range exceeds page count')) {
       return null
@@ -116,7 +136,7 @@ const renderChunk = async (html: string, pageRange: string, cssPath: string): Pr
 
     logger.debug(chalk.gray(`chunk ${pageRange}: retrying after error — ${(err as Error).message}`))
 
-    return renderChunkOnce(html, pageRange, cssPath)
+    return renderChunkOnce(html, pageRange, cssPath, baseHref)
   }
 }
 
@@ -193,7 +213,7 @@ const preparePdfHtml = async (
   const browser = await launchBrowser()
 
   try {
-    const page = await setupPage(browser, html, getCssPath(config))
+    const page = await setupPage(browser, html, getCssPath(config), getWebServerBaseUrl(config))
     await injectNamePolyfill(page)
     await buildTocForPage(page, config, htmlChunksPath)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -756,7 +776,7 @@ const createDocumentContentPdf = async (
         if (incrPlan.cached.has(i)) {
           ordered[i] = { i, buf: incrPlan.cached.get(i)! }
         } else {
-          ordered[i] = { i, buf: await renderChunk(finalHtml, ranges[i], cssPath) }
+          ordered[i] = { i, buf: await renderChunk(finalHtml, ranges[i], cssPath, getWebServerBaseUrl(config)) }
         }
       }
     }
@@ -859,7 +879,12 @@ const createDocumentContentPdf = async (
         const patchedHtml = dom.serialize()
 
         // 2. Render only the TOC pages
-        const tocBuffer = await renderChunk(patchedHtml, `${tocStartPage}-${tocEndPage}`, getCssPath(config))
+        const tocBuffer = await renderChunk(
+          patchedHtml,
+          `${tocStartPage}-${tocEndPage}`,
+          getCssPath(config),
+          getWebServerBaseUrl(config),
+        )
         if (tocBuffer) {
           // 3. Splice new TOC pages into the merged PDF
           const mergedDoc = await PDFDocument.load(mergedBytes)
