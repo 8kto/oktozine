@@ -33,4 +33,16 @@ describe('resolveContentPaths', () => {
     expect(result.imagesDir).toBe('/myproject/src/images')
     expect(result.fontsDir).toBe('/myproject/src/styles/fonts')
   })
+
+  it('resolves relative dirs against projectRoot', () => {
+    const result = resolveContentPaths({
+      outputPath: '/out',
+      projectRoot: '/myproject',
+      markdownPath: 'src/markdown/player-book',
+      fontsDir: 'assets/fonts',
+    } as IBaseConfig)
+    expect(result.markdownPath).toBe('/myproject/src/markdown/player-book')
+    expect(result.fontsDir).toBe('/myproject/assets/fonts')
+    expect(result.pageNumbersFontPath).toBe('/myproject/assets/fonts/Philosopher/Philosopher-Regular.ttf')
+  })
 })

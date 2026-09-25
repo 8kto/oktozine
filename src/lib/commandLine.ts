@@ -21,7 +21,7 @@ Usage: oktozine <document IDs> [options]
 --config <path>                     Path to build config file (e.g. ./conf/oktozine.build.conf.mjs)
 --output-dir <path>                 Base output directory (default: <project-root>/build); final PDFs go into <path>/release/
 --release-dir <path>                Directory where final merged PDFs are written (overrides <output-dir>/release)
---markdown-dir <path>               Directory containing Markdown source files (overrides config markdownPath)
+--markdown-dir <path>               Directory containing Markdown source files (overrides markdownPath for every document)
 --port <port>                       Port for server sub-commands (overrides config webServerPort)
 `.trim()
 

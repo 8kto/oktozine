@@ -30,19 +30,27 @@ export const getConsumingAppVersion = (config: IDocumentConfig): string => {
   return `v${consumingAppConfig.version}${sfx}`
 }
 
+/**
+ * `markdownPath` precedence: `--markdown-dir` (applied to every document) > document > top-level > default.
+ */
 const enrichConfigWithModuleOptions = <T extends IModuleBuilderConfig>(
   conf: T,
   moduleOptions: BuildModuleOptions,
 ): T => {
+  const cliMarkdownPath = moduleOptions.markdownPath
+
   return {
     ...conf,
+    documents: cliMarkdownPath
+      ? conf.documents.map((doc) => ({ ...doc, markdownPath: cliMarkdownPath }))
+      : conf.documents,
     isProduction: !!moduleOptions.isProduction,
     outputPath: moduleOptions.outputPath ?? DEFAULT_BUILD_PATH,
     releasePath: moduleOptions.releasePath ?? DEFAULT_RELEASE_PATH,
     shouldRebuildHtml: !!moduleOptions.shouldRebuildHtml,
     shouldAddPdfBookmarks: !!moduleOptions.shouldAddPdfBookmarks,
     shouldUsePdfCache: !!moduleOptions.shouldUsePdfCache,
-    markdownPath: moduleOptions.markdownPath,
+    markdownPath: cliMarkdownPath ?? conf.markdownPath,
     buildLang: conf.buildLang ?? process.env.OB_LANG ?? 'en',
   }
 }

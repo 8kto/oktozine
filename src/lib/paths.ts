@@ -16,7 +16,9 @@ export interface IResolvedContentPaths {
 }
 
 /**
- * TODO oktozine root?
+ * Resolves content directories for a (merged) document config.
+ * Relative paths are resolved against `projectRoot` (default: cwd); omitted ones fall back to
+ * `<projectRoot>/src/...` defaults.
  */
 export const resolveContentPaths = (
   config: Pick<
@@ -24,16 +26,19 @@ export const resolveContentPaths = (
     'projectRoot' | 'markdownPath' | 'templatesDir' | 'imagesDir' | 'fontsDir' | 'pageNumbersFontPath'
   >,
 ): IResolvedContentPaths => {
-  const root = config.projectRoot ?? process.cwd()
-  const fonts = config.fontsDir ?? path.join(root, 'src/styles/fonts')
+  const root = path.resolve(config.projectRoot ?? process.cwd())
+  const fromRoot = (p: string | undefined, fallback: string) => path.resolve(root, p ?? fallback)
+  const fonts = fromRoot(config.fontsDir, 'src/styles/fonts')
 
   return {
     projectRoot: root,
-    markdownPath: config.markdownPath ?? path.join(root, 'src/markdown'),
-    templatesDir: config.templatesDir ?? path.join(root, 'src/html'),
-    imagesDir: config.imagesDir ?? path.join(root, 'src/images'),
+    markdownPath: fromRoot(config.markdownPath, 'src/markdown'),
+    templatesDir: fromRoot(config.templatesDir, 'src/html'),
+    imagesDir: fromRoot(config.imagesDir, 'src/images'),
     fontsDir: fonts,
-    pageNumbersFontPath: config.pageNumbersFontPath ?? path.join(fonts, 'Philosopher/Philosopher-Regular.ttf'),
+    pageNumbersFontPath: config.pageNumbersFontPath
+      ? path.resolve(root, config.pageNumbersFontPath)
+      : path.join(fonts, 'Philosopher/Philosopher-Regular.ttf'),
   }
 }
 

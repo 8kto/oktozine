@@ -192,7 +192,7 @@ Usage: oktozine <document IDs> [options]
 --config <path>                     Path to a custom build config file
 --output-dir <path>                 Base output directory (default: <project-root>/build); final PDFs go into <path>/release/
 --release-dir <path>                Directory where final merged PDFs are written (overrides <output-dir>/release)
---markdown-dir <path>               Directory containing Markdown source files (overrides config markdownPath)
+--markdown-dir <path>               Directory containing Markdown source files (overrides markdownPath for every document)
 --port <port>                       Port for server sub-commands (overrides config webServerPort)
 ```
 
@@ -250,7 +250,7 @@ per-document.
 | `skipFooter`               | `number[]`               |     | Same, but footer only                                                                                                                              |
 | `bookmarksConfig`          | `IBookmarksConfig`       |     | PDF bookmark config: `{ config: string; skipFirstPages?: number; skipLastPages?: number }`                                                         |
 | `projectRoot`              | `string`                 |     | Absolute path to the consuming app root. Defaults to `process.cwd()`.                                                                              |
-| `markdownPath`             | `string`                 |     | Directory containing Markdown sources. Defaults to `<projectRoot>/src/markdown`. Set via `--markdown-dir`.                                         |
+| `markdownPath`             | `string`                 |     | Markdown sources dir, relative to `projectRoot`. Default `src/markdown`. Precedence: `--markdown-dir` > document > top-level.                      |
 | `templatesDir`             | `string`                 |     | Directory containing EJS/HTML page templates. Defaults to `<projectRoot>/src/html`.                                                                |
 | `imagesDir`                | `string`                 |     | Directory containing image assets. Defaults to `<projectRoot>/src/images`.                                                                         |
 | `fontsDir`                 | `string`                 |     | Directory containing font assets. Defaults to `<projectRoot>/src/styles/fonts`.                                                                    |
@@ -276,6 +276,21 @@ All `IBaseConfig` fields apply and can be overridden per-document. Document-spec
 | `skipBuild`         | `boolean`        | Exclude this document from default (no-args) builds                             |
 | `buildPartSize`     | `number`         | Pages per PDF chunk (overrides auto-calculation)                                |
 | `buildProcessesNum` | `number`         | Number of parallel Chromium instances for this document                         |
+
+### Per-document sources
+
+Every document can read from its own Markdown directory. Relative paths resolve against `projectRoot` (default: cwd):
+
+```js
+export default {
+  version: '2.3',
+  releaseDocumentIds: ['player', 'referee'],
+  documents: [
+    { id: 'player', documentTitle: 'Player Book', markdownPath: 'src/markdown/player-book' },
+    { id: 'referee', documentTitle: 'Referee Book', markdownPath: 'src/markdown/referee-book' },
+  ],
+}
+```
 
 ### PDF chunk tuning — measured build times (main module)
 

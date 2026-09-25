@@ -7,7 +7,7 @@
  * `dump-bestiary` script produces, but driven inline from Markdown.
  *
  * The `ref-file` argument is a filename stem (with or without `.md`) resolved
- * from `markdownPath` (defaults to `<cwd>/src/markdown`). Subdirectory paths
+ * from the document's resolved `markdownPath` (see `resolveContentPaths`). Subdirectory paths
  * such as `ru/$refs-stats.md` are resolved relative to `markdownPath` as well.
  * Only absolute paths are used verbatim.
  *
@@ -33,6 +33,7 @@ import path from 'node:path'
 import { slugify } from 'transliteration'
 
 import { logger } from '../lib/logger'
+import { resolveContentPaths } from '../lib/paths'
 import { renderReferenceBlock } from '../lib/render-reference-block'
 import { getReferenceDictionary, resolveReferenceFiles } from '../lib/resolve-reference-files'
 import type { IDocumentConfig } from '../types'
@@ -49,7 +50,7 @@ export const convertDumpInserts = (markdown: string, buildConf?: IDocumentConfig
     return markdown
   }
 
-  const markdownPath = buildConf?.markdownPath ?? path.join(process.cwd(), 'src/markdown')
+  const { markdownPath } = resolveContentPaths(buildConf ?? {})
 
   return markdown.replace(commandPattern, (match, refFile: string, sorted?: string, sortDirection?: string) => {
     const filePath = resolveRefFilePath(refFile.trim(), markdownPath)
