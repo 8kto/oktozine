@@ -612,7 +612,7 @@ const decoratePagesInRange = (
   }
 }
 
-const isBlankPage = (doc: PDFDocument, page: ReturnType<typeof doc.getPage>): boolean => {
+export const isBlankPage = (doc: PDFDocument, page: ReturnType<typeof doc.getPage>): boolean => {
   const resolve = (ref: unknown): unknown => (ref instanceof PDFRef ? doc.context.lookup(ref) : ref)
 
   const contents = page.node.get(PDFName.of('Contents'))
@@ -641,6 +641,63 @@ const isBlankPage = (doc: PDFDocument, page: ReturnType<typeof doc.getPage>): bo
   }
 
   return false
+}
+
+/**
+ * Chrome can also insert one or more blank pages — sized like the content
+ * that precedes them, not like what follows — immediately before a page
+ * that switches to a different named `@page` size (e.g. the bestiary's
+ * landscape content pages giving way to the back cover's portrait
+ * `fullpage_image` page). Unlike the trailing-blank-page case, these survive
+ * a simple "is the last page blank" check, because the page right after
+ * them renders real content, not blank.
+ *
+ * Must run *after* rebuildNamedDestinations: it can remove pages from the
+ * middle of the document, which would invalidate the pageOffset + localIdx
+ * arithmetic that function relies on. Removing pages here is safe because
+ * the artifacts are, by construction, blank — nothing has a named
+ * destination pointing at them.
+ *
+ * `PDFDocument.removePage()` doesn't invalidate pdf-lib's internal page
+ * cache — only `addPage`/`insertPage` do — so `doc.getPage()`/`getPages()`
+ * can return a stale, longer-than-reality array as soon as *anything* has
+ * called `removePage()` on this document before (e.g. the trailing-blank
+ * trim right above this function's call site). `doc.getPageCount()` stays
+ * accurate though (it's a plain counter), so slicing the stale array down
+ * to that count recovers the true current page list. From there we keep
+ * our own snapshot in sync by hand instead of re-querying the document
+ * mid-loop, since our own removals would go stale the same way.
+ */
+export const trimPageSizeTransitionArtifacts = (doc: PDFDocument): number => {
+  let trimmed = 0
+  const pages = doc.getPages().slice(0, doc.getPageCount())
+  let anchorIdx = pages.length - 1
+
+  while (anchorIdx > 0) {
+    const anchorPage = pages[anchorIdx]
+    const candidateIdx = anchorIdx - 1
+    const candidatePage = pages[candidateIdx]
+
+    if (!isBlankPage(doc, candidatePage)) {
+      break
+    }
+
+    const anchorSize = anchorPage.getSize()
+    const candidateSize = candidatePage.getSize()
+    if (anchorSize.width === candidateSize.width && anchorSize.height === candidateSize.height) {
+      // Same size as the page it precedes — not a size-transition artifact,
+      // leave it alone rather than guess.
+      break
+    }
+
+    logger.debug(chalk.gray(`Trimmed blank page-size-transition artifact before page ${anchorIdx + 1}`))
+    doc.removePage(candidateIdx)
+    pages.splice(candidateIdx, 1)
+    trimmed++
+    anchorIdx--
+  }
+
+  return trimmed
 }
 
 const mergeChunks = async (
@@ -685,6 +742,11 @@ const mergeChunks = async (
   const endRebuildNamedDestinations = measure('Rebuild PDF links')
   rebuildNamedDestinations(mergedPdf, chunkMeta, anchorPageOut)
   logger.info(chalk.gray(endRebuildNamedDestinations()))
+
+  const trimmedArtifacts = trimPageSizeTransitionArtifacts(mergedPdf)
+  if (trimmedArtifacts > 0) {
+    logger.info(chalk.gray(`Trimmed ${trimmedArtifacts} blank page-size-transition artifact(s)`))
+  }
 
   decoratePdfPages(mergedPdf, headerText, font, decorateOpts)
 

@@ -1,7 +1,130 @@
 /** @jest-environment node */
 
-import { buildChunkRanges, resolveChunkPlan } from '../build-pdf'
+import { PDFDocument } from 'pdf-lib'
+
+import { buildChunkRanges, isBlankPage, resolveChunkPlan, trimPageSizeTransitionArtifacts } from '../build-pdf'
 import { IDocumentConfig } from '../types'
+
+// ── trimPageSizeTransitionArtifacts ──────────────────────────────────────────
+
+describe('trimPageSizeTransitionArtifacts', () => {
+  const LANDSCAPE: [number, number] = [420, 298]
+  const PORTRAIT: [number, number] = [298, 420]
+
+  const addBlankPage = (doc: PDFDocument, size: [number, number]): void => {
+    doc.addPage(size)
+  }
+
+  const addContentPage = (doc: PDFDocument, size: [number, number]): void => {
+    const page = doc.addPage(size)
+    page.drawText('Real page content, definitely over twenty bytes long.', { x: 10, y: 10, size: 12 })
+  }
+
+  /**
+   * isBlankPage() (used internally by trimPageSizeTransitionArtifacts) only
+   * recognizes a page's content stream once it's a real PDFRawStream, which
+   * pdf-lib only produces after a save/reload round-trip — matching how the
+   * real pipeline always operates on pages loaded from already-saved chunk
+   * PDFs. A freshly-drawn, never-saved page reads as blank regardless of its
+   * content, so tests must round-trip too or they'd misrepresent both the
+   * "blank" and "non-blank" cases.
+   */
+  const roundTrip = async (doc: PDFDocument): Promise<PDFDocument> => PDFDocument.load(await doc.save())
+
+  it('removes a single blank page sandwiched between a size change', async () => {
+    const doc = await PDFDocument.create()
+    addContentPage(doc, LANDSCAPE) // p1: real landscape content
+    addBlankPage(doc, LANDSCAPE) // p2: blank artifact, same size as p1
+    addContentPage(doc, PORTRAIT) // p3: real portrait content (e.g. back cover)
+
+    const reloaded = await roundTrip(doc)
+    const trimmed = trimPageSizeTransitionArtifacts(reloaded)
+
+    expect(trimmed).toBe(1)
+    expect(reloaded.getPageCount()).toBe(2)
+  })
+
+  it('removes a run of multiple consecutive blank artifacts', async () => {
+    const doc = await PDFDocument.create()
+    addContentPage(doc, LANDSCAPE)
+    addBlankPage(doc, LANDSCAPE)
+    addBlankPage(doc, LANDSCAPE)
+    addContentPage(doc, PORTRAIT)
+
+    const reloaded = await roundTrip(doc)
+    const trimmed = trimPageSizeTransitionArtifacts(reloaded)
+
+    expect(trimmed).toBe(2)
+    expect(reloaded.getPageCount()).toBe(2)
+  })
+
+  it('leaves a blank page alone when it matches the size of the page it precedes', async () => {
+    const doc = await PDFDocument.create()
+    addContentPage(doc, LANDSCAPE)
+    addBlankPage(doc, LANDSCAPE) // same size as what follows — not a transition artifact
+    addContentPage(doc, LANDSCAPE)
+
+    const reloaded = await roundTrip(doc)
+    const trimmed = trimPageSizeTransitionArtifacts(reloaded)
+
+    expect(trimmed).toBe(0)
+    expect(reloaded.getPageCount()).toBe(3)
+  })
+
+  it('does not touch a document with no size transition', async () => {
+    const doc = await PDFDocument.create()
+    addContentPage(doc, LANDSCAPE)
+    addContentPage(doc, LANDSCAPE)
+    addContentPage(doc, LANDSCAPE)
+
+    const reloaded = await roundTrip(doc)
+    const trimmed = trimPageSizeTransitionArtifacts(reloaded)
+
+    expect(trimmed).toBe(0)
+    expect(reloaded.getPageCount()).toBe(3)
+  })
+
+  it('stops at the first non-blank page walking backward', async () => {
+    const doc = await PDFDocument.create()
+    addContentPage(doc, LANDSCAPE) // p1
+    addContentPage(doc, LANDSCAPE) // p2: real content, not blank
+    addContentPage(doc, PORTRAIT) // p3: size change, but p2 isn't blank
+
+    const reloaded = await roundTrip(doc)
+    const trimmed = trimPageSizeTransitionArtifacts(reloaded)
+
+    expect(trimmed).toBe(0)
+    expect(reloaded.getPageCount()).toBe(3)
+  })
+
+  it('still works after a prior removePage() call has already staled the page cache', async () => {
+    // Reproduces the real mergeChunks() call sequence: the trailing-blank
+    // trim loop calls getPage()/removePage() before this function runs,
+    // which — due to pdf-lib never invalidating its page cache on removal —
+    // left getPages() returning a stale, pre-removal-length array the first
+    // time this regression was caught.
+    const doc = await PDFDocument.create()
+    addContentPage(doc, LANDSCAPE) // p1
+    addBlankPage(doc, LANDSCAPE) // p2: blank artifact, same size as p1
+    addBlankPage(doc, LANDSCAPE) // p3: blank artifact
+    addContentPage(doc, PORTRAIT) // p4: real portrait content
+    addBlankPage(doc, PORTRAIT) // p5: genuine trailing blank
+
+    const reloaded = await roundTrip(doc)
+
+    // Simulate the trailing-blank trim loop that runs immediately before
+    // trimPageSizeTransitionArtifacts in mergeChunks().
+    while (reloaded.getPageCount() > 0 && isBlankPage(reloaded, reloaded.getPage(reloaded.getPageCount() - 1))) {
+      reloaded.removePage(reloaded.getPageCount() - 1)
+    }
+    expect(reloaded.getPageCount()).toBe(4) // p5 trimmed, p1-p4 remain
+
+    const trimmed = trimPageSizeTransitionArtifacts(reloaded)
+
+    expect(trimmed).toBe(2)
+    expect(reloaded.getPageCount()).toBe(2)
+  })
+})
 
 // ── buildChunkRanges ─────────────────────────────────────────────────────────
 
