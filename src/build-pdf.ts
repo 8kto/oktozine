@@ -28,8 +28,11 @@ import { wrapContentSections } from './lib/wrap-sections'
 import type { IDocumentConfig, ITocItem } from './types'
 
 // Number of parallel Chromium instances for PDF rendering.
-// Override with PDF_PARALLEL=N environment variable.
-const PDF_PARALLEL = Math.max(1, parseInt(process.env.PDF_PARALLEL ?? '4', 10))
+// Override with PDF_PARALLEL=N environment variable. Read lazily (not cached
+// into a module-level constant) so it reflects whatever the env var is set to
+// at build time, even when set from within a dynamically-imported build
+// config file — those load after this module's top-level code has already run.
+const getPdfParallel = (): number => Math.max(1, parseInt(process.env.PDF_PARALLEL ?? '4', 10))
 
 // Each Puppeteer browser instance registers exit/signal handlers on the process.
 // With many parallel instances the default limit of 10 triggers a warning.
@@ -49,6 +52,9 @@ const BROWSER_ARGS = [
 // ── Browser helpers ──────────────────────────────────────────────────────────
 
 const launchBrowser = () => puppeteer.launch({ headless: 'new' as const, defaultViewport: null, args: BROWSER_ARGS })
+
+type Browser = Awaited<ReturnType<typeof launchBrowser>>
+type GetBrowser = () => Promise<Browser>
 
 /**
  * page.setContent() leaves the page's document URL at about:blank, so relative
@@ -94,16 +100,20 @@ const injectNamePolyfill = (page: Awaited<ReturnType<typeof setupPage>>) =>
 
 // ── Chunk rendering ──────────────────────────────────────────────────────────
 
+// getBrowser supplies a (possibly reused) browser — see the worker pool in
+// createDocumentContentPdf, which keeps one browser per parallel slot alive
+// across chunks instead of paying full Chromium startup cost per chunk.
 const renderChunkOnce = async (
+  getBrowser: GetBrowser,
   html: string,
   pageRange: string,
   cssPath: string,
   baseHref?: string,
 ): Promise<Buffer> => {
-  const browser = await launchBrowser()
+  const browser = await getBrowser()
+  const page = await setupPage(browser, html, cssPath, baseHref)
 
   try {
-    const page = await setupPage(browser, html, cssPath, baseHref)
     await page.emulateMediaType('print')
 
     // No displayHeaderFooter — we add headers/footers via pdf-lib after merge
@@ -118,13 +128,15 @@ const renderChunkOnce = async (
       timeout: 60_000,
     })
   } finally {
-    await browser.close()
+    await page.close()
   }
 }
 
 // Retry once on failure — parallel Chrome instances can fail transiently
-// due to resource contention (shared memory, CPU spikes, etc.).
+// due to resource contention (shared memory, CPU spikes, etc.). getBrowser()
+// transparently relaunches if the browser died between attempts.
 const renderChunk = async (
+  getBrowser: GetBrowser,
   html: string,
   pageRange: string,
   cssPath: string,
@@ -133,7 +145,7 @@ const renderChunk = async (
   try {
     logger.debug(chalk.gray(`Rendering PDF chunk ${pageRange}`))
 
-    return await renderChunkOnce(html, pageRange, cssPath, baseHref)
+    return await renderChunkOnce(getBrowser, html, pageRange, cssPath, baseHref)
   } catch (err) {
     if ((err as Error)?.message.includes('Page range exceeds page count')) {
       return null
@@ -141,7 +153,24 @@ const renderChunk = async (
 
     logger.debug(chalk.gray(`chunk ${pageRange}: retrying after error — ${(err as Error).message}`))
 
-    return renderChunkOnce(html, pageRange, cssPath, baseHref)
+    return renderChunkOnce(getBrowser, html, pageRange, cssPath, baseHref)
+  }
+}
+
+// One-off render outside the worker pool (e.g. the TOC-patch pass) — launches
+// and closes its own browser since there's no pool slot to reuse.
+const renderSingleChunk = async (
+  html: string,
+  pageRange: string,
+  cssPath: string,
+  baseHref?: string,
+): Promise<Buffer | null> => {
+  const browser = await launchBrowser()
+
+  try {
+    return await renderChunk(async () => browser, html, pageRange, cssPath, baseHref)
+  } finally {
+    await browser.close()
   }
 }
 
@@ -252,7 +281,7 @@ interface IChunkPlan {
  * evenly across up to PDF_PARALLEL workers.
  */
 export const resolveChunkPlan = (config: IDocumentConfig, approxPageCount: number): IChunkPlan => {
-  const N = config.buildProcessesNum ?? Math.min(PDF_PARALLEL, approxPageCount)
+  const N = config.buildProcessesNum ?? Math.min(getPdfParallel(), approxPageCount)
   const chunkSize = config.buildPartSize ?? Math.ceil(approxPageCount / N)
 
   return { N, chunkSize }
@@ -772,20 +801,42 @@ const createDocumentContentPdf = async (
   try {
     // Worker-pool: at most PDF_PARALLEL chunks render at a time.
     // Starting all N chunks simultaneously saturates the HTTP server when N is large.
+    // Each worker keeps one browser alive across all the chunks it handles instead
+    // of relaunching Chromium per chunk — launch is the dominant per-chunk cost,
+    // and a shared browser also reuses its HTTP cache for the CSS/fonts/images
+    // fetched from the local dev server on every render.
     const cssPath = getCssPath(config)
     const ordered: Array<{ i: number; buf: Buffer | null }> = new Array(ranges.length)
     let next = 0
     const worker = async (): Promise<void> => {
-      while (next < ranges.length) {
-        const i = next++
-        if (incrPlan.cached.has(i)) {
-          ordered[i] = { i, buf: incrPlan.cached.get(i)! }
-        } else {
-          ordered[i] = { i, buf: await renderChunk(finalHtml, ranges[i], cssPath, getWebServerBaseUrl(config)) }
+      let browser: Browser | null = null
+      const getBrowser: GetBrowser = async () => {
+        if (!browser || !browser.connected) {
+          browser = await launchBrowser()
+        }
+
+        return browser
+      }
+
+      try {
+        while (next < ranges.length) {
+          const i = next++
+          if (incrPlan.cached.has(i)) {
+            ordered[i] = { i, buf: incrPlan.cached.get(i)! }
+          } else {
+            ordered[i] = {
+              i,
+              buf: await renderChunk(getBrowser, finalHtml, ranges[i], cssPath, getWebServerBaseUrl(config)),
+            }
+          }
+        }
+      } finally {
+        if (browser) {
+          await (browser as Browser).close()
         }
       }
     }
-    await Promise.all(Array.from({ length: Math.min(PDF_PARALLEL, ranges.length) }, worker))
+    await Promise.all(Array.from({ length: Math.min(getPdfParallel(), ranges.length) }, worker))
     chunkResults = ordered
   } catch (err) {
     logger.error(err)
@@ -884,7 +935,7 @@ const createDocumentContentPdf = async (
         const patchedHtml = dom.serialize()
 
         // 2. Render only the TOC pages
-        const tocBuffer = await renderChunk(
+        const tocBuffer = await renderSingleChunk(
           patchedHtml,
           `${tocStartPage}-${tocEndPage}`,
           getCssPath(config),
